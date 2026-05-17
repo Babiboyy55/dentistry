@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - Admin Portal</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    
+    <style>
+        body { font-family: "Space Grotesk", sans-serif; background-color: #f4f7fe; }
+        .admin-layout { display: flex; min-height: 100vh; }
+        
+        .admin-sidebar {
+            width: 250px;
+            background: #fff;
+            border-right: 1px solid #eef0f7;
+            padding: 24px 0;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .admin-sidebar .brand { padding: 0 24px 32px; font-weight: 700; color: #1b75d0; font-size: 1.2rem; display: flex; align-items: center; gap: 10px; }
+        .admin-sidebar .brand .icon { background: #1b75d0; color: #fff; width: 32px; height: 32px; border-radius: 8px; display: grid; place-items: center; }
+
+        .sidebar-menu { display: flex; flex-direction: column; gap: 4px; padding: 0 12px; }
+        .sidebar-menu a {
+            display: flex; align-items: center; gap: 12px; padding: 12px 16px; 
+            text-decoration: none; color: #5b6b7a; border-radius: 12px; font-weight: 500; transition: all 0.2s;
+        }
+        .sidebar-menu a:hover { background: #f4f9ff; color: #1b75d0; }
+        .sidebar-menu a.active { background: #1b75d0; color: #fff; }
+        
+        .admin-content { flex: 1; padding: 0; display: flex; flex-direction: column; height: 100vh; overflow-y: auto;}
+        
+        .admin-topbar {
+            height: 70px; background: #fff; display: flex; align-items: center; justify-content: space-between;
+            padding: 0 32px; border-bottom: 1px solid #eef0f7;
+        }
+        
+        .topbar-search { background: #f4f7fe; border-radius: 99px; padding: 8px 16px; display: flex; align-items: center; gap: 8px; width: 300px; }
+        .topbar-search input { border: none; background: transparent; outline: none; flex: 1; font-size: 0.9rem; }
+        
+        .topbar-right { display: flex; align-items: center; gap: 20px; }
+        .topbar-avatar { width: 36px; height: 36px; border-radius: 50%; background: #cfe9ff; display: grid; place-items: center; color: #1b75d0; font-weight: 700; }
+
+        .admin-main { padding: 32px; flex: 1; }
+        
+        .bottom-actions { margin-top: auto; padding: 24px; display: flex; flex-direction: column; gap: 8px; border-top: 1px solid #eef0f7; }
+        .bottom-actions a, .bottom-actions button { 
+             display: flex; align-items: center; gap: 12px; text-decoration: none; color: #5b6b7a; 
+             background: none; border: none; width: 100%; text-align: left; padding: 8px; border-radius: 8px;
+        }
+        .bottom-actions a:hover, .bottom-actions button:hover { background: #ffe9e9; color: #d01b1b; }
+    </style>
+</head>
+<body>
+    <div class="admin-layout">
+        <!-- Sidebar -->
+        <aside class="admin-sidebar">
+            <div class="brand">
+                <div class="icon"><i class="bi bi-hospital"></i></div>
+                St. Mary's Clinic<br/><small class="text-muted" style="font-size: 0.75rem; font-weight: 500;">Admin Portal</small>
+            </div>
+            
+            <nav class="sidebar-menu">
+                <a href="#"><i class="bi bi-grid-1x2"></i> Tổng quan</a>
+                <a href="#"><i class="bi bi-calendar-check"></i> Lịch hẹn</a>
+                <a href="#"><i class="bi bi-journal-medical"></i> Hồ sơ bệnh án</a>
+                <a href="#"><i class="bi bi-receipt"></i> Thanh toán</a>
+                <a href="/Staff" class="active"><i class="bi bi-people"></i> Nhân sự</a>
+            </nav>
+            
+            <div class="bottom-actions">
+                <a href="#"><i class="bi bi-question-circle"></i> Trung tâm hỗ trợ</a>
+                <form asp-controller="Auth" asp-action="Logout" method="post" class="m-0 p-0">
+                    <button type="submit"><i class="bi bi-box-arrow-right"></i> Đăng xuất</button>
+                </form>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <div class="admin-content">
+            <!-- Topbar -->
+            <header class="admin-topbar">
+                <div class="d-flex align-items-center gap-4">
+                    <span class="fw-bold" style="color: #1b75d0;">CarePulse Pro</span>
+                    <nav class="d-none d-md-flex gap-3 text-muted fw-medium font-size-sm">
+                        <a href="#" class="text-decoration-none text-muted">Tổng quan</a>
+                        <a href="#" class="text-decoration-none text-muted">Bệnh nhân</a>
+                        <a href="#" class="text-decoration-none text-muted">Lịch hẹn</a>
+                        <a href="#" class="text-decoration-none text-muted">Phân tích</a>
+                    </nav>
+                </div>
+                
+                <div class="topbar-right">
+                    <div class="topbar-search">
+                        <i class="bi bi-search text-muted"></i>
+                        <input type="text" placeholder="Tìm kiếm nhanh..." />
+                    </div>
+                    <i class="bi bi-bell text-muted fs-5"></i>
+                    <div class="topbar-avatar">A</div>
+                </div>
+            </header>
+
+            <!-- Inner Page Content -->
+            <main class="admin-main">
+                @if (TempData["SuccessMessage"] != null)
+                {
+                    <div class="alert alert-success d-flex align-items-center mb-4" role="alert">
+                        <i class="bi bi-check-circle-fill me-2"></i>
+                        <div>@TempData["SuccessMessage"]</div>
+                    </div>
+                }
+
+                @RenderBody()
+            </main>
+        </div>
+    </div>
+    
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

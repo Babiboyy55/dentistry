@@ -1,0 +1,85 @@
+@model Nhakhoa.ViewModels.LoginViewModel
+@{
+    ViewData["Title"] = "Đăng nhập";
+    ViewData["UseFluid"] = true;
+    ViewData["BodyClass"] = "auth-body";
+}
+
+<div class="auth-page">
+    <div class="auth-shell">
+        <section class="auth-hero">
+            <div class="auth-hero__badge">CLINIC FLOW</div>
+            <h1>Giải pháp y tế thông minh</h1>
+            <p>Quản lý hồ sơ bệnh nhân, lịch hẹn và thanh toán trong một nền tảng chuyên nghiệp.</p>
+
+            <div class="auth-hero__card">
+                <div class="auth-hero__art">
+                    <div class="auth-hero__title">Clinic Flow</div>
+                    <div class="auth-hero__subtitle">LOGIN</div>
+                    <div class="auth-hero__pulse"></div>
+                </div>
+                <div class="auth-hero__avatar">
+                    <svg viewBox="0 0 120 140" role="img" aria-label="Bác sĩ" focusable="false">
+                        <path d="M60 6c18 0 30 14 30 32 0 15-7 26-16 30v12h10c10 0 18 8 18 18v20H18v-20c0-10 8-18 18-18h10V68c-9-4-16-15-16-30C30 20 42 6 60 6z" fill="#d7ecff"/>
+                        <path d="M60 12c12 0 20 9 20 20s-8 21-20 21-20-10-20-21S48 12 60 12z" fill="#ffe1c7"/>
+                        <path d="M40 80h40l6 18H34l6-18z" fill="#4aa3ff"/>
+                        <path d="M48 88h24v26H48z" fill="#ffffff"/>
+                        <path d="M58 96h4v12h-4z" fill="#4aa3ff"/>
+                        <path d="M52 102h16v4H52z" fill="#4aa3ff"/>
+                    </svg>
+                </div>
+            </div>
+
+            <div class="auth-hero__dots">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+        </section>
+
+        <section class="auth-form">
+            <div class="auth-brand">
+                <span class="auth-brand__icon">+</span>
+                MediClinic
+            </div>
+            <h2>Đăng nhập hệ thống quản lý phòng khám</h2>
+            <p>Vui lòng nhập thông tin tài khoản của bạn.</p>
+
+            <form class="auth-form__body" method="post" asp-controller="Auth" asp-action="Login">
+                <div asp-validation-summary="ModelOnly" class="text-danger small"></div>
+
+                <label class="auth-label" asp-for="Username">Tên đăng nhập</label>
+                <div class="auth-input">
+                    <span class="auth-input__icon">&#64;</span>
+                    <input asp-for="Username" type="text" placeholder="Nhập tên đăng nhập" autocomplete="username" />
+                </div>
+                <span asp-validation-for="Username" class="text-danger small"></span>
+
+                <label class="auth-label" asp-for="Password">Mật khẩu</label>
+                <div class="auth-input">
+                    <span class="auth-input__icon">*</span>
+                    <input asp-for="Password" type="password" placeholder="••••••••" autocomplete="current-password" />
+                    <button type="button" class="auth-input__action" aria-label="Hiện mật khẩu">Hiện</button>
+                </div>
+                <span asp-validation-for="Password" class="text-danger small"></span>
+
+                <div class="auth-row">
+                    <label class="auth-check">
+                        <input type="checkbox" asp-for="RememberMe" />
+                        Ghi nhớ đăng nhập
+                    </label>
+                    <a class="auth-link" href="#">Quên mật khẩu?</a>
+                </div>
+
+                <button type="submit" class="auth-submit">Đăng nhập</button>
+            </form>
+
+            <div class="auth-note">Bạn chưa có tài khoản? <a class="auth-link" href="#">Liên hệ quản trị viên</a></div>
+
+            <div class="auth-meta">
+                <span>🔒 Bảo mật SSL 256-bit</span>
+                <span>Hỗ trợ 24/7</span>
+            </div>
+        </section>
+    </div>
+</div>

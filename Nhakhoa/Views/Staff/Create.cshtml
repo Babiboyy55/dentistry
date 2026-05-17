@@ -1,0 +1,131 @@
+@model Nhakhoa.ViewModels.CreateStaffViewModel
+@{
+    Layout = "_AdminLayout";
+    ViewData["Title"] = "Tạo tài khoản nhân viên";
+}
+
+<div class="card border-0 shadow-sm rounded-4" style="background-color: #fff; padding: 32px;">
+    <div class="mb-4">
+        <h2 class="fw-bold mb-1" style="color: #0b1f35;">Tạo tài khoản nhân viên</h2>
+        <p class="text-muted">Thêm tài khoản mới cho nhân sự phòng khám</p>
+    </div>
+
+    <form asp-action="Create" method="post">
+        <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+
+        <div class="row g-4 mb-4">
+            <!-- Cột 1 -->
+            <div class="col-md-6">
+                <div class="form-group mb-4">
+                    <label class="form-label fw-semibold text-dark small mb-2" asp-for="FullName">Họ tên</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-transparent text-muted border-end-0"><i class="bi bi-person"></i></span>
+                        <input asp-for="FullName" class="form-control border-start-0 ps-0" placeholder="Nguyễn Văn A" />
+                    </div>
+                    <span asp-validation-for="FullName" class="text-danger small"></span>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label fw-semibold text-dark small mb-2" asp-for="Email">Email</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-transparent text-muted border-end-0"><i class="bi bi-envelope"></i></span>
+                        <input asp-for="Email" class="form-control border-start-0 ps-0" placeholder="vana.nguyen@clinic.com" />
+                    </div>
+                    <span asp-validation-for="Email" class="text-danger small"></span>
+                </div>
+            </div>
+
+            <!-- Cột 2 -->
+            <div class="col-md-6">
+                <div class="form-group mb-4">
+                    <label class="form-label fw-semibold text-dark small mb-2" asp-for="Username">Tên đăng nhập</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-transparent text-muted border-end-0"><i class="bi bi-at"></i></span>
+                        <input asp-for="Username" class="form-control border-start-0 ps-0" placeholder="bs.nguyenvana" />
+                    </div>
+                    <span asp-validation-for="Username" class="text-danger small"></span>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label fw-semibold text-dark small mb-2" asp-for="PhoneNumber">Số điện thoại</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-transparent text-muted border-end-0"><i class="bi bi-telephone"></i></span>
+                        <input asp-for="PhoneNumber" class="form-control border-start-0 ps-0" placeholder="090 123 4567" />
+                    </div>
+                    <span asp-validation-for="PhoneNumber" class="text-danger small"></span>
+                </div>
+            </div>
+        </div>
+
+        <div class="row mb-5">
+            <div class="col-md-12">
+                <label class="form-label fw-semibold text-dark small mb-2" asp-for="Role">Vai trò</label>
+                <div class="input-group">
+                    <span class="input-group-text bg-transparent text-muted border-end-0"><i class="bi bi-person-badge"></i></span>
+                    <select asp-for="Role" class="form-select border-start-0 ps-0 text-muted">
+                        <option value="">Chọn vai trò nhân viên</option>
+                        <option value="Admin">Quản trị viên</option>
+                        <option value="Doctor">Bác sĩ</option>
+                        <option value="Receptionist">Lễ tân</option>
+                    </select>
+                </div>
+                <span asp-validation-for="Role" class="text-danger small"></span>
+            </div>
+        </div>
+
+        <div class="d-flex justify-content-end gap-3 mt-4">
+            <a href="/Staff" class="btn btn-light px-4 py-2 fw-semibold" style="border: 1px solid #dee2e6; color: #5b6b7a;">Hủy</a>
+            <button type="submit" class="btn btn-primary px-4 py-2 fw-semibold" style="background-color: #1b75d0; border-color: #1b75d0;">
+                Tạo tài khoản
+            </button>
+        </div>
+    </form>
+</div>
+
+<!-- Info Cards for Admin context -->
+<div class="row mt-4 g-4">
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm h-100 rounded-4" style="background: rgba(27, 117, 208, 0.03);">
+            <div class="card-body text-center p-4">
+                <div class="rounded-circle d-inline-flex justify-content-center align-items-center mb-3" style="width: 48px; height: 48px; background: rgba(27, 117, 208, 0.1); color: #1b75d0; font-size: 1.25rem;">
+                    <i class="bi bi-shield-check"></i>
+                </div>
+                <h6 class="fw-bold text-dark">Bảo mật HIPAA</h6>
+                <p class="text-muted small mb-0">Dữ liệu nhân viên được mã hóa và bảo mật tuyệt đối theo tiêu chuẩn quốc tế.</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm h-100 rounded-4" style="background: rgba(27, 117, 208, 0.03);">
+            <div class="card-body text-center p-4">
+                <div class="rounded-circle d-inline-flex justify-content-center align-items-center mb-3" style="width: 48px; height: 48px; background: rgba(59, 151, 255, 0.1); color: #3b97ff; font-size: 1.25rem;">
+                    <i class="bi bi-clock-history"></i>
+                </div>
+                <h6 class="fw-bold text-dark">Nhật ký hệ thống</h6>
+                <p class="text-muted small mb-0">Mọi hành động tạo tài khoản đều được lưu vết chi tiết trong nhật ký hệ thống.</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm h-100 rounded-4" style="background: rgba(27, 117, 208, 0.03);">
+            <div class="card-body text-center p-4">
+                <div class="rounded-circle d-inline-flex justify-content-center align-items-center mb-3" style="width: 48px; height: 48px; background: rgba(255, 140, 66, 0.1); color: #ff8c42; font-size: 1.25rem;">
+                    <i class="bi bi-people"></i>
+                </div>
+                <h6 class="fw-bold text-dark">Phân quyền linh hoạt</h6>
+                <p class="text-muted small mb-0">Dễ dàng điều chỉnh quyền truy cập cho từng vị trí chuyên môn cụ thể.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="mt-4 pt-4 border-top text-center text-muted small d-flex justify-content-between">
+    <span>&copy; 2026 CarePulse Systems. HIPAA Compliant.</span>
+    <span class="d-flex gap-3">
+        <a href="#" class="text-muted text-decoration-none">Privacy Policy</a>
+        <a href="#" class="text-muted text-decoration-none">Terms of Service</a>
+        <a href="#" class="text-muted text-decoration-none">Security Standards</a>
+    </span>
+</div>

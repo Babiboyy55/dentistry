@@ -1,8 +1,24 @@
-﻿@{
-    ViewData["Title"] = "Home Page";
+@{
+    ViewData["Title"] = "Trang chủ";
 }
 
-<div class="text-center">
-    <h1 class="display-4">Welcome</h1>
-    <p>Learn about <a href="https://learn.microsoft.com/aspnet/core">building Web apps with ASP.NET Core</a>.</p>
+<div class="container py-5">
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <h1 class="display-6">Xin chào, @User.Identity?.Name!</h1>
+            <p class="lead">Bạn đã đăng nhập thành công vào hệ thống Clinic Flow.</p>
+            <hr />
+            <div class="mb-3">
+                <strong>Các thông tin phân quyền:</strong>
+                <ul>
+                    <li>Role: @User.Claims.FirstOrDefault(c => c.Type == System.Security.Claims.ClaimTypes.Role)?.Value</li>
+                    <li>Phiên làm việc sẽ lưu theo cấu hình Cookie (Timeout hoặc Remember Me).</li>
+                </ul>
+            </div>
+
+            <form asp-controller="Auth" asp-action="Logout" method="post">
+                <button type="submit" class="btn btn-outline-danger">Đăng xuất</button>
+            </form>
+        </div>
+    </div>
 </div>

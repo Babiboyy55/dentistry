@@ -8,7 +8,11 @@ namespace Nhakhoa.Controllers
     {
         public IActionResult Index()
         {
-            return View();
+            if (User.Identity.IsAuthenticated)
+            {
+                return RedirectToAction("Create", "Staff");
+            }
+            return RedirectToAction("Login", "Auth");
         }
 
         public IActionResult Privacy()

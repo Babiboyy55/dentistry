@@ -1,0 +1,72 @@
+@model Nhakhoa.ViewModels.EditStaffViewModel
+@{
+    Layout = "_AdminLayout";
+    ViewData["Title"] = "Cập nhật nhân sự";
+}
+
+<div class="card border-0 shadow-sm rounded-4" style="background-color: #fff; padding: 32px;">
+    <div class="mb-4">
+        <h2 class="fw-bold mb-1" style="color: #0b1f35;">Cập nhật nhân sự</h2>
+        <p class="text-muted">Chỉnh sửa thông tin cơ bản của nhân sự</p>
+    </div>
+
+    <form asp-action="Edit" method="post">
+        <input type="hidden" asp-for="Id" />
+        <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+
+        <div class="row g-4 mb-4">
+            <div class="col-md-6">
+                <div class="form-group mb-4">
+                    <label class="form-label fw-semibold text-dark small mb-2" asp-for="FullName">Họ tên</label>
+                    <input asp-for="FullName" class="form-control" />
+                    <span asp-validation-for="FullName" class="text-danger small"></span>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label fw-semibold text-dark small mb-2" asp-for="Email">Email</label>
+                    <input asp-for="Email" class="form-control" />
+                    <span asp-validation-for="Email" class="text-danger small"></span>
+                </div>
+            </div>
+
+            <div class="col-md-6">
+                <div class="form-group mb-4">
+                    <label class="form-label fw-semibold text-dark small mb-2" asp-for="Username">Tên đăng nhập</label>
+                    <input asp-for="Username" class="form-control" readonly />
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label fw-semibold text-dark small mb-2" asp-for="PhoneNumber">Số điện thoại</label>
+                    <input asp-for="PhoneNumber" class="form-control" />
+                    <span asp-validation-for="PhoneNumber" class="text-danger small"></span>
+                </div>
+            </div>
+        </div>
+
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <label class="form-label fw-semibold text-dark small mb-2" asp-for="Role">Vai trò</label>
+                <select asp-for="Role" class="form-select">
+                    <option value="Admin">Quản trị viên</option>
+                    <option value="Doctor">Bác sĩ</option>
+                    <option value="Receptionist">Lễ tân</option>
+                </select>
+                <span asp-validation-for="Role" class="text-danger small"></span>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label fw-semibold text-dark small mb-2" asp-for="IsActive">Trạng thái</label>
+                <select asp-for="IsActive" class="form-select">
+                    <option value="true">Đang hoạt động</option>
+                    <option value="false">Tạm khóa</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="d-flex justify-content-end gap-3 mt-4">
+            <a href="/Staff" class="btn btn-light px-4 py-2 fw-semibold" style="border: 1px solid #dee2e6; color: #5b6b7a;">Quay lại</a>
+            <button type="submit" class="btn btn-primary px-4 py-2 fw-semibold" style="background-color: #1b75d0; border-color: #1b75d0;">
+                Lưu thay đổi
+            </button>
+        </div>
+    </form>
+</div>
