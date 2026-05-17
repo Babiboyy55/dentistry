@@ -1,24 +1,183 @@
 @{
-    ViewData["Title"] = "Trang chủ";
+    ViewData["Title"] = "Tổng quan";
+    Layout = "~/Views/Shared/_AdminLayout.cshtml";
 }
 
-<div class="container py-5">
-    <div class="card shadow-sm">
-        <div class="card-body">
-            <h1 class="display-6">Xin chào, @User.Identity?.Name!</h1>
-            <p class="lead">Bạn đã đăng nhập thành công vào hệ thống Clinic Flow.</p>
-            <hr />
-            <div class="mb-3">
-                <strong>Các thông tin phân quyền:</strong>
-                <ul>
-                    <li>Role: @User.Claims.FirstOrDefault(c => c.Type == System.Security.Claims.ClaimTypes.Role)?.Value</li>
-                    <li>Phiên làm việc sẽ lưu theo cấu hình Cookie (Timeout hoặc Remember Me).</li>
-                </ul>
-            </div>
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="h3 text-gray-800 mb-0">Dashboard - Clinic Flow</h2>
+        <a href="#" class="d-none d-sm-inline-block btn btn-sm btn-primary shadow-sm">
+            <i class="bi bi-download fa-sm text-white-50"></i> Xuất báo cáo
+        </a>
+    </div>
 
-            <form asp-controller="Auth" asp-action="Logout" method="post">
-                <button type="submit" class="btn btn-outline-danger">Đăng xuất</button>
-            </form>
+    <!-- Cột thống kê (Cards) -->
+    <div class="row">
+        <!-- Tổng Lịch Hẹn -->
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-primary shadow h-100 py-2" style="border-left: 4px solid #4e73df;">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                                Lịch hẹn hôm nay</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">12</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="bi bi-calendar-check fs-2 text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Doanh Thu -->
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-success shadow h-100 py-2" style="border-left: 4px solid #1cc88a;">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                                Doanh thu (Tháng)</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">215,000,000 ₫</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="bi bi-currency-dollar fs-2 text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bệnh Nhân Mới -->
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-info shadow h-100 py-2" style="border-left: 4px solid #36b9cc;">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-info text-uppercase mb-1">Bệnh nhân mới
+                            </div>
+                            <div class="row no-gutters align-items-center">
+                                <div class="col-auto">
+                                    <div class="h5 mb-0 mr-3 font-weight-bold text-gray-800">24</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="bi bi-people fs-2 text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Yêu Cầu Chờ -->
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-warning shadow h-100 py-2" style="border-left: 4px solid #f6c23e;">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                                Cần xác nhận</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">5</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="bi bi-chat-left-text fs-2 text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Cột nội dung (Content) -->
+    <div class="row mt-4">
+        <!-- Lịch trình khám -->
+        <div class="col-lg-8 mb-4">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                    <h6 class="m-0 font-weight-bold text-primary">Lịch hẹn sắp tới</h6>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Thời gian</th>
+                                    <th>Bệnh nhân</th>
+                                    <th>Bác sĩ</th>
+                                    <th>Dịch vụ</th>
+                                    <th>Trạng thái</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>08:30 - Hôm nay</td>
+                                    <td>Nguyễn Văn A</td>
+                                    <td>BS. Trần B</td>
+                                    <td>Nhổ răng khôn</td>
+                                    <td><span class="badge bg-warning text-dark">Chờ khám</span></td>
+                                </tr>
+                                <tr>
+                                    <td>09:00 - Hôm nay</td>
+                                    <td>Trần Thị C</td>
+                                    <td>BS. Lê D</td>
+                                    <td>Tẩy trắng răng</td>
+                                    <td><span class="badge bg-success">Đang khám</span></td>
+                                </tr>
+                                <tr>
+                                    <td>10:30 - Hôm nay</td>
+                                    <td>Lê Hoàng E</td>
+                                    <td>BS. Trần B</td>
+                                    <td>Niềng răng</td>
+                                    <td><span class="badge bg-secondary">Đã xong</span></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tin tức / Ghi chú nhanh -->
+        <div class="col-lg-4 mb-4">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Hoạt động gần đây</h6>
+                </div>
+                <div class="card-body">
+                    <div class="timeline">
+                        <div class="mb-3">
+                            <small class="text-muted">10 phút trước</small>
+                            <p class="mb-0"><strong>@User.Identity?.Name</strong> đã đăng nhập vào hệ thống.</p>
+                        </div>
+                        <div class="mb-3">
+                            <small class="text-muted">1 giờ trước</small>
+                            <p class="mb-0">Có 1 lịch hẹn mới được đặt qua website.</p>
+                        </div>
+                        <div class="mb-3">
+                            <small class="text-muted">Hôm qua</small>
+                            <p class="mb-0">Hoàn tất kiểm kê kho thuốc cuối ngày.</p>
+                        </div>
+                    </div>
+                    <hr />
+                    <form asp-controller="Auth" asp-action="Logout" method="post">
+                        <button type="submit" class="btn btn-outline-danger w-100">
+                            <i class="bi bi-box-arrow-right"></i> Đăng xuất ngay
+                        </button>
+                    </form>
+                </div>
+            </div>
         </div>
     </div>
 </div>
+
+<style>
+    /* Styling cho thẻ card */
+    .border-left-primary { border-left: .25rem solid #4e73df!important; }
+    .border-left-success { border-left: .25rem solid #1cc88a!important; }
+    .border-left-info { border-left: .25rem solid #36b9cc!important; }
+    .border-left-warning { border-left: .25rem solid #f6c23e!important; }
+    .text-gray-300 { color: #dddfeb!important; }
+    .text-gray-800 { color: #5a5c69!important; }
+</style>

@@ -33,6 +33,15 @@
                     </div>
                     <span asp-validation-for="Email" class="text-danger small"></span>
                 </div>
+
+                <div class="form-group mt-4">
+                    <label class="form-label fw-semibold text-dark small mb-2" asp-for="Password">Mật khẩu</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-transparent text-muted border-end-0"><i class="bi bi-lock"></i></span>
+                        <input asp-for="Password" type="password" class="form-control border-start-0 ps-0" placeholder="Nhập mật khẩu" />
+                    </div>
+                    <span asp-validation-for="Password" class="text-danger small"></span>
+                </div>
             </div>
 
             <!-- Cột 2 -->
@@ -53,6 +62,15 @@
                         <input asp-for="PhoneNumber" class="form-control border-start-0 ps-0" placeholder="090 123 4567" />
                     </div>
                     <span asp-validation-for="PhoneNumber" class="text-danger small"></span>
+                </div>
+
+                <div class="form-group mt-4">
+                    <label class="form-label fw-semibold text-dark small mb-2" asp-for="ConfirmPassword">Xác nhận mật khẩu</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-transparent text-muted border-end-0"><i class="bi bi-lock-fill"></i></span>
+                        <input asp-for="ConfirmPassword" type="password" class="form-control border-start-0 ps-0" placeholder="Nhập lại mật khẩu" />
+                    </div>
+                    <span asp-validation-for="ConfirmPassword" class="text-danger small"></span>
                 </div>
             </div>
         </div>

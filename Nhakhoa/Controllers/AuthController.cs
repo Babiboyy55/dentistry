@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Nhakhoa.Data;
+using Nhakhoa.Models;
 using Nhakhoa.ViewModels;
 using System.Security.Claims;
 
@@ -21,7 +22,7 @@ namespace Nhakhoa.Controllers
         {
             if (User.Identity.IsAuthenticated)
             {
-                return RedirectToAction("Create", "Staff");
+                return RedirectToAction("Index", "Home");
             }
             return View();
         }
@@ -60,9 +61,17 @@ namespace Nhakhoa.Controllers
 
                     await HttpContext.SignInAsync("Cookies", principal, authProperties);
 
-                    // Optional: write to Audit log here
+                    // Ghi lịch sử hoạt động đăng nhập
+                    var log = new ActivityLog
+                    {
+                        Username = user.Username,
+                        Action = "Đăng nhập",
+                        Details = $"Nhân sự {user.FullName} ({user.Username}) đã đăng nhập vào hệ thống."
+                    };
+                    _context.ActivityLogs.Add(log);
+                    await _context.SaveChangesAsync();
 
-                    return RedirectToAction("Create", "Staff");
+                    return RedirectToAction("Index", "Home");
                 }
 
                 ModelState.AddModelError(string.Empty, "Tên đăng nhập hoặc mật khẩu không đúng.");

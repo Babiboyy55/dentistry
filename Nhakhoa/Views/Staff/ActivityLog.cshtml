@@ -1,0 +1,62 @@
+@model List<Nhakhoa.Models.ActivityLog>
+@{
+    Layout = "_AdminLayout";
+    ViewData["Title"] = "Lịch sử hoạt động";
+}
+
+<div class="card border-0 shadow-sm rounded-4" style="background-color: #fff; padding: 32px;">
+    <div class="d-flex flex-wrap align-items-start justify-content-between mb-4 gap-3">
+        <div>
+            <h2 class="fw-bold mb-1" style="color: #0b1f35;">Lịch sử hoạt động hệ thống</h2>
+            <p class="text-muted mb-0">Theo dõi toàn bộ các thao tác đăng nhập, tạo, sửa, khóa tài khoản của nhân sự</p>
+        </div>
+        <a class="btn btn-outline-secondary px-4 py-2 fw-semibold" href="/Staff">
+            <i class="bi bi-arrow-left me-1"></i>
+            Quay lại quản lý nhân sự
+        </a>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table align-middle">
+            <thead class="text-muted small">
+                <tr>
+                    <th style="width: 180px;">Thời gian</th>
+                    <th>Tài khoản thực hiện</th>
+                    <th>Hành động</th>
+                    <th>Chi tiết hoạt động</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model.Count == 0)
+                {
+                    <tr>
+                        <td colspan="4" class="text-center text-muted py-4">Chưa có hoạt động nào được ghi nhận</td>
+                    </tr>
+                }
+                else
+                {
+                    foreach (var log in Model)
+                    {
+                        var actionBadge = log.Action switch
+                        {
+                            "Đăng nhập" => "bg-success-subtle text-success",
+                            "Tạo tài khoản" => "bg-primary-subtle text-primary",
+                            "Cập nhật thông tin" => "bg-info-subtle text-info",
+                            "Khóa tài khoản" => "bg-danger-subtle text-danger",
+                            "Mở khóa tài khoản" => "bg-success-subtle text-success",
+                            "Cấp lại mật khẩu" => "bg-warning-subtle text-warning",
+                            _ => "bg-secondary-subtle text-secondary"
+                        };
+
+                        <tr>
+                            <td class="text-muted">@log.Timestamp.ToString("dd/MM/yyyy HH:mm:ss")</td>
+                            <td class="fw-semibold">@log.Username</td>
+                            <td><span class="badge @actionBadge">@log.Action</span></td>
+                            <td class="text-secondary">@log.Details</td>
+                        </tr>
+                    }
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

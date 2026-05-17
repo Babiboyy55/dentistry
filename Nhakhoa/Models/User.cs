@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 
 namespace Nhakhoa.Models
@@ -29,5 +30,9 @@ namespace Nhakhoa.Models
         public string Role { get; set; } // Admin, Doctor, Receptionist
 
         public bool IsActive { get; set; } = true;
+
+        public StaffProfile StaffProfile { get; set; }
+        public StaffSalaryInfo StaffSalaryInfo { get; set; }
+        public ICollection<StaffQualification> StaffQualifications { get; set; } = new List<StaffQualification>();
     }
 }

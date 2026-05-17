@@ -49,6 +49,8 @@
         .topbar-avatar { width: 36px; height: 36px; border-radius: 50%; background: #cfe9ff; display: grid; place-items: center; color: #1b75d0; font-weight: 700; }
 
         .admin-main { padding: 32px; flex: 1; }
+
+        .topbar-datetime { color: #5b6b7a; font-weight: 500; font-size: 0.95rem; }
         
         .bottom-actions { margin-top: auto; padding: 24px; display: flex; flex-direction: column; gap: 8px; border-top: 1px solid #eef0f7; }
         .bottom-actions a, .bottom-actions button { 
@@ -67,12 +69,16 @@
                 St. Mary's Clinic<br/><small class="text-muted" style="font-size: 0.75rem; font-weight: 500;">Admin Portal</small>
             </div>
             
+            @{
+                var controller = ViewContext.RouteData.Values["controller"]?.ToString();
+                var action = ViewContext.RouteData.Values["action"]?.ToString();
+            }
             <nav class="sidebar-menu">
-                <a href="#"><i class="bi bi-grid-1x2"></i> Tổng quan</a>
+                <a asp-controller="Home" asp-action="Index" class="@(controller == "Home" && action == "Index" ? "active" : "")"><i class="bi bi-grid-1x2"></i> Tổng quan</a>
                 <a href="#"><i class="bi bi-calendar-check"></i> Lịch hẹn</a>
                 <a href="#"><i class="bi bi-journal-medical"></i> Hồ sơ bệnh án</a>
                 <a href="#"><i class="bi bi-receipt"></i> Thanh toán</a>
-                <a href="/Staff" class="active"><i class="bi bi-people"></i> Nhân sự</a>
+                <a asp-controller="Staff" asp-action="Index" class="@(controller == "Staff" ? "active" : "")"><i class="bi bi-people"></i> Nhân sự</a>
             </nav>
             
             <div class="bottom-actions">
@@ -89,12 +95,7 @@
             <header class="admin-topbar">
                 <div class="d-flex align-items-center gap-4">
                     <span class="fw-bold" style="color: #1b75d0;">CarePulse Pro</span>
-                    <nav class="d-none d-md-flex gap-3 text-muted fw-medium font-size-sm">
-                        <a href="#" class="text-decoration-none text-muted">Tổng quan</a>
-                        <a href="#" class="text-decoration-none text-muted">Bệnh nhân</a>
-                        <a href="#" class="text-decoration-none text-muted">Lịch hẹn</a>
-                        <a href="#" class="text-decoration-none text-muted">Phân tích</a>
-                    </nav>
+                    <div class="topbar-datetime" id="topbarDateTime"></div>
                 </div>
                 
                 <div class="topbar-right">
@@ -124,6 +125,26 @@
     
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        (function () {
+            var el = document.getElementById("topbarDateTime");
+            if (!el) return;
+
+            function pad2(value) {
+                return value.toString().padStart(2, "0");
+            }
+
+            function updateDateTime() {
+                var now = new Date();
+                var time = pad2(now.getHours()) + ":" + pad2(now.getMinutes());
+                var date = pad2(now.getDate()) + "/" + pad2(now.getMonth() + 1) + "/" + now.getFullYear();
+                el.textContent = time + " " + date;
+            }
+
+            updateDateTime();
+            setInterval(updateDateTime, 1000);
+        })();
+    </script>
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>

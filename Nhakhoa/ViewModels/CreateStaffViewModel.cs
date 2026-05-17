@@ -19,5 +19,15 @@ namespace Nhakhoa.ViewModels
 
         [Required(ErrorMessage = "Vui lòng chọn vai trò")]
         public string Role { get; set; } // Lễ tân, Bác sĩ, Quản trị viên
+
+        [Required(ErrorMessage = "Vui lòng nhập mật khẩu")]
+        [MinLength(6, ErrorMessage = "Mật khẩu tối thiểu 6 ký tự")]
+        [DataType(DataType.Password)]
+        public string Password { get; set; }
+
+        [Required(ErrorMessage = "Vui lòng xác nhận mật khẩu")]
+        [DataType(DataType.Password)]
+        [Compare("Password", ErrorMessage = "Mật khẩu xác nhận không khớp")]
+        public string ConfirmPassword { get; set; }
     }
 }
