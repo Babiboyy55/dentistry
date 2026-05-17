@@ -1,0 +1,29 @@
+## Ignore Visual Studio / VS Code cache and settings
+.vs/
+.vscode/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+## Ignore build outputs (compilation artifacts)
+[Dd]ebug/
+[Debug]/
+[Rr]elease/
+[Release]/
+x64/
+x86/
+build/
+bin/
+obj/
+
+## Ignore published outputs
+publish/
+
+## Ignore log files and temporary files
+*.log
+*.tmp
+*.temp
+
+## Ignore local environment settings (if any)
+appsettings.Development.json
