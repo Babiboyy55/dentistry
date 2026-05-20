@@ -1,4 +1,4 @@
-﻿@{
+@{
     var bodyClass = ViewData["BodyClass"] as string ?? "";
     var useFluid = ViewData["UseFluid"] as bool? ?? false;
 }
@@ -29,6 +29,9 @@
                     <ul class="navbar-nav flex-grow-1">
                         <li class="nav-item">
                             <a class="nav-link text-dark" asp-area="" asp-controller="Auth" asp-action="Login">Đăng nhập</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link text-dark" asp-area="" asp-controller="Auth" asp-action="Register">Đăng ký</a>
                         </li>
                         <li class="nav-item">
                             <a class="nav-link text-dark" asp-area="" asp-controller="Home" asp-action="Privacy">Privacy</a>

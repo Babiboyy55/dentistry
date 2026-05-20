@@ -1,0 +1,705 @@
+@model IEnumerable<Nhakhoa.Models.MedicalService>
+@{
+    ViewData["Title"] = "Danh mục dịch vụ y tế";
+    Layout = "~/Views/Shared/_AdminLayout.cshtml";
+}
+
+<div class="container-fluid px-0">
+    <!-- Header Section -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h2 fw-bold text-dark mb-1">Danh mục dịch vụ y tế</h1>
+            <p class="text-secondary mb-0">Quản lý dịch vụ khám chữa bệnh và đơn giá hệ thống</p>
+        </div>
+        <button class="btn btn-primary px-4 py-2 fw-semibold d-flex align-items-center gap-2 shadow-sm" onclick="openCreatePanel()">
+            <i class="bi bi-plus-lg"></i> Thêm dịch vụ mới
+        </button>
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="row g-3 mb-4">
+        <!-- Card 1 -->
+        <div class="col-12 col-md-4">
+            <div class="card border-0 shadow-sm rounded-4 p-4 bg-white h-100 position-relative overflow-hidden stat-card">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <span class="text-secondary fw-semibold text-uppercase tracking-wider small">Tổng dịch vụ</span>
+                        <h2 class="display-6 fw-bold text-dark mt-2 mb-0">@ViewBag.TotalServices</h2>
+                    </div>
+                    <div class="stat-icon-wrapper bg-primary-subtle text-primary">
+                        <i class="bi bi-folder2-open fs-4"></i>
+                    </div>
+                </div>
+                <div class="mt-3 d-flex align-items-center gap-2">
+                    <span class="badge bg-success-subtle text-success rounded-pill px-2.5 py-1 fw-semibold small">+4%</span>
+                    <span class="text-muted small">So với tháng trước</span>
+                </div>
+            </div>
+        </div>
+        <!-- Card 2 -->
+        <div class="col-12 col-md-4">
+            <div class="card border-0 shadow-sm rounded-4 p-4 bg-white h-100 position-relative overflow-hidden stat-card">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <span class="text-secondary fw-semibold text-uppercase tracking-wider small">Đang hoạt động</span>
+                        <h2 class="display-6 fw-bold text-dark mt-2 mb-0">@ViewBag.ActiveServices</h2>
+                    </div>
+                    <div class="stat-icon-wrapper bg-success-subtle text-success">
+                        <i class="bi bi-check-circle fs-4"></i>
+                    </div>
+                </div>
+                <div class="mt-3 d-flex align-items-center gap-2">
+                    <span class="badge bg-info-subtle text-info rounded-pill px-2.5 py-1 fw-semibold small">98%</span>
+                    <span class="text-muted small">Tỷ lệ khả dụng</span>
+                </div>
+            </div>
+        </div>
+        <!-- Card 3 -->
+        <div class="col-12 col-md-4">
+            <div class="card border-0 shadow-sm rounded-4 p-4 bg-white h-100 position-relative overflow-hidden stat-card">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <span class="text-secondary fw-semibold text-uppercase tracking-wider small">Dịch vụ mới (Tháng)</span>
+                        <h2 class="display-6 fw-bold text-dark mt-2 mb-0">@ViewBag.NewServicesMonth</h2>
+                    </div>
+                    <div class="stat-icon-wrapper bg-warning-subtle text-warning">
+                        <i class="bi bi-tags fs-4"></i>
+                    </div>
+                </div>
+                <div class="mt-3 d-flex align-items-center gap-2">
+                    <span class="badge bg-warning-subtle text-warning rounded-pill px-2.5 py-1 fw-semibold small">Mới</span>
+                    <span class="text-muted small">Đăng ký trong tháng 5</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filter & Search Section -->
+    <div class="card border-0 shadow-sm rounded-4 p-3 bg-white mb-4">
+        <form method="get" asp-action="Index" class="row g-3 align-items-center">
+            <!-- Search -->
+            <div class="col-12 col-md-4">
+                <div class="input-group search-input-group">
+                    <span class="input-group-text bg-light border-0 text-muted"><i class="bi bi-search"></i></span>
+                    <input type="text" name="search" class="form-control bg-light border-0" placeholder="Tìm kiếm dịch vụ, chuyên khoa..." value="@ViewBag.CurrentSearch" />
+                </div>
+            </div>
+            <!-- Status filter -->
+            <div class="col-12 col-sm-6 col-md-3">
+                <div class="d-flex align-items-center gap-2">
+                    <label class="text-secondary small fw-semibold text-nowrap">Lọc theo:</label>
+                    <select name="status" class="form-select border-light bg-light-subtle" onchange="this.form.submit()">
+                        <option value="">Tất cả trạng thái</option>
+                        <option value="active" selected="@(ViewBag.CurrentStatus == "active")">Kích hoạt</option>
+                        <option value="hidden" selected="@(ViewBag.CurrentStatus == "hidden")">Ẩn</option>
+                    </select>
+                </div>
+            </div>
+            <!-- Department filter -->
+            <div class="col-12 col-sm-6 col-md-3">
+                <select name="department" class="form-select border-light bg-light-subtle" onchange="this.form.submit()">
+                    <option value="">Tất cả chuyên khoa</option>
+                    @foreach (var dept in ViewBag.Departments)
+                    {
+                        <option value="@dept" selected="@(ViewBag.CurrentDepartment == dept)">@dept</option>
+                    }
+                </select>
+            </div>
+            <!-- Buttons -->
+            <div class="col-12 col-md-2 d-flex gap-2 justify-content-md-end">
+                <button type="button" class="btn btn-outline-secondary btn-sm px-3 d-flex align-items-center gap-1.5" onclick="exportExcel()">
+                    <i class="bi bi-download"></i> Xuất Excel
+                </button>
+                <button type="submit" class="btn btn-outline-primary btn-sm px-3 d-flex align-items-center gap-1.5">
+                    <i class="bi bi-funnel"></i> Lọc
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Warning Info Banner -->
+    <div class="alert alert-info border-0 rounded-4 p-3 mb-4 d-flex align-items-start gap-3 alert-info-custom">
+        <div class="alert-icon bg-info text-white rounded-circle d-grid place-items-center flex-shrink-0">
+            <i class="bi bi-info-lg fs-5"></i>
+        </div>
+        <div>
+            <span class="fw-semibold text-info-emphasis">Thông tin quan trọng:</span>
+            <p class="mb-0 text-secondary-emphasis small mt-0.5">
+                Giá dịch vụ chỉ áp dụng cho các hóa đơn mới. Hóa đơn đã phát hành sẽ giữ nguyên mức giá tại thời điểm tạo. Vui lòng kiểm tra kỹ trước khi cập nhật bảng giá.
+            </p>
+        </div>
+    </div>
+
+    <!-- Data Table -->
+    <div class="card border-0 shadow-sm rounded-4 overflow-hidden bg-white mb-4">
+        <div class="table-responsive">
+            <table class="table align-middle mb-0 table-hover table-custom">
+                <thead class="table-light text-secondary small fw-bold text-uppercase tracking-wider">
+                    <tr>
+                        <th scope="col" class="ps-4">Tên dịch vụ</th>
+                        <th scope="col">Đơn giá</th>
+                        <th scope="col">Chuyên khoa</th>
+                        <th scope="col">Trạng thái</th>
+                        <th scope="col">Cập nhật</th>
+                        <th scope="col" class="pe-4 text-end">Hành động</th>
+                    </tr>
+                </thead>
+                <tbody class="border-top-0">
+                    @if (!Model.Any())
+                    {
+                        <tr>
+                            <td colspan="6" class="text-center py-5 text-secondary">
+                                <i class="bi bi-inbox fs-1 d-block mb-2 text-muted"></i>
+                                Không tìm thấy dịch vụ nào phù hợp.
+                            </td>
+                        </tr>
+                    }
+                    @foreach (var item in Model)
+                    {
+                        <tr>
+                            <td class="ps-4 py-3.5">
+                                <div class="fw-semibold text-dark fs-6">@item.Name</div>
+                                <div class="text-secondary small mt-0.5 text-truncate-custom">@item.Description</div>
+                            </td>
+                            <td>
+                                <span class="fw-bold text-primary fs-6">@item.Price.ToString("N0")đ</span>
+                            </td>
+                            <td>
+                                <span class="badge bg-light text-dark border px-2.5 py-1.5 fw-medium text-capitalize rounded">@item.Department</span>
+                            </td>
+                            <td>
+                                @if (item.IsActive)
+                                {
+                                    <span class="badge bg-success-subtle text-success px-2.5 py-1.5 rounded-pill fw-semibold d-inline-flex align-items-center gap-1">
+                                        <span class="status-indicator bg-success"></span> Kích hoạt
+                                    </span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-secondary-subtle text-secondary px-2.5 py-1.5 rounded-pill fw-semibold d-inline-flex align-items-center gap-1">
+                                        <span class="status-indicator bg-secondary"></span> Ẩn
+                                    </span>
+                                }
+                            </td>
+                            <td class="text-secondary small">
+                                @item.UpdatedAt.ToString("dd/MM/yyyy")
+                            </td>
+                            <td class="pe-4 text-end">
+                                <div class="d-inline-flex gap-1.5">
+                                    <button class="btn btn-icon btn-light rounded-circle" onclick="viewDetails(@item.Id)" title="Xem chi tiết">
+                                        <i class="bi bi-eye text-primary"></i>
+                                    </button>
+                                    <button class="btn btn-icon btn-light rounded-circle" onclick="openEditPanel(@item.Id)" title="Chỉnh sửa">
+                                        <i class="bi bi-pencil text-warning"></i>
+                                    </button>
+                                    <button class="btn btn-icon btn-light rounded-circle" onclick="confirmDelete(@item.Id)" title="Xóa/Ẩn">
+                                        <i class="bi bi-eye-slash text-danger"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Slide-over Offcanvas (Edit/Create Panel) -->
+<div class="offcanvas offcanvas-end offcanvas-custom" tabindex="-1" id="serviceEditOffcanvas" aria-labelledby="serviceEditOffcanvasLabel">
+    <div class="offcanvas-header border-bottom py-3.5 px-4 bg-light-subtle d-flex align-items-center justify-content-between">
+        <div>
+            <h5 class="offcanvas-title fw-bold text-dark" id="offcanvasTitle">Chỉnh sửa dịch vụ y tế</h5>
+            <p class="text-secondary small mb-0 mt-0.5">Cập nhật thông tin và đơn giá dịch vụ</p>
+        </div>
+        <button type="button" class="btn-close text-secondary" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+    </div>
+    
+    <div class="offcanvas-body p-4">
+        <!-- Live Compare Alert Box (SO SÁNH THAY ĐỔI) -->
+        <div id="compareBox" class="card border-info-subtle bg-info-subtle bg-opacity-10 rounded-4 p-3 mb-4 d-none">
+            <h6 class="text-info-emphasis fw-bold mb-2.5 small text-uppercase tracking-wider">So sánh thay đổi</h6>
+            <div class="d-flex flex-column gap-2 small">
+                <!-- Price comparison -->
+                <div id="comparePriceRow" class="d-flex justify-content-between align-items-center">
+                    <span class="text-secondary">Đơn giá</span>
+                    <div class="d-flex align-items-center gap-2">
+                        <span id="origPrice" class="text-muted text-decoration-line-through">300.000đ</span>
+                        <i class="bi bi-arrow-right text-secondary"></i>
+                        <span id="newPrice" class="badge bg-primary text-white px-2 py-1 fw-bold fs-6">450.000đ</span>
+                    </div>
+                </div>
+                <!-- Name comparison -->
+                <div id="compareNameRow" class="d-flex justify-content-between align-items-center mt-1">
+                    <span class="text-secondary">Tên dịch vụ</span>
+                    <div class="d-flex align-items-center gap-2">
+                        <span id="origName" class="text-muted text-truncate-compare">Khám Nội...</span>
+                        <i class="bi bi-arrow-right text-secondary"></i>
+                        <span id="newName" class="badge bg-primary text-white px-2 py-1 fw-bold fs-6 text-truncate-compare">Khám Nội Theo Yêu Cầu</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Warning Alert Inside Offcanvas -->
+        <div class="alert alert-warning border-0 rounded-4 p-3 mb-4 d-flex align-items-start gap-2.5">
+            <i class="bi bi-info-circle-fill text-warning fs-5 flex-shrink-0"></i>
+            <div class="small text-warning-emphasis">
+                Đơn giá mới chỉ áp dụng cho <strong>hóa đơn mới</strong> được tạo sau khi lưu thay đổi. Các hóa đơn cũ và lịch hẹn đã chốt sẽ giữ nguyên mức giá cũ.
+            </div>
+        </div>
+
+        <!-- Form -->
+        <form id="serviceForm" method="post" asp-action="Save">
+            @Html.AntiForgeryToken()
+            <input type="hidden" id="serviceId" name="id" value="0" />
+
+            <!-- Input Name -->
+            <div class="mb-3.5">
+                <label for="inputName" class="form-label small fw-bold text-dark">Tên dịch vụ</label>
+                <input type="text" class="form-control form-control-lg border-light-subtle fs-6 rounded-3" id="inputName" name="name" required placeholder="Ví dụ: Khám nội tổng quát" />
+            </div>
+
+            <!-- Input Description -->
+            <div class="mb-3.5">
+                <label for="inputDescription" class="form-label small fw-bold text-dark">Mô tả dịch vụ</label>
+                <textarea class="form-control border-light-subtle fs-6 rounded-3" id="inputDescription" name="description" rows="4" placeholder="Nhập mô tả chi tiết về dịch vụ..." required></textarea>
+            </div>
+
+            <!-- Input Price & Department -->
+            <div class="row g-3 mb-3.5">
+                <div class="col-6">
+                    <label for="inputPrice" class="form-label small fw-bold text-dark">Đơn giá (VNĐ)</label>
+                    <div class="input-group">
+                        <input type="number" class="form-control form-control-lg border-light-subtle fs-6 rounded-start-3" id="inputPrice" name="price" required min="0" step="1000" placeholder="500000" />
+                        <span class="input-group-text bg-light border-light-subtle rounded-end-3 fw-bold text-secondary">đ</span>
+                    </div>
+                </div>
+                <div class="col-6">
+                    <label for="inputDepartment" class="form-label small fw-bold text-dark">Chuyên khoa</label>
+                    <select class="form-select form-select-lg border-light-subtle fs-6 rounded-3" id="inputDepartment" name="department" required>
+                        <option value="Nội tổng quát">Nội tổng quát</option>
+                        <option value="Xét nghiệm">Xét nghiệm</option>
+                        <option value="Chẩn đoán hình ảnh">Chẩn đoán hình ảnh</option>
+                        <option value="Nha khoa tổng quát">Nha khoa tổng quát</option>
+                        <option value="Nha khoa thẩm mỹ">Nha khoa thẩm mỹ</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Active Toggle -->
+            <div class="card border-light-subtle rounded-3 p-3 mb-4.5 bg-light-subtle bg-opacity-25">
+                <div class="form-check form-switch d-flex justify-content-between align-items-center ps-0 mb-0">
+                    <div>
+                        <label class="form-check-label fw-bold text-dark small d-block" for="inputIsActive">Trạng thái hoạt động</label>
+                        <span class="text-secondary small" style="font-size: 0.75rem;">Dịch vụ sẽ hiển thị trong danh sách đặt lịch</span>
+                    </div>
+                    <input class="form-check-input form-switch-lg cursor-pointer" type="checkbox" id="inputIsActive" name="isActive" value="true" checked />
+                </div>
+            </div>
+
+            <!-- Footer Buttons -->
+            <div class="row g-2.5 mt-2">
+                <div class="col-5">
+                    <button type="button" class="btn btn-outline-secondary w-100 py-2.5 fw-semibold rounded-3" data-bs-dismiss="offcanvas">Hủy thay đổi</button>
+                </div>
+                <div class="col-7">
+                    <button type="submit" class="btn btn-primary w-100 py-2.5 fw-semibold rounded-3 d-flex align-items-center justify-content-center gap-1.5 shadow-sm">
+                        <i class="bi bi-save"></i> Lưu và áp dụng
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Modal: Constraint Error Modal (Không thể xóa dịch vụ) -->
+<div class="modal fade" id="constraintModal" tabindex="-1" aria-labelledby="constraintModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-custom">
+        <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+            <div class="modal-body p-4.5">
+                <!-- Header Icon & Title -->
+                <div class="d-flex align-items-start gap-3.5">
+                    <div class="modal-warning-icon bg-danger-subtle text-danger rounded-circle d-grid place-items-center flex-shrink-0">
+                        <i class="bi bi-exclamation-triangle fs-4"></i>
+                    </div>
+                    <div>
+                        <h4 class="fw-bold text-dark mb-1">Không thể xóa dịch vụ</h4>
+                        <p class="text-secondary mb-0 mt-0.5">Dịch vụ <strong class="text-dark" id="constraintServiceName">"Khám nội tổng quát"</strong> không thể xóa vì đang có các dữ liệu liên quan trong hệ thống.</p>
+                    </div>
+                </div>
+
+                <!-- Constraint Details Cards -->
+                <div class="mt-4 border border-warning-subtle bg-warning-subtle bg-opacity-10 rounded-4 p-3">
+                    <span class="text-warning-emphasis fw-bold text-uppercase small tracking-wider">Ràng buộc dữ liệu</span>
+                    <div class="row g-3 mt-1.5">
+                        <div class="col-6">
+                            <div class="bg-white rounded-3 p-3 border border-light-subtle shadow-xs text-center">
+                                <span class="text-secondary small d-block">Cuộc hẹn sắp tới</span>
+                                <span class="h3 fw-bold text-dark d-block mt-1" id="countAppointments">05</span>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="bg-white rounded-3 p-3 border border-light-subtle shadow-xs text-center">
+                                <span class="text-secondary small d-block">Hóa đơn chưa thanh toán</span>
+                                <span class="h3 fw-bold text-dark d-block mt-1" id="countBills">02</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Suggestion Box -->
+                <div class="mt-4 p-3 bg-light rounded-4 small text-secondary-emphasis d-flex gap-2">
+                    <i class="bi bi-lightbulb text-warning fs-5 flex-shrink-0"></i>
+                    <div>
+                        <strong>Gợi ý:</strong> Thay vì xóa vĩnh viễn, bạn có thể chuyển dịch vụ sang trạng thái <strong>"Ẩn"</strong>. Việc này sẽ ngăn chặn các đăng ký mới nhưng vẫn giữ lại dữ liệu lịch sử cho các báo cáo tài chính và hồ sơ bệnh án.
+                    </div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="mt-4.5 d-flex gap-2.5 justify-content-end">
+                    <button type="button" class="btn btn-outline-secondary px-4 py-2.5 fw-semibold rounded-3" data-bs-dismiss="modal">Đóng</button>
+                    <form id="hideServiceForm" method="post" asp-action="HideService" class="m-0">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" id="hideServiceId" name="id" value="0" />
+                        <button type="submit" class="btn btn-primary px-4 py-2.5 fw-semibold rounded-3 d-flex align-items-center gap-1.5 shadow-sm">
+                            Chuyển sang trạng thái Ẩn
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Standard Confirm Delete Modal -->
+<div class="modal fade" id="deleteConfirmModal" tabindex="-1" aria-labelledby="deleteConfirmModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-custom">
+        <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+            <div class="modal-body p-4.5">
+                <div class="d-flex align-items-start gap-3.5">
+                    <div class="modal-warning-icon bg-warning-subtle text-warning rounded-circle d-grid place-items-center flex-shrink-0">
+                        <i class="bi bi-trash fs-4"></i>
+                    </div>
+                    <div>
+                        <h4 class="fw-bold text-dark mb-1">Xác nhận xóa dịch vụ</h4>
+                        <p class="text-secondary mb-0 mt-0.5">Bạn có chắc chắn muốn xóa dịch vụ <strong class="text-dark" id="deleteServiceName">"Dịch vụ test"</strong>?</p>
+                    </div>
+                </div>
+                <p class="text-danger small mt-3 mb-0">Hành động này không thể hoàn tác nếu không có liên kết dữ liệu.</p>
+                <div class="mt-4.5 d-flex gap-2.5 justify-content-end">
+                    <button type="button" class="btn btn-outline-secondary px-4 py-2.5 fw-semibold rounded-3" data-bs-dismiss="modal">Hủy</button>
+                    <form id="deleteServiceForm" method="post" asp-action="Delete" class="m-0">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" id="deleteServiceId" name="id" value="0" />
+                        <button type="submit" class="btn btn-danger px-4 py-2.5 fw-semibold rounded-3 shadow-sm">
+                            Đồng ý xóa
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: View Details Modal -->
+<div class="modal fade" id="viewDetailsModal" tabindex="-1" aria-labelledby="viewDetailsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <div class="modal-header border-bottom py-3.5 px-4">
+                <h5 class="modal-title fw-bold text-dark" id="viewDetailsModalLabel">Chi tiết dịch vụ y tế</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="mb-3.5">
+                    <span class="text-secondary small fw-bold text-uppercase tracking-wider">Tên dịch vụ</span>
+                    <h5 class="text-dark fw-bold mt-1" id="detailName">-</h5>
+                </div>
+                <div class="mb-3.5">
+                    <span class="text-secondary small fw-bold text-uppercase tracking-wider">Mô tả chi tiết</span>
+                    <p class="text-secondary mt-1 mb-0 fs-6" id="detailDescription">-</p>
+                </div>
+                <div class="row g-3 mb-3.5">
+                    <div class="col-6">
+                        <span class="text-secondary small fw-bold text-uppercase tracking-wider">Đơn giá</span>
+                        <h4 class="text-primary fw-bold mt-1" id="detailPrice">-</h4>
+                    </div>
+                    <div class="col-6">
+                        <span class="text-secondary small fw-bold text-uppercase tracking-wider">Chuyên khoa</span>
+                        <div><span class="badge bg-light text-dark border px-2.5 py-1.5 fw-semibold mt-1" id="detailDepartment">-</span></div>
+                    </div>
+                </div>
+                <div class="row g-3">
+                    <div class="col-6">
+                        <span class="text-secondary small fw-bold text-uppercase tracking-wider">Trạng thái</span>
+                        <div id="detailStatus" class="mt-1">-</div>
+                    </div>
+                    <div class="col-6">
+                        <span class="text-secondary small fw-bold text-uppercase tracking-wider">Cập nhật lần cuối</span>
+                        <div class="text-dark mt-1.5 small" id="detailUpdatedAt">-</div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer border-top py-3 px-4">
+                <button type="button" class="btn btn-secondary px-4 py-2 fw-semibold rounded-3" data-bs-dismiss="modal">Đóng</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    /* Styling variables and custom overrides */
+    .stat-card {
+        transition: transform 0.25s, box-shadow 0.25s;
+    }
+    .stat-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 10px 20px rgba(0, 0, 0, 0.04) !important;
+    }
+    
+    .stat-icon-wrapper {
+        width: 48px;
+        height: 48px;
+        border-radius: 12px;
+        display: grid;
+        place-items: center;
+    }
+    
+    .search-input-group {
+        border-radius: 99px;
+        overflow: hidden;
+    }
+    .search-input-group .form-control {
+        border: none;
+        padding-left: 0;
+    }
+    .search-input-group .form-control:focus {
+        box-shadow: none;
+    }
+    
+    .alert-info-custom {
+        background-color: #f0f7ff !important;
+    }
+    .alert-icon {
+        width: 32px;
+        height: 32px;
+    }
+    
+    .table-custom th {
+        border-bottom: 1px solid #eef0f7;
+        font-weight: 600;
+        font-size: 0.8rem;
+    }
+    .table-custom tr {
+        transition: background-color 0.15s;
+    }
+    .table-custom tr:hover {
+        background-color: #fcfdfe !important;
+    }
+    .text-truncate-custom {
+        max-width: 320px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    
+    .status-indicator {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        display: inline-block;
+    }
+    
+    .btn-icon {
+        width: 34px;
+        height: 34px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0;
+    }
+    .btn-icon:hover {
+        background-color: #eef2f6 !important;
+    }
+    
+    /* Offcanvas Slide-over Width Customization */
+    .offcanvas-custom {
+        width: 520px !important;
+    }
+    .offcanvas-title {
+        font-size: 1.15rem;
+    }
+    .form-switch-lg {
+        width: 2.8em !important;
+        height: 1.5em !important;
+    }
+    .cursor-pointer {
+        cursor: pointer;
+    }
+    
+    .text-truncate-compare {
+        max-width: 140px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        display: inline-block;
+    }
+    
+    /* Modals Custom styling */
+    .modal-custom {
+        max-width: 480px;
+    }
+    .modal-warning-icon {
+        width: 50px;
+        height: 50px;
+    }
+</style>
+
+@section Scripts {
+    <script>
+        var originalPrice = 0;
+        var originalName = "";
+        var offcanvasInstance;
+        var constraintModalInstance;
+        var deleteConfirmModalInstance;
+        var viewDetailsModalInstance;
+
+        $(document).ready(function () {
+            offcanvasInstance = new bootstrap.Offcanvas(document.getElementById('serviceEditOffcanvas'));
+            constraintModalInstance = new bootstrap.Modal(document.getElementById('constraintModal'));
+            deleteConfirmModalInstance = new bootstrap.Modal(document.getElementById('deleteConfirmModal'));
+            viewDetailsModalInstance = new bootstrap.Modal(document.getElementById('viewDetailsModal'));
+
+            // Live Change Comparison Logic
+            $('#inputPrice, #inputName').on('input', function() {
+                updateCompareBox();
+            });
+        });
+
+        function formatCurrency(number) {
+            return new Intl.NumberFormat('vi-VN').format(number) + 'đ';
+        }
+
+        function updateCompareBox() {
+            var currentId = parseInt($('#serviceId').val());
+            if (currentId === 0) {
+                // Creating new - no compare box needed
+                $('#compareBox').addClass('d-none');
+                return;
+            }
+
+            var currentPrice = parseFloat($('#inputPrice').val()) || 0;
+            var currentName = $('#inputName').val().trim();
+
+            var priceChanged = currentPrice !== originalPrice;
+            var nameChanged = currentName !== originalName && currentName !== "";
+
+            if (priceChanged || nameChanged) {
+                $('#compareBox').removeClass('d-none');
+                
+                // Price row toggle
+                if (priceChanged) {
+                    $('#comparePriceRow').removeClass('d-none');
+                    $('#origPrice').text(formatCurrency(originalPrice));
+                    $('#newPrice').text(formatCurrency(currentPrice));
+                } else {
+                    $('#comparePriceRow').addClass('d-none');
+                }
+
+                // Name row toggle
+                if (nameChanged) {
+                    $('#compareNameRow').removeClass('d-none');
+                    $('#origName').text(originalName).attr('title', originalName);
+                    $('#newName').text(currentName).attr('title', currentName);
+                } else {
+                    $('#compareNameRow').addClass('d-none');
+                }
+            } else {
+                $('#compareBox').addClass('d-none');
+            }
+        }
+
+        function openCreatePanel() {
+            $('#offcanvasTitle').text('Thêm dịch vụ mới');
+            $('#serviceId').val(0);
+            $('#inputName').val('');
+            $('#inputDescription').val('');
+            $('#inputPrice').val('');
+            $('#inputDepartment').val('Nội tổng quát');
+            $('#inputIsActive').prop('checked', true);
+            
+            originalPrice = 0;
+            originalName = "";
+            $('#compareBox').addClass('d-none');
+            
+            offcanvasInstance.show();
+        }
+
+        function openEditPanel(id) {
+            $('#offcanvasTitle').text('Chỉnh sửa dịch vụ y tế');
+            
+            $.get('/MedicalService/DetailsJson/' + id, function (data) {
+                $('#serviceId').val(data.id);
+                $('#inputName').val(data.name);
+                $('#inputDescription').val(data.description);
+                $('#inputPrice').val(data.price);
+                $('#inputDepartment').val(data.department);
+                $('#inputIsActive').prop('checked', data.isActive);
+
+                originalPrice = data.price;
+                originalName = data.name;
+                
+                $('#compareBox').addClass('d-none'); // Hide initially until user types
+                offcanvasInstance.show();
+            }).fail(function() {
+                alert('Có lỗi xảy ra khi lấy thông tin dịch vụ.');
+            });
+        }
+
+        function viewDetails(id) {
+            $.get('/MedicalService/DetailsJson/' + id, function (data) {
+                $('#detailName').text(data.name);
+                $('#detailDescription').text(data.description || 'Không có mô tả.');
+                $('#detailPrice').text(formatCurrency(data.price));
+                $('#detailDepartment').text(data.department);
+                
+                var statusHtml = data.isActive 
+                    ? '<span class="badge bg-success-subtle text-success px-2.5 py-1.5 rounded-pill fw-semibold d-inline-flex align-items-center gap-1"><span class="status-indicator bg-success"></span> Kích hoạt</span>'
+                    : '<span class="badge bg-secondary-subtle text-secondary px-2.5 py-1.5 rounded-pill fw-semibold d-inline-flex align-items-center gap-1"><span class="status-indicator bg-secondary"></span> Ẩn</span>';
+                
+                $('#detailStatus').html(statusHtml);
+                $('#detailUpdatedAt').text(data.updatedAt);
+                
+                viewDetailsModalInstance.show();
+            }).fail(function() {
+                alert('Có lỗi xảy ra khi lấy thông tin dịch vụ.');
+            });
+        }
+
+        function confirmDelete(id) {
+            $.get('/MedicalService/GetDeleteConstraints/' + id, function (data) {
+                if (data.hasConstraints) {
+                    // Show block constraint modal
+                    $('#constraintServiceName').text('"' + data.serviceName + '"');
+                    $('#countAppointments').text(String(data.upcomingAppointments).padStart(2, '0'));
+                    $('#countBills').text(String(data.unpaidBills).padStart(2, '0'));
+                    $('#hideServiceId').val(id);
+                    
+                    constraintModalInstance.show();
+                } else {
+                    // Show standard delete confirm modal
+                    $('#deleteServiceName').text('"' + data.serviceName + '"');
+                    $('#deleteServiceId').val(id);
+                    
+                    deleteConfirmModalInstance.show();
+                }
+            }).fail(function() {
+                alert('Có lỗi xảy ra khi kiểm tra ràng buộc.');
+            });
+        }
+
+        function exportExcel() {
+            alert('Chức năng xuất excel đang được chuẩn bị.');
+        }
+    </script>
+}

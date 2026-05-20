@@ -31,6 +31,17 @@ namespace Nhakhoa.Models
 
         public bool IsActive { get; set; } = true;
 
+        public bool IsTemporaryPassword { get; set; } = false;
+
+        [MaxLength(6)]
+        public string? ResetOtpCode { get; set; }
+
+        public DateTime? ResetOtpExpiry { get; set; }
+
+        [Required]
+        [MaxLength(100)]
+        public string SecurityStamp { get; set; } = Guid.NewGuid().ToString();
+
         public StaffProfile StaffProfile { get; set; }
         public StaffSalaryInfo StaffSalaryInfo { get; set; }
         public ICollection<StaffQualification> StaffQualifications { get; set; } = new List<StaffQualification>();

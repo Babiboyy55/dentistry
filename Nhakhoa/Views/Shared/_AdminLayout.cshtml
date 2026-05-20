@@ -57,7 +57,35 @@
              display: flex; align-items: center; gap: 12px; text-decoration: none; color: #5b6b7a; 
              background: none; border: none; width: 100%; text-align: left; padding: 8px; border-radius: 8px;
         }
-        .bottom-actions a:hover, .bottom-actions button:hover { background: #ffe9e9; color: #d01b1b; }
+        .bottom-actions a:hover { background: #f4f9ff; color: #1b75d0; }
+        .bottom-actions button:hover { background: #ffe9e9; color: #d01b1b; }
+
+        /* Avatar dropdown */
+        .avatar-wrapper { position: relative; }
+        .avatar-wrapper:hover .avatar-dropdown { display: block; }
+        .avatar-dropdown {
+            display: none; position: absolute; right: 0; top: calc(100% + 10px);
+            background: #fff; border: 1px solid #eef0f7; border-radius: 14px;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.12); min-width: 200px; z-index: 999; overflow: hidden;
+        }
+        .avatar-dropdown-header {
+            padding: 14px 16px; border-bottom: 1px solid #eef0f7;
+            font-size: 0.85rem; color: #5b6b7a;
+        }
+        .avatar-dropdown-header strong { display: block; color: #1a2332; font-size: 0.95rem; }
+        .avatar-dropdown a {
+            display: flex; align-items: center; gap: 10px; padding: 11px 16px;
+            text-decoration: none; color: #3a4a5c; font-size: 0.9rem; font-weight: 500; transition: background 0.15s;
+        }
+        .avatar-dropdown a:hover { background: #f4f9ff; color: #1b75d0; }
+        .avatar-dropdown .dropdown-danger:hover { background: #fff4f4; color: #d01b1b; }
+        .avatar-dropdown form { margin: 0; }
+        .avatar-dropdown form button {
+            display: flex; align-items: center; gap: 10px; padding: 11px 16px; width: 100%;
+            text-decoration: none; color: #3a4a5c; font-size: 0.9rem; font-weight: 500;
+            background: none; border: none; cursor: pointer; transition: background 0.15s;
+        }
+        .avatar-dropdown form button:hover { background: #fff4f4; color: #d01b1b; }
     </style>
 </head>
 <body>
@@ -77,12 +105,22 @@
                 <a asp-controller="Home" asp-action="Index" class="@(controller == "Home" && action == "Index" ? "active" : "")"><i class="bi bi-grid-1x2"></i> Tổng quan</a>
                 <a href="#"><i class="bi bi-calendar-check"></i> Lịch hẹn</a>
                 <a href="#"><i class="bi bi-journal-medical"></i> Hồ sơ bệnh án</a>
+                <a asp-controller="MedicalService" asp-action="Index" class="@(controller == "MedicalService" ? "active" : "")"><i class="bi bi-activity"></i> Dịch vụ y tế</a>
                 <a href="#"><i class="bi bi-receipt"></i> Thanh toán</a>
                 <a asp-controller="Staff" asp-action="Index" class="@(controller == "Staff" ? "active" : "")"><i class="bi bi-people"></i> Nhân sự</a>
+                @if (User.IsInRole("Admin"))
+                {
+                    <a asp-controller="RolePermission" asp-action="Index" class="@(controller == "RolePermission" ? "active" : "")">
+                        <i class="bi bi-shield-lock"></i> Phân quyền
+                    </a>
+                }
             </nav>
             
             <div class="bottom-actions">
                 <a href="#"><i class="bi bi-question-circle"></i> Trung tâm hỗ trợ</a>
+                <a asp-controller="Auth" asp-action="ChangePassword" class="@(controller == "Auth" && action == "ChangePassword" ? "active" : "")">
+                    <i class="bi bi-key"></i> Đổi mật khẩu
+                </a>
                 <form asp-controller="Auth" asp-action="Logout" method="post" class="m-0 p-0">
                     <button type="submit"><i class="bi bi-box-arrow-right"></i> Đăng xuất</button>
                 </form>
@@ -104,7 +142,23 @@
                         <input type="text" placeholder="Tìm kiếm nhanh..." />
                     </div>
                     <i class="bi bi-bell text-muted fs-5"></i>
-                    <div class="topbar-avatar">A</div>
+                    <div class="avatar-wrapper">
+                        <div class="topbar-avatar" style="cursor:pointer;" title="Tài khoản">@(User.Identity?.Name?.Substring(0,1).ToUpper() ?? "A")</div>
+                        <div class="avatar-dropdown">
+                            <div class="avatar-dropdown-header">
+                                <strong>@User.Identity?.Name</strong>
+                                @User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value
+                            </div>
+                            <a asp-controller="Auth" asp-action="ChangePassword">
+                                <i class="bi bi-key"></i> Đổi mật khẩu
+                            </a>
+                            <form asp-controller="Auth" asp-action="Logout" method="post">
+                                <button type="submit" class="dropdown-danger">
+                                    <i class="bi bi-box-arrow-right"></i> Đăng xuất
+                                </button>
+                            </form>
+                        </div>
+                    </div>
                 </div>
             </header>
 

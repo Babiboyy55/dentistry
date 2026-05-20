@@ -20,10 +20,7 @@ namespace Nhakhoa.Controllers
         [HttpGet]
         public IActionResult Login()
         {
-            if (User.Identity.IsAuthenticated)
-            {
-                return RedirectToAction("Index", "Home");
-            }
+            // Always show login view regardless of authentication status
             return View();
         }
 
@@ -47,7 +44,8 @@ namespace Nhakhoa.Controllers
                     {
                         new Claim(ClaimTypes.Name, user.Username),
                         new Claim(ClaimTypes.Role, user.Role),
-                        new Claim("UserId", user.Id.ToString())
+                        new Claim("UserId", user.Id.ToString()),
+                        new Claim("SecurityStamp", user.SecurityStamp)
                     };
 
                     var identity = new ClaimsIdentity(claims, "Cookies");
@@ -75,6 +73,303 @@ namespace Nhakhoa.Controllers
                 }
 
                 ModelState.AddModelError(string.Empty, "Tên đăng nhập hoặc mật khẩu không đúng.");
+            }
+
+            return View(model);
+        }
+
+        [HttpGet]
+        public IActionResult Register()
+        {
+            if (User.Identity.IsAuthenticated)
+            {
+                return RedirectToAction("Index", "Home");
+            }
+            return View();
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> Register(RegisterViewModel model)
+        {
+            if (ModelState.IsValid)
+            {
+                var isExist = await _context.Users.AnyAsync(u => u.Username == model.Username);
+                if (isExist)
+                {
+                    ModelState.AddModelError("Username", "Tên đăng nhập đã tồn tại.");
+                    return View(model);
+                }
+
+                var user = new User
+                {
+                    Username = model.Username,
+                    FullName = model.FullName,
+                    Email = model.Email,
+                    PhoneNumber = model.PhoneNumber,
+                    PasswordHash = model.Password,
+                    Role = model.Role,
+                    IsActive = true
+                };
+
+                _context.Users.Add(user);
+                await _context.SaveChangesAsync();
+
+                var log = new ActivityLog
+                {
+                    Username = user.Username,
+                    Action = "Đăng ký tài khoản",
+                    Details = $"Người dùng {user.FullName} ({user.Username}) đã tự đăng ký tài khoản thành công với vai trò {user.Role}."
+                };
+                _context.ActivityLogs.Add(log);
+                await _context.SaveChangesAsync();
+
+                var claims = new List<Claim>
+                {
+                    new Claim(ClaimTypes.Name, user.Username),
+                    new Claim(ClaimTypes.Role, user.Role),
+                    new Claim("UserId", user.Id.ToString()),
+                    new Claim("SecurityStamp", user.SecurityStamp)
+                };
+
+                var identity = new ClaimsIdentity(claims, "Cookies");
+                var principal = new ClaimsPrincipal(identity);
+
+                var authProperties = new AuthenticationProperties
+                {
+                    IsPersistent = false,
+                    ExpiresUtc = DateTime.UtcNow.AddHours(8)
+                };
+
+                await HttpContext.SignInAsync("Cookies", principal, authProperties);
+
+                return RedirectToAction("Index", "Home");
+            }
+
+            return View(model);
+        }
+
+        [HttpGet]
+        public IActionResult ChangePassword()
+        {
+            if (!User.Identity.IsAuthenticated)
+            {
+                return RedirectToAction("Login", "Auth");
+            }
+            return View();
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> ChangePassword(ChangePasswordViewModel model)
+        {
+            if (!User.Identity.IsAuthenticated)
+            {
+                return RedirectToAction("Login", "Auth");
+            }
+
+            if (ModelState.IsValid)
+            {
+                var userIdClaim = User.FindFirst("UserId")?.Value;
+                if (int.TryParse(userIdClaim, out int userId))
+                {
+                    var user = await _context.Users.FindAsync(userId);
+                    if (user != null)
+                    {
+                        if (user.PasswordHash != model.CurrentPassword)
+                        {
+                            ModelState.AddModelError("CurrentPassword", "Mật khẩu hiện tại không đúng.");
+                            return View(model);
+                        }
+
+                        if (model.NewPassword == model.CurrentPassword)
+                        {
+                            ModelState.AddModelError("NewPassword", "Mật khẩu mới không được trùng mật khẩu cũ.");
+                            return View(model);
+                        }
+
+                        user.PasswordHash = model.NewPassword;
+                        user.IsTemporaryPassword = false;
+                        user.SecurityStamp = Guid.NewGuid().ToString();
+
+                        _context.Users.Update(user);
+                        await _context.SaveChangesAsync();
+
+                        var log = new ActivityLog
+                        {
+                            Username = user.Username,
+                            Action = "Đổi mật khẩu",
+                            Details = $"Người dùng {user.FullName} ({user.Username}) đã đổi mật khẩu thành công."
+                        };
+                        _context.ActivityLogs.Add(log);
+                        await _context.SaveChangesAsync();
+
+                        var claims = new List<Claim>
+                        {
+                            new Claim(ClaimTypes.Name, user.Username),
+                            new Claim(ClaimTypes.Role, user.Role),
+                            new Claim("UserId", user.Id.ToString()),
+                            new Claim("SecurityStamp", user.SecurityStamp)
+                        };
+
+                        var identity = new ClaimsIdentity(claims, "Cookies");
+                        var principal = new ClaimsPrincipal(identity);
+
+                        await HttpContext.SignInAsync("Cookies", principal, new AuthenticationProperties
+                        {
+                            IsPersistent = false,
+                            ExpiresUtc = DateTime.UtcNow.AddHours(8)
+                        });
+
+                        TempData["SuccessMessage"] = "Đổi mật khẩu thành công!";
+                        return RedirectToAction("Index", "Home");
+                    }
+                }
+            }
+
+            return View(model);
+        }
+
+        [HttpGet]
+        public IActionResult ForgotPassword()
+        {
+            if (User.Identity.IsAuthenticated)
+            {
+                return RedirectToAction("Index", "Home");
+            }
+            return View();
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> ForgotPassword(ForgotPasswordViewModel model)
+        {
+            if (ModelState.IsValid)
+            {
+                var user = await _context.Users.FirstOrDefaultAsync(u => u.IsActive && 
+                    (u.Username == model.UsernameOrEmail || u.Email == model.UsernameOrEmail));
+
+                if (user != null)
+                {
+                    var random = new Random();
+                    var otp = random.Next(100000, 999999).ToString();
+
+                    user.ResetOtpCode = otp;
+                    user.ResetOtpExpiry = DateTime.UtcNow.AddMinutes(5);
+
+                    _context.Users.Update(user);
+                    await _context.SaveChangesAsync();
+
+                    TempData["MockedOtp"] = otp;
+                    TempData["Message"] = $"Một mã OTP đã được gửi tới email/SĐT đã đăng ký.";
+
+                    var log = new ActivityLog
+                    {
+                        Username = "System",
+                        Action = "Yêu cầu khôi phục mật khẩu",
+                        Details = $"Đã tạo mã OTP khôi phục mật khẩu cho {user.Username}. Mã OTP (giả lập): {otp}"
+                    };
+                    _context.ActivityLogs.Add(log);
+                    await _context.SaveChangesAsync();
+
+                    return RedirectToAction("VerifyOtp", new { username = user.Username });
+                }
+
+                TempData["Message"] = "Nếu thông tin hợp lệ, bạn sẽ nhận được hướng dẫn qua email/SMS.";
+                return RedirectToAction("Login");
+            }
+
+            return View(model);
+        }
+
+        [HttpGet]
+        public IActionResult VerifyOtp(string username)
+        {
+            if (string.IsNullOrEmpty(username))
+            {
+                return RedirectToAction("Login");
+            }
+
+            var model = new VerifyOtpViewModel { Username = username };
+            return View(model);
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> VerifyOtp(VerifyOtpViewModel model)
+        {
+            if (ModelState.IsValid)
+            {
+                var user = await _context.Users.FirstOrDefaultAsync(u => u.Username == model.Username && u.IsActive);
+                if (user == null)
+                {
+                    ModelState.AddModelError(string.Empty, "Tài khoản không hợp lệ hoặc đã bị vô hiệu hóa.");
+                    return View(model);
+                }
+
+                if (user.ResetOtpCode != model.OtpCode)
+                {
+                    ModelState.AddModelError("OtpCode", "Mã OTP không hợp lệ.");
+                    return View(model);
+                }
+
+                if (user.ResetOtpExpiry == null || user.ResetOtpExpiry < DateTime.UtcNow)
+                {
+                    ModelState.AddModelError("OtpCode", "Mã OTP đã hết hạn.");
+                    return View(model);
+                }
+
+                return RedirectToAction("ResetPassword", new { username = user.Username, otp = model.OtpCode });
+            }
+
+            return View(model);
+        }
+
+        [HttpGet]
+        public IActionResult ResetPassword(string username, string otp)
+        {
+            if (string.IsNullOrEmpty(username) || string.IsNullOrEmpty(otp))
+            {
+                return RedirectToAction("Login");
+            }
+
+            var model = new ResetPasswordViewModel { Username = username, OtpCode = otp };
+            return View(model);
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> ResetPassword(ResetPasswordViewModel model)
+        {
+            if (ModelState.IsValid)
+            {
+                var user = await _context.Users.FirstOrDefaultAsync(u => u.Username == model.Username && u.IsActive);
+                if (user == null)
+                {
+                    ModelState.AddModelError(string.Empty, "Tài khoản không hợp lệ.");
+                    return View(model);
+                }
+
+                if (user.ResetOtpCode != model.OtpCode || user.ResetOtpExpiry == null || user.ResetOtpExpiry < DateTime.UtcNow)
+                {
+                    ModelState.AddModelError(string.Empty, "Yêu cầu khôi phục mật khẩu không hợp lệ hoặc đã hết hạn.");
+                    return View(model);
+                }
+
+                user.PasswordHash = model.NewPassword;
+                user.ResetOtpCode = null;
+                user.ResetOtpExpiry = null;
+                user.SecurityStamp = Guid.NewGuid().ToString();
+
+                _context.Users.Update(user);
+                await _context.SaveChangesAsync();
+
+                var log = new ActivityLog
+                {
+                    Username = user.Username,
+                    Action = "Khôi phục mật khẩu",
+                    Details = $"Tài khoản {user.Username} đã khôi phục mật khẩu thành công qua mã OTP."
+                };
+                _context.ActivityLogs.Add(log);
+                await _context.SaveChangesAsync();
+
+                TempData["SuccessMessage"] = "Mật khẩu đã được đặt lại thành công. Vui lòng đăng nhập lại.";
+                return RedirectToAction("Login");
             }
 
             return View(model);

@@ -1,0 +1,408 @@
+@{
+    ViewData["Title"] = "Phân quyền hệ thống";
+    var allPerms = ViewBag.Permissions as List<Nhakhoa.Models.RolePermission> ?? new();
+    var auditLogs = ViewBag.AuditLogs as List<Nhakhoa.Models.ActivityLog> ?? new();
+
+    var roles = new[] {
+        new { Key = "Admin",        Label = "Admin",   Icon = "bi-shield-lock" },
+        new { Key = "Doctor",       Label = "Bác sĩ",  Icon = "bi-heart-pulse" },
+        new { Key = "Receptionist", Label = "Lễ tân",  Icon = "bi-person-badge" },
+    };
+
+    // Get distinct modules ordered by SortOrder
+    var modules = allPerms
+        .GroupBy(p => p.ModuleKey)
+        .Select(g => g.First())
+        .OrderBy(p => p.SortOrder)
+        .ToList();
+}
+
+<style>
+    .rbac-page { display: flex; gap: 24px; }
+
+    /* --- Left panel --- */
+    .rbac-main { flex: 1; min-width: 0; }
+    .rbac-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 24px; flex-wrap: wrap; gap: 12px; }
+    .rbac-header h1 { font-size: 1.6rem; font-weight: 700; color: #1a2332; margin: 0; }
+    .rbac-header p  { color: #6b7a90; margin: 4px 0 0; font-size: 0.93rem; }
+    .rbac-actions { display: flex; gap: 10px; }
+    .btn-reset { background: #fff; border: 1.5px solid #d0d8e8; color: #3a4a5c; font-weight: 600; border-radius: 10px; padding: 9px 18px; cursor: pointer; font-size: 0.9rem; transition: all .2s; }
+    .btn-reset:hover { background: #f4f7fe; border-color: #a0b0c8; }
+    .btn-save  { background: #1b75d0; border: none; color: #fff; font-weight: 600; border-radius: 10px; padding: 9px 20px; cursor: pointer; font-size: 0.9rem; transition: all .2s; }
+    .btn-save:hover { background: #155faa; }
+
+    /* --- Role tabs --- */
+    .role-tabs { display: flex; gap: 8px; margin-bottom: 20px; }
+    .role-tab {
+        display: flex; align-items: center; gap: 8px;
+        padding: 10px 20px; border-radius: 12px; font-weight: 600; font-size: 0.92rem;
+        cursor: pointer; border: 2px solid transparent; transition: all .2s; color: #5b6b7a;
+        background: #fff; box-shadow: 0 1px 4px rgba(0,0,0,.06);
+    }
+    .role-tab:hover { border-color: #c5d8f0; color: #1b75d0; }
+    .role-tab.active { background: #1b75d0; color: #fff; border-color: #1b75d0; }
+    .role-tab.active i { color: #fff; }
+
+    /* --- Permission table --- */
+    .perm-card { background: #fff; border-radius: 16px; box-shadow: 0 1px 8px rgba(0,0,0,.07); overflow: hidden; }
+    .perm-table { width: 100%; border-collapse: collapse; }
+    .perm-table thead th { padding: 14px 20px; font-weight: 700; font-size: 0.85rem; color: #6b7a90; letter-spacing: .03em; text-transform: uppercase; background: #f8f9fc; border-bottom: 1.5px solid #eef0f7; }
+    .perm-table thead th:not(:first-child) { text-align: center; width: 90px; }
+    .perm-table tbody tr { border-bottom: 1px solid #f1f3f8; transition: background .15s; }
+    .perm-table tbody tr:last-child { border-bottom: none; }
+    .perm-table tbody tr:hover { background: #f8faff; }
+    .perm-table td { padding: 14px 20px; vertical-align: middle; }
+    .perm-table td:not(:first-child) { text-align: center; }
+    .module-cell { display: flex; align-items: center; gap: 12px; }
+    .module-icon-wrap {
+        width: 36px; height: 36px; border-radius: 10px; background: #edf4ff;
+        display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+        color: #1b75d0; font-size: 1rem;
+    }
+    .module-name { font-weight: 600; color: #1a2332; font-size: 0.92rem; }
+
+    /* Custom checkbox */
+    .perm-check {
+        width: 20px; height: 20px; cursor: pointer; accent-color: #1b75d0;
+        border-radius: 6px; display: inline-block;
+    }
+    .perm-check:disabled { opacity: .35; cursor: not-allowed; }
+
+    /* --- Right panel: Audit log --- */
+    .rbac-sidebar { width: 280px; flex-shrink: 0; }
+    .audit-card { background: #fff; border-radius: 16px; box-shadow: 0 1px 8px rgba(0,0,0,.07); overflow: hidden; }
+    .audit-card-header { padding: 16px 20px; border-bottom: 1.5px solid #eef0f7; display: flex; justify-content: space-between; align-items: center; }
+    .audit-card-header h3 { margin: 0; font-size: 1rem; font-weight: 700; color: #1a2332; }
+    .audit-card-header a { font-size: 0.82rem; color: #1b75d0; text-decoration: none; }
+    .audit-list { list-style: none; margin: 0; padding: 0; }
+    .audit-item { padding: 14px 20px; border-bottom: 1px solid #f1f3f8; display: flex; gap: 12px; }
+    .audit-item:last-child { border-bottom: none; }
+    .audit-dot { width: 8px; height: 8px; border-radius: 50%; background: #1b75d0; flex-shrink: 0; margin-top: 6px; }
+    .audit-dot.danger { background: #e53935; }
+    .audit-content { font-size: 0.83rem; }
+    .audit-content strong { display: block; color: #1a2332; font-weight: 600; margin-bottom: 2px; line-height: 1.35; }
+    .audit-content span { color: #6b7a90; display: block; font-size: 0.78rem; margin-bottom: 3px; }
+    .audit-content time { color: #a0aec0; font-size: 0.75rem; }
+
+    .security-badge {
+        margin: 16px; padding: 12px 16px; border-radius: 12px;
+        background: #f0f7ff; border: 1px solid #c5dff8; display: flex; gap: 10px;
+        font-size: 0.82rem; color: #1b75d0;
+    }
+
+    /* --- Confirmation modal --- */
+    .modal-overlay {
+        position: fixed; inset: 0; background: rgba(20,30,50,.45); z-index: 9000;
+        display: none; align-items: center; justify-content: center;
+        backdrop-filter: blur(2px);
+    }
+    .modal-overlay.show { display: flex; }
+    .modal-box {
+        background: #fff; border-radius: 20px; padding: 32px;
+        width: 460px; max-width: 95vw; box-shadow: 0 20px 60px rgba(0,0,0,.2);
+        animation: modalIn .2s ease;
+    }
+    @@keyframes modalIn { from { transform: translateY(16px); opacity: 0; } to { transform: none; opacity: 1; } }
+    .modal-icon { width: 48px; height: 48px; border-radius: 14px; background: #edf4ff; display: flex; align-items: center; justify-content: center; color: #1b75d0; font-size: 1.4rem; margin-bottom: 16px; }
+    .modal-box h3 { font-size: 1.2rem; font-weight: 700; color: #1a2332; margin: 0 0 6px; }
+    .modal-box p  { color: #6b7a90; font-size: 0.9rem; margin: 0 0 20px; }
+    .modal-summary { background: #f8f9fc; border-radius: 12px; padding: 14px 16px; margin-bottom: 16px; font-size: 0.85rem; }
+    .modal-summary .role-label { font-weight: 700; color: #1a2332; margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }
+    .change-tag { display: inline-block; border-radius: 6px; padding: 2px 10px; font-size: 0.8rem; font-weight: 600; margin: 2px 4px 2px 0; }
+    .change-tag.added   { background: #e8f5e9; color: #2e7d32; }
+    .change-tag.removed { background: #fce4ec; color: #c62828; }
+    .modal-note { font-size: 0.82rem; color: #6b7a90; display: flex; gap: 8px; align-items: flex-start; margin-bottom: 20px; }
+    .modal-note i { color: #1b75d0; flex-shrink: 0; margin-top: 1px; }
+    .modal-actions { display: flex; gap: 10px; justify-content: flex-end; }
+    .btn-cancel { background: #f1f3f8; border: none; color: #3a4a5c; font-weight: 600; border-radius: 10px; padding: 10px 20px; cursor: pointer; font-size: 0.9rem; }
+    .btn-confirm { background: #1b75d0; border: none; color: #fff; font-weight: 600; border-radius: 10px; padding: 10px 22px; cursor: pointer; font-size: 0.9rem; }
+    .btn-confirm:hover { background: #155faa; }
+
+    .toast-success {
+        position: fixed; bottom: 28px; right: 28px; background: #1b75d0;
+        color: #fff; padding: 14px 22px; border-radius: 12px;
+        box-shadow: 0 8px 24px rgba(27,117,208,.3); font-weight: 600;
+        display: none; align-items: center; gap: 10px; z-index: 9999;
+        animation: slideUp .25s ease;
+    }
+    .toast-success.show { display: flex; }
+    @@keyframes slideUp { from { transform: translateY(16px); opacity: 0; } to { transform: none; opacity: 1; } }
+</style>
+
+<div class="rbac-page">
+    <!-- ========== LEFT PANEL ========== -->
+    <div class="rbac-main">
+        <div class="rbac-header">
+            <div>
+                <h1><i class="bi bi-shield-check me-2 text-primary"></i>Phân quyền hệ thống</h1>
+                <p>Quản lý quyền truy cập cho từng vai trò trong phòng khám.</p>
+            </div>
+            <div class="rbac-actions">
+                <button class="btn-reset" onclick="handleReset()">
+                    <i class="bi bi-arrow-counterclockwise me-1"></i>Khôi phục mặc định
+                </button>
+                <button class="btn-save" onclick="handleSave()">
+                    <i class="bi bi-floppy me-1"></i>Lưu thay đổi quyền
+                </button>
+            </div>
+        </div>
+
+        <!-- Role tabs -->
+        <div class="role-tabs">
+            @foreach (var r in roles)
+            {
+                <button class="role-tab @(r.Key == "Admin" ? "active" : "")"
+                        onclick="switchRole('@r.Key', this)">
+                    <i class="bi @r.Icon"></i> @r.Label
+                </button>
+            }
+        </div>
+
+        <!-- Permission table -->
+        <div class="perm-card">
+            <table class="perm-table">
+                <thead>
+                    <tr>
+                        <th>Module / Chức năng</th>
+                        @foreach (var r in roles)
+                        {
+                            <th>@r.Label</th>
+                        }
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var mod in modules)
+                    {
+                        <tr>
+                            <td>
+                                <div class="module-cell">
+                                    <div class="module-icon-wrap"><i class="bi @mod.ModuleIcon"></i></div>
+                                    <span class="module-name">@mod.ModuleName</span>
+                                </div>
+                            </td>
+                            @foreach (var r in roles)
+                            {
+                                var perm = allPerms.FirstOrDefault(p => p.Role == r.Key && p.ModuleKey == mod.ModuleKey);
+                                bool isAllowed = perm?.IsAllowed ?? false;
+                                bool isAdmin = r.Key == "Admin";
+                                <td>
+                                    <input type="checkbox"
+                                           class="perm-check"
+                                           data-role="@r.Key"
+                                           data-module="@mod.ModuleKey"
+                                           @(isAllowed ? "checked" : "")
+                                           @(isAdmin ? "disabled" : "")
+                                           title="@(isAdmin ? "Admin luôn có toàn quyền" : "")" />
+                                </td>
+                            }
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- ========== RIGHT PANEL ========== -->
+    <div class="rbac-sidebar">
+        <div class="audit-card">
+            <div class="audit-card-header">
+                <h3>Nhật ký thay đổi</h3>
+                <a href="#">Xem tất cả</a>
+            </div>
+            <ul class="audit-list">
+                @if (auditLogs.Count == 0)
+                {
+                    <li class="audit-item">
+                        <div class="audit-dot"></div>
+                        <div class="audit-content">
+                            <strong>Hệ thống đã lưu dữ liệu phân quyền</strong>
+                            <span>Khởi tạo ban đầu</span>
+                            <time>Hôm nay</time>
+                        </div>
+                    </li>
+                }
+                @foreach (var log in auditLogs)
+                {
+                    bool isDanger = log.Details?.Contains("Thu hồi") == true || log.Details?.Contains("-") == true;
+                    <li class="audit-item">
+                        <div class="audit-dot @(isDanger ? "danger" : "")"></div>
+                        <div class="audit-content">
+                            <strong>@log.Username @log.Action</strong>
+                            <span style="font-size:0.76rem;color:#8898aa;">@(log.Details?.Length > 60 ? log.Details.Substring(0, 60) + "…" : log.Details)</span>
+                            <time>@log.Timestamp.ToString("HH:mm dd/MM/yyyy")</time>
+                        </div>
+                    </li>
+                }
+            </ul>
+            <div class="security-badge">
+                <i class="bi bi-shield-check fs-5"></i>
+                <span>Hệ thống đang ở trạng thái an toàn cao.</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ========== CONFIRMATION MODAL ========== -->
+<div class="modal-overlay" id="confirmModal">
+    <div class="modal-box">
+        <div class="modal-icon"><i class="bi bi-shield-lock"></i></div>
+        <h3>Xác nhận cập nhật phân quyền</h3>
+        <p>Các thay đổi quyền truy cập sẽ được áp dụng ngay lập tức.</p>
+
+        <div class="modal-summary" id="modalSummary">
+            <div class="role-label" id="modalRoleLabel"></div>
+            <div id="modalAdded"></div>
+            <div id="modalRemoved"></div>
+        </div>
+
+        <div class="modal-note">
+            <i class="bi bi-info-circle"></i>
+            <span>Hành động này sẽ được ghi lại trong nhật ký hệ thống.</span>
+        </div>
+
+        <div class="modal-actions">
+            <button class="btn-cancel" onclick="closeModal()">Hủy</button>
+            <button class="btn-confirm" onclick="confirmSave()">Xác nhận lưu</button>
+        </div>
+    </div>
+</div>
+
+<!-- Toast -->
+<div class="toast-success" id="toastSuccess">
+    <i class="bi bi-check-circle-fill"></i>
+    <span id="toastMsg">Đã lưu phân quyền thành công!</span>
+</div>
+
+@section Scripts {
+<script>
+    let currentRole = 'Admin';
+    let pendingChanges = {};   // { moduleKey: bool }
+    let pendingRole = '';
+
+    // ── Highlight active role column ──────────────────────────────
+    function switchRole(role, btn) {
+        currentRole = role;
+        document.querySelectorAll('.role-tab').forEach(t => t.classList.remove('active'));
+        btn.classList.add('active');
+        // Scroll to first non-disabled checkbox of this role
+        const firstCheck = document.querySelector(`.perm-check[data-role="${role}"]`);
+        if (firstCheck) firstCheck.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    // ── Gather changes for the active role ───────────────────────
+    function gatherChanges(role) {
+        const checks = document.querySelectorAll(`.perm-check[data-role="${role}"]`);
+        const perms = {};
+        const added = [];
+        const removed = [];
+
+        checks.forEach(chk => {
+            perms[chk.dataset.module] = chk.checked;
+            // "original" state stored in data-original attribute
+            const orig = chk.dataset.original === 'true';
+            if (chk.checked && !orig) {
+                added.push(chk.closest('tr').querySelector('.module-name')?.textContent.trim() ?? chk.dataset.module);
+            } else if (!chk.checked && orig) {
+                removed.push(chk.closest('tr').querySelector('.module-name')?.textContent.trim() ?? chk.dataset.module);
+            }
+        });
+        return { perms, added, removed };
+    }
+
+    // ── Store original state on page load ────────────────────────
+    document.querySelectorAll('.perm-check').forEach(chk => {
+        chk.dataset.original = chk.checked.toString();
+    });
+
+    // ── Handle Save ──────────────────────────────────────────────
+    function handleSave() {
+        const role = currentRole;
+        const { perms, added, removed } = gatherChanges(role);
+
+        if (added.length === 0 && removed.length === 0) {
+            showToast('Không có thay đổi nào để lưu.', false);
+            return;
+        }
+
+        pendingChanges = perms;
+        pendingRole = role;
+
+        // Build modal content
+        const roleLabels = { Admin: 'Admin', Doctor: 'Bác sĩ', Receptionist: 'Lễ tân' };
+        document.getElementById('modalRoleLabel').innerHTML =
+            `<i class="bi bi-person-badge me-1"></i> Vai trò: <span style="color:#1b75d0">${roleLabels[role]}</span>`;
+
+        const addedHtml = added.length
+            ? `<div style="margin-bottom:6px;font-size:0.8rem;font-weight:700;color:#2e7d32;">ĐƯỢC THÊM MỚI</div>`
+              + added.map(n => `<span class="change-tag added">+ ${n}</span>`).join('')
+            : '';
+        const removedHtml = removed.length
+            ? `<div style="margin-top:8px;margin-bottom:6px;font-size:0.8rem;font-weight:700;color:#c62828;">THU HỒI QUYỀN</div>`
+              + removed.map(n => `<span class="change-tag removed">- ${n}</span>`).join('')
+            : '';
+
+        document.getElementById('modalAdded').innerHTML = addedHtml;
+        document.getElementById('modalRemoved').innerHTML = removedHtml;
+        document.getElementById('confirmModal').classList.add('show');
+    }
+
+    function closeModal() {
+        document.getElementById('confirmModal').classList.remove('show');
+    }
+
+    async function confirmSave() {
+        closeModal();
+        try {
+            const res = await fetch('/RolePermission/Save', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ role: pendingRole, permissions: pendingChanges })
+            });
+            const data = await res.json();
+            if (data.success) {
+                // Update original state
+                document.querySelectorAll(`.perm-check[data-role="${pendingRole}"]`).forEach(chk => {
+                    chk.dataset.original = chk.checked.toString();
+                });
+                showToast(`Đã lưu phân quyền vai trò [${pendingRole}] thành công!`, true);
+            }
+        } catch (e) {
+            showToast('Lỗi khi lưu dữ liệu!', false);
+        }
+    }
+
+    // ── Handle Reset ─────────────────────────────────────────────
+    async function handleReset() {
+        if (!confirm(`Khôi phục phân quyền mặc định cho vai trò "${currentRole}"?`)) return;
+        try {
+            const res = await fetch('/RolePermission/Reset', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ role: currentRole })
+            });
+            const data = await res.json();
+            if (data.success) {
+                showToast('Đã khôi phục phân quyền mặc định!', true);
+                setTimeout(() => location.reload(), 1200);
+            }
+        } catch (e) {
+            showToast('Lỗi khi khôi phục!', false);
+        }
+    }
+
+    // ── Toast helper ─────────────────────────────────────────────
+    function showToast(msg, success) {
+        const t = document.getElementById('toastSuccess');
+        const m = document.getElementById('toastMsg');
+        t.style.background = success ? '#1b75d0' : '#e53935';
+        m.textContent = msg;
+        t.classList.add('show');
+        setTimeout(() => t.classList.remove('show'), 3000);
+    }
+
+    // Close modal on overlay click
+    document.getElementById('confirmModal').addEventListener('click', function(e) {
+        if (e.target === this) closeModal();
+    });
+</script>
+}

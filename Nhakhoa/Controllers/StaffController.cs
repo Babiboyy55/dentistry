@@ -146,7 +146,9 @@ namespace Nhakhoa.Controllers
                     PhoneNumber = model.PhoneNumber,
                     Role = model.Role,
                     PasswordHash = model.Password,
-                    IsActive = true
+                    IsActive = true,
+                    IsTemporaryPassword = true,
+                    SecurityStamp = Guid.NewGuid().ToString()
                 };
 
                 _context.Users.Add(user);
@@ -266,6 +268,8 @@ namespace Nhakhoa.Controllers
 
             var defaultPassword = "123456";
             user.PasswordHash = defaultPassword;
+            user.IsTemporaryPassword = true;
+            user.SecurityStamp = Guid.NewGuid().ToString();
             await _context.SaveChangesAsync();
 
             // Lưu lịch sử hoạt động
