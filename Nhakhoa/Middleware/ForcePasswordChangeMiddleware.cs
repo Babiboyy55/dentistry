@@ -19,7 +19,20 @@ namespace Nhakhoa.Middleware
 
         public async Task InvokeAsync(HttpContext context, ApplicationDbContext dbContext)
         {
-            if (context.User.Identity?.IsAuthenticated == true)
+            var path = context.Request.Path.Value ?? "";
+
+            // Bỏ qua tất cả Auth routes và static assets — tránh redirect loop
+            var isAuthPath = path.StartsWith("/Auth/", StringComparison.OrdinalIgnoreCase)
+                          || path.Equals("/Auth", StringComparison.OrdinalIgnoreCase);
+            var isStaticFile = path.Contains("/css/", StringComparison.OrdinalIgnoreCase)
+                            || path.Contains("/js/", StringComparison.OrdinalIgnoreCase)
+                            || path.Contains("/lib/", StringComparison.OrdinalIgnoreCase)
+                            || path.Contains(".css", StringComparison.OrdinalIgnoreCase)
+                            || path.Contains(".js", StringComparison.OrdinalIgnoreCase)
+                            || path.Contains(".png", StringComparison.OrdinalIgnoreCase)
+                            || path.Contains(".ico", StringComparison.OrdinalIgnoreCase);
+
+            if (!isAuthPath && !isStaticFile && context.User.Identity?.IsAuthenticated == true)
             {
                 var userIdClaim = context.User.FindFirst("UserId")?.Value;
                 if (int.TryParse(userIdClaim, out int userId))
@@ -27,29 +40,20 @@ namespace Nhakhoa.Middleware
                     var user = await dbContext.Users.FindAsync(userId);
                     if (user != null)
                     {
-                        // 1. Force logout if SecurityStamp claim doesn't match database
+                        // 1. Force logout nếu SecurityStamp không khớp (tài khoản bị thay đổi/bị khóa)
                         var securityStampClaim = context.User.FindFirst("SecurityStamp")?.Value;
-                        if (securityStampClaim != user.SecurityStamp)
+                        System.Console.WriteLine($"[DEBUG] DB Stamp: {user.SecurityStamp}, Claim: {securityStampClaim}"); if (!string.IsNullOrEmpty(securityStampClaim) && securityStampClaim != user.SecurityStamp)
                         {
                             await context.SignOutAsync("Cookies");
                             context.Response.Redirect("/Auth/Login");
                             return;
                         }
 
-                        // 2. Force password change if user has a temporary password
-                        if (user.IsTemporaryPassword)
+                        // 2. Bắt buộc đổi mật khẩu nếu đang dùng mật khẩu tạm
+                        if (user.IsTemporaryPassword && !path.Equals("/Auth/ChangePassword", StringComparison.OrdinalIgnoreCase))
                         {
-                            var path = context.Request.Path.Value ?? "";
-                            if (!path.Equals("/Auth/ChangePassword", StringComparison.OrdinalIgnoreCase) &&
-                                !path.Equals("/Auth/Logout", StringComparison.OrdinalIgnoreCase) &&
-                                !path.Contains("/css/", StringComparison.OrdinalIgnoreCase) &&
-                                !path.Contains("/js/", StringComparison.OrdinalIgnoreCase) &&
-                                !path.Contains("/lib/", StringComparison.OrdinalIgnoreCase) &&
-                                !path.Contains("/Nhakhoa.styles.css", StringComparison.OrdinalIgnoreCase))
-                            {
-                                context.Response.Redirect("/Auth/ChangePassword");
-                                return;
-                            }
+                            context.Response.Redirect("/Auth/ChangePassword");
+                            return;
                         }
                     }
                 }

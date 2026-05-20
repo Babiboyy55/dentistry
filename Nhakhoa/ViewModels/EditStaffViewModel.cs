@@ -1,3 +1,4 @@
+using System;
 using System.ComponentModel.DataAnnotations;
 
 namespace Nhakhoa.ViewModels
@@ -22,5 +23,22 @@ namespace Nhakhoa.ViewModels
         public string Role { get; set; }
 
         public bool IsActive { get; set; }
+
+        // --- Profile Info ---
+        public string StaffCode { get; set; }
+        public string PositionTitle { get; set; }
+        public string Department { get; set; }
+        public string Gender { get; set; }
+        public string Address { get; set; }
+        public DateTime? JoinDate { get; set; }
+        public string PrimaryClinic { get; set; }
+
+        // --- Salary Info ---
+        public decimal BaseSalary { get; set; }
+        public decimal DegreeMultiplier { get; set; } = 1m;
+        public string DegreeTitle { get; set; }
+        public decimal SpecializationAllowance { get; set; }
+        public decimal SeniorityAllowance { get; set; }
+        public decimal MonthlyBonus { get; set; }
     }
 }

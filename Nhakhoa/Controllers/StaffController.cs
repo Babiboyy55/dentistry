@@ -46,7 +46,10 @@ namespace Nhakhoa.Controllers
         // GET: Staff/Edit/5
         public async Task<IActionResult> Edit(int id)
         {
-            var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == id);
+            var user = await _context.Users
+                .Include(u => u.StaffProfile)
+                .Include(u => u.StaffSalaryInfo)
+                .FirstOrDefaultAsync(u => u.Id == id);
             if (user == null)
             {
                 return NotFound();
@@ -60,7 +63,20 @@ namespace Nhakhoa.Controllers
                 Email = user.Email,
                 PhoneNumber = user.PhoneNumber,
                 Role = user.Role,
-                IsActive = user.IsActive
+                IsActive = user.IsActive,
+                StaffCode = user.StaffProfile?.StaffCode,
+                PositionTitle = user.StaffProfile?.PositionTitle,
+                Department = user.StaffProfile?.Department,
+                Gender = user.StaffProfile?.Gender,
+                Address = user.StaffProfile?.Address,
+                JoinDate = user.StaffProfile?.JoinDate,
+                PrimaryClinic = user.StaffProfile?.PrimaryClinic,
+                BaseSalary = user.StaffSalaryInfo?.BaseSalary ?? 0m,
+                DegreeMultiplier = user.StaffSalaryInfo?.DegreeMultiplier ?? 1m,
+                DegreeTitle = user.StaffSalaryInfo?.DegreeTitle,
+                SpecializationAllowance = user.StaffSalaryInfo?.SpecializationAllowance ?? 0m,
+                SeniorityAllowance = user.StaffSalaryInfo?.SeniorityAllowance ?? 0m,
+                MonthlyBonus = user.StaffSalaryInfo?.MonthlyBonus ?? 0m
             };
 
             return View(model);
@@ -182,7 +198,10 @@ namespace Nhakhoa.Controllers
                 return View(model);
             }
 
-            var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == model.Id);
+            var user = await _context.Users
+                .Include(u => u.StaffProfile)
+                .Include(u => u.StaffSalaryInfo)
+                .FirstOrDefaultAsync(u => u.Id == model.Id);
             if (user == null)
             {
                 return NotFound();
@@ -197,11 +216,34 @@ namespace Nhakhoa.Controllers
             user.Role = model.Role;
             user.IsActive = model.IsActive;
 
+            if (user.StaffProfile == null)
+            {
+                user.StaffProfile = new StaffProfile();
+            }
+            user.StaffProfile.StaffCode = model.StaffCode;
+            user.StaffProfile.PositionTitle = model.PositionTitle;
+            user.StaffProfile.Department = model.Department;
+            user.StaffProfile.Gender = model.Gender;
+            user.StaffProfile.Address = model.Address;
+            user.StaffProfile.JoinDate = model.JoinDate;
+            user.StaffProfile.PrimaryClinic = model.PrimaryClinic;
+
+            if (user.StaffSalaryInfo == null)
+            {
+                user.StaffSalaryInfo = new StaffSalaryInfo();
+            }
+            user.StaffSalaryInfo.BaseSalary = model.BaseSalary;
+            user.StaffSalaryInfo.DegreeMultiplier = model.DegreeMultiplier;
+            user.StaffSalaryInfo.DegreeTitle = model.DegreeTitle;
+            user.StaffSalaryInfo.SpecializationAllowance = model.SpecializationAllowance;
+            user.StaffSalaryInfo.SeniorityAllowance = model.SeniorityAllowance;
+            user.StaffSalaryInfo.MonthlyBonus = model.MonthlyBonus;
+
             await _context.SaveChangesAsync();
 
             // Lưu lịch sử hoạt động
             var currentUser = User.Identity?.Name ?? "System";
-            var details = $"Cập nhật thông tin nhân sự: {user.FullName} ({user.Username}).";
+            var details = $"Cập nhật thông tin nhân sự và hồ sơ: {user.FullName} ({user.Username}).";
             if (oldRole != model.Role) details += $" Đổi vai trò: {oldRole} -> {model.Role}.";
             if (oldStatus != model.IsActive) details += $" Trạng thái: {(oldStatus ? "Hoạt động" : "Bị khóa")} -> {(model.IsActive ? "Hoạt động" : "Bị khóa")}.";
 
@@ -214,8 +256,8 @@ namespace Nhakhoa.Controllers
             _context.ActivityLogs.Add(log);
             await _context.SaveChangesAsync();
 
-            TempData["SuccessMessage"] = "Cập nhật thông tin nhân sự thành công";
-            return RedirectToAction(nameof(Index));
+            TempData["SuccessMessage"] = "Cập nhật thông tin cá nhân thành công";
+            return RedirectToAction(nameof(Details), new { id = user.Id });
         }
 
         // POST: Staff/ToggleStatus/5

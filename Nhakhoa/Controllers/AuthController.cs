@@ -69,7 +69,7 @@ namespace Nhakhoa.Controllers
                     _context.ActivityLogs.Add(log);
                     await _context.SaveChangesAsync();
 
-                    return RedirectToAction("Index", "Home");
+                    return Redirect("/Home/Index?clear=1");
                 }
 
                 ModelState.AddModelError(string.Empty, "Tên đăng nhập hoặc mật khẩu không đúng.");
@@ -83,7 +83,7 @@ namespace Nhakhoa.Controllers
         {
             if (User.Identity.IsAuthenticated)
             {
-                return RedirectToAction("Index", "Home");
+                return Redirect("/Home/Index?clear=1");
             }
             return View();
         }
@@ -142,10 +142,24 @@ namespace Nhakhoa.Controllers
 
                 await HttpContext.SignInAsync("Cookies", principal, authProperties);
 
-                return RedirectToAction("Index", "Home");
+                return Redirect("/Home/Index?clear=1");
             }
 
             return View(model);
+        }
+
+        [HttpGet]
+        public IActionResult Debug()
+        {
+            var claims = User.Claims.Select(c => new { c.Type, c.Value }).ToList();
+            var dbStamp = "";
+            var userIdClaim = User.FindFirst("UserId")?.Value;
+            if (int.TryParse(userIdClaim, out int uid))
+            {
+                var user = _context.Users.Find(uid);
+                dbStamp = user?.SecurityStamp;
+            }
+            return Json(new { isAuthenticated = User.Identity.IsAuthenticated, claims, dbStamp });
         }
 
         [HttpGet]
@@ -220,7 +234,7 @@ namespace Nhakhoa.Controllers
                         });
 
                         TempData["SuccessMessage"] = "Đổi mật khẩu thành công!";
-                        return RedirectToAction("Index", "Home");
+                        return Redirect("/Home/Index?clear=1");
                     }
                 }
             }
@@ -233,7 +247,7 @@ namespace Nhakhoa.Controllers
         {
             if (User.Identity.IsAuthenticated)
             {
-                return RedirectToAction("Index", "Home");
+                return Redirect("/Home/Index?clear=1");
             }
             return View();
         }

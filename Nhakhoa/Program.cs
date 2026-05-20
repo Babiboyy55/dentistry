@@ -38,8 +38,13 @@ app.UseMiddleware<Nhakhoa.Middleware.ForcePasswordChangeMiddleware>();
 app.MapStaticAssets();
 
 app.MapControllerRoute(
+    name: "root",
+    pattern: "",
+    defaults: new { controller = "Auth", action = "Login" });
+
+app.MapControllerRoute(
     name: "default",
-    pattern: "{controller=Auth}/{action=Login}/{id?}")
+    pattern: "{controller=Home}/{action=Index}/{id?}")
     .WithStaticAssets();
 
 
