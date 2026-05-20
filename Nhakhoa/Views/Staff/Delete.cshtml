@@ -1,0 +1,24 @@
+@model Nhakhoa.Models.User
+@{
+    Layout = "_AdminLayout";
+    ViewData["Title"] = "Xoa tai khoan";
+}
+
+<div class="card border-0 shadow-sm rounded-4" style="background-color: #fff; padding: 32px;">
+    <h2 class="fw-bold mb-2" style="color: #0b1f35;">Xac nhan xoa tai khoan</h2>
+    <p class="text-muted">Ban chac chan muon xoa tai khoan nhan su nay? Hanh dong nay khong the hoan tac.</p>
+
+    <div class="bg-light rounded-3 p-3 mb-4">
+        <div class="fw-semibold">@Model.FullName</div>
+        <div class="text-muted">@Model.Username - @Model.Email</div>
+        <div class="text-muted">Vai tro: @Model.Role</div>
+    </div>
+
+    <form asp-action="Delete" method="post">
+        <input type="hidden" name="id" value="@Model.Id" />
+        <div class="d-flex justify-content-end gap-3">
+            <a href="/Staff" class="btn btn-light px-4 py-2 fw-semibold" style="border: 1px solid #dee2e6; color: #5b6b7a;">Huy</a>
+            <button type="submit" class="btn btn-danger px-4 py-2 fw-semibold">Xoa tai khoan</button>
+        </div>
+    </form>
+</div>

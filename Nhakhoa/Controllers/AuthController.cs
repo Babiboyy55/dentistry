@@ -20,7 +20,11 @@ namespace Nhakhoa.Controllers
         [HttpGet]
         public IActionResult Login()
         {
-            // Always show login view regardless of authentication status
+            if (User.Identity?.IsAuthenticated == true)
+            {
+                return RedirectToAction("Index", "Home");
+            }
+
             return View();
         }
 
@@ -38,6 +42,13 @@ namespace Nhakhoa.Controllers
                     {
                         ModelState.AddModelError(string.Empty, "Tài khoản bị khóa.");
                         return View(model);
+                    }
+
+                    // Đảm bảo SecurityStamp luôn có giá trị
+                    if (string.IsNullOrEmpty(user.SecurityStamp))
+                    {
+                        user.SecurityStamp = Guid.NewGuid().ToString();
+                        await _context.SaveChangesAsync();
                     }
 
                     var claims = new List<Claim>
@@ -108,7 +119,8 @@ namespace Nhakhoa.Controllers
                     PhoneNumber = model.PhoneNumber,
                     PasswordHash = model.Password,
                     Role = model.Role,
-                    IsActive = true
+                    IsActive = true,
+                    SecurityStamp = Guid.NewGuid().ToString()
                 };
 
                 _context.Users.Add(user);

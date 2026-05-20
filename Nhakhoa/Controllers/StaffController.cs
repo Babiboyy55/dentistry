@@ -182,7 +182,7 @@ namespace Nhakhoa.Controllers
                 await _context.SaveChangesAsync();
 
                 TempData["SuccessMessage"] = "Tài khoản đã được tạo thành công";
-                return RedirectToAction(nameof(Create));
+                return RedirectToAction(nameof(Details), new { id = user.Id });
             }
 
             return View(model);
@@ -219,7 +219,10 @@ namespace Nhakhoa.Controllers
             if (user.StaffProfile == null)
             {
                 user.StaffProfile = new StaffProfile();
+                _context.StaffProfiles.Add(user.StaffProfile);
             }
+            user.StaffProfile.UserId = user.Id;
+            user.StaffProfile.User = user;
             user.StaffProfile.StaffCode = model.StaffCode;
             user.StaffProfile.PositionTitle = model.PositionTitle;
             user.StaffProfile.Department = model.Department;
@@ -231,13 +234,16 @@ namespace Nhakhoa.Controllers
             if (user.StaffSalaryInfo == null)
             {
                 user.StaffSalaryInfo = new StaffSalaryInfo();
+                _context.StaffSalaryInfos.Add(user.StaffSalaryInfo);
             }
-            user.StaffSalaryInfo.BaseSalary = model.BaseSalary;
-            user.StaffSalaryInfo.DegreeMultiplier = model.DegreeMultiplier;
+            user.StaffSalaryInfo.UserId = user.Id;
+            user.StaffSalaryInfo.User = user;
+            user.StaffSalaryInfo.BaseSalary = model.BaseSalary ?? 0m;
+            user.StaffSalaryInfo.DegreeMultiplier = model.DegreeMultiplier ?? 1m;
             user.StaffSalaryInfo.DegreeTitle = model.DegreeTitle;
-            user.StaffSalaryInfo.SpecializationAllowance = model.SpecializationAllowance;
-            user.StaffSalaryInfo.SeniorityAllowance = model.SeniorityAllowance;
-            user.StaffSalaryInfo.MonthlyBonus = model.MonthlyBonus;
+            user.StaffSalaryInfo.SpecializationAllowance = model.SpecializationAllowance ?? 0m;
+            user.StaffSalaryInfo.SeniorityAllowance = model.SeniorityAllowance ?? 0m;
+            user.StaffSalaryInfo.MonthlyBonus = model.MonthlyBonus ?? 0m;
 
             await _context.SaveChangesAsync();
 
@@ -258,6 +264,59 @@ namespace Nhakhoa.Controllers
 
             TempData["SuccessMessage"] = "Cập nhật thông tin cá nhân thành công";
             return RedirectToAction(nameof(Details), new { id = user.Id });
+        }
+
+        // GET: Staff/Delete/5
+        public async Task<IActionResult> Delete(int id)
+        {
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == id);
+            if (user == null)
+            {
+                return NotFound();
+            }
+
+            var currentUser = User.Identity?.Name;
+            if (user.Username.Equals(currentUser, StringComparison.OrdinalIgnoreCase))
+            {
+                TempData["ErrorMessage"] = "Bạn không thể tự xóa tài khoản của chính mình.";
+                return RedirectToAction(nameof(Index));
+            }
+
+            return View(user);
+        }
+
+        // POST: Staff/Delete/5
+        [HttpPost, ActionName("Delete")]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> DeleteConfirmed(int id)
+        {
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == id);
+            if (user == null)
+            {
+                return NotFound();
+            }
+
+            var currentUser = User.Identity?.Name;
+            if (user.Username.Equals(currentUser, StringComparison.OrdinalIgnoreCase))
+            {
+                TempData["ErrorMessage"] = "Bạn không thể tự xóa tài khoản của chính mình.";
+                return RedirectToAction(nameof(Index));
+            }
+
+            _context.Users.Remove(user);
+            await _context.SaveChangesAsync();
+
+            var log = new ActivityLog
+            {
+                Username = currentUser ?? "System",
+                Action = "Xóa tài khoản",
+                Details = $"Đã xóa tài khoản nhân sự: {user.FullName} ({user.Username})"
+            };
+            _context.ActivityLogs.Add(log);
+            await _context.SaveChangesAsync();
+
+            TempData["SuccessMessage"] = $"Đã xóa tài khoản {user.FullName} thành công.";
+            return RedirectToAction(nameof(Index));
         }
 
         // POST: Staff/ToggleStatus/5

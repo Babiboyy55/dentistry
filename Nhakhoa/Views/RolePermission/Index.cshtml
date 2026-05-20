@@ -15,136 +15,568 @@
         .Select(g => g.First())
         .OrderBy(p => p.SortOrder)
         .ToList();
+
+    // Calculate statistics
+    var totalModules = modules.Count;
+    var totalRoles = roles.Length;
 }
 
 <style>
-    .rbac-page { display: flex; gap: 24px; }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #f5f7fb; }
+    
+    /* ──── MAIN LAYOUT WITH SIDEBAR ──── */
+    .rbac-page-wrapper {
+        display: flex;
+        gap: 0;
+        min-height: 100vh;
+    }
+    
+    .rbac-sidebar-nav {
+        width: 260px;
+        background: #fff;
+        border-right: 1px solid #eef0f7;
+        padding: 24px 16px;
+        flex-shrink: 0;
+        box-shadow: 1px 0 4px rgba(0, 0, 0, 0.04);
+    }
+    
+    .rbac-main-content {
+        flex: 1;
+        overflow-y: auto;
+    }
 
-    /* --- Left panel --- */
-    .rbac-main { flex: 1; min-width: 0; }
-    .rbac-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 24px; flex-wrap: wrap; gap: 12px; }
-    .rbac-header h1 { font-size: 1.6rem; font-weight: 700; color: #1a2332; margin: 0; }
-    .rbac-header p  { color: #6b7a90; margin: 4px 0 0; font-size: 0.93rem; }
-    .rbac-actions { display: flex; gap: 10px; }
-    .btn-reset { background: #fff; border: 1.5px solid #d0d8e8; color: #3a4a5c; font-weight: 600; border-radius: 10px; padding: 9px 18px; cursor: pointer; font-size: 0.9rem; transition: all .2s; }
-    .btn-reset:hover { background: #f4f7fe; border-color: #a0b0c8; }
-    .btn-save  { background: #1b75d0; border: none; color: #fff; font-weight: 600; border-radius: 10px; padding: 9px 20px; cursor: pointer; font-size: 0.9rem; transition: all .2s; }
-    .btn-save:hover { background: #155faa; }
+    /* ──── CONTAINER ──── */
+    .rbac-container { padding: 32px 24px; max-width: 1400px; margin: 0 auto; }
+    
+    /* ──── HEADER SECTION ──── */
+    .rbac-header-section {
+        display: flex; 
+        justify-content: space-between; 
+        align-items: flex-start; 
+        margin-bottom: 28px; 
+        gap: 20px;
+    }
+    .rbac-header-left h1 {
+        font-size: 1.8rem; 
+        font-weight: 800; 
+        color: #1a2332;
+        margin-bottom: 4px;
+    }
+    .rbac-header-left p {
+        font-size: 0.95rem; 
+        color: #6b7a90; 
+        line-height: 1.5;
+    }
+    .rbac-header-actions {
+        display: flex; 
+        gap: 12px;
+    }
+    .btn-primary, .btn-secondary {
+        padding: 10px 22px;
+        border-radius: 10px;
+        font-weight: 600;
+        font-size: 0.9rem;
+        cursor: pointer;
+        transition: all 0.25s ease;
+        border: none;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        white-space: nowrap;
+    }
+    .btn-primary {
+        background: #1b75d0;
+        color: #fff;
+    }
+    .btn-primary:hover {
+        background: #155faa;
+        box-shadow: 0 4px 12px rgba(27, 117, 208, 0.3);
+    }
+    .btn-secondary {
+        background: #fff;
+        color: #3a4a5c;
+        border: 1.5px solid #d0d8e8;
+    }
+    .btn-secondary:hover {
+        background: #f8fafc;
+        border-color: #a0b0c8;
+    }
 
-    /* --- Role tabs --- */
-    .role-tabs { display: flex; gap: 8px; margin-bottom: 20px; }
+    /* ──── STATISTICS CARDS ──── */
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 16px;
+        margin-bottom: 28px;
+    }
+    .stat-card {
+        background: #fff;
+        border-radius: 12px;
+        padding: 20px;
+        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        transition: all 0.2s ease;
+    }
+    .stat-card:hover {
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        transform: translateY(-2px);
+    }
+    .stat-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.4rem;
+        flex-shrink: 0;
+    }
+    .stat-icon.blue { background: #edf4ff; color: #1b75d0; }
+    .stat-icon.green { background: #e8f5e9; color: #2e7d32; }
+    .stat-icon.orange { background: #fff3e0; color: #f57c00; }
+    .stat-content h3 {
+        font-size: 0.8rem;
+        color: #6b7a90;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 4px;
+    }
+    .stat-content .value {
+        font-size: 1.6rem;
+        font-weight: 800;
+        color: #1a2332;
+    }
+
+    /* ──── MAIN CONTENT CARD ──── */
+    .rbac-main-card {
+        background: #fff;
+        border-radius: 16px;
+        box-shadow: 0 1px 8px rgba(0, 0, 0, 0.07);
+        overflow: hidden;
+        margin-bottom: 24px;
+    }
+    .rbac-main-card-header {
+        padding: 20px 24px;
+        border-bottom: 1.5px solid #eef0f7;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    .rbac-main-card-header h2 {
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: #1a2332;
+    }
+
+    /* ──── ROLE TABS ──── */
+    .role-tabs {
+        display: flex;
+        gap: 8px;
+        padding: 0 24px 20px 24px;
+    }
     .role-tab {
-        display: flex; align-items: center; gap: 8px;
-        padding: 10px 20px; border-radius: 12px; font-weight: 600; font-size: 0.92rem;
-        cursor: pointer; border: 2px solid transparent; transition: all .2s; color: #5b6b7a;
-        background: #fff; box-shadow: 0 1px 4px rgba(0,0,0,.06);
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 18px;
+        border-radius: 10px;
+        font-weight: 600;
+        font-size: 0.9rem;
+        cursor: pointer;
+        border: 2px solid transparent;
+        transition: all 0.2s ease;
+        color: #5b6b7a;
+        background: #f8f9fc;
     }
-    .role-tab:hover { border-color: #c5d8f0; color: #1b75d0; }
-    .role-tab.active { background: #1b75d0; color: #fff; border-color: #1b75d0; }
-    .role-tab.active i { color: #fff; }
+    .role-tab:hover {
+        border-color: #c5d8f0;
+        color: #1b75d0;
+    }
+    .role-tab.active {
+        background: #1b75d0;
+        color: #fff;
+        border-color: #1b75d0;
+    }
 
-    /* --- Permission table --- */
-    .perm-card { background: #fff; border-radius: 16px; box-shadow: 0 1px 8px rgba(0,0,0,.07); overflow: hidden; }
-    .perm-table { width: 100%; border-collapse: collapse; }
-    .perm-table thead th { padding: 14px 20px; font-weight: 700; font-size: 0.85rem; color: #6b7a90; letter-spacing: .03em; text-transform: uppercase; background: #f8f9fc; border-bottom: 1.5px solid #eef0f7; }
-    .perm-table thead th:not(:first-child) { text-align: center; width: 90px; }
-    .perm-table tbody tr { border-bottom: 1px solid #f1f3f8; transition: background .15s; }
-    .perm-table tbody tr:last-child { border-bottom: none; }
-    .perm-table tbody tr:hover { background: #f8faff; }
-    .perm-table td { padding: 14px 20px; vertical-align: middle; }
-    .perm-table td:not(:first-child) { text-align: center; }
-    .module-cell { display: flex; align-items: center; gap: 12px; }
+    /* ──── PERMISSION TABLE ──── */
+    .perm-table-wrapper {
+        padding: 0 24px 24px 24px;
+        overflow-x: auto;
+    }
+    .perm-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+    .perm-table thead th {
+        padding: 12px 16px;
+        font-weight: 700;
+        font-size: 0.75rem;
+        color: #6b7a90;
+        letter-spacing: 0.5px;
+        text-transform: uppercase;
+        background: #f8f9fc;
+        border-bottom: 2px solid #eef0f7;
+        text-align: left;
+    }
+    .perm-table thead th:not(:first-child) {
+        text-align: center;
+        width: 100px;
+    }
+    .perm-table tbody tr {
+        border-bottom: 1px solid #f1f3f8;
+        transition: background 0.15s ease;
+    }
+    .perm-table tbody tr:last-child {
+        border-bottom: none;
+    }
+    .perm-table tbody tr:hover {
+        background: #fafbff;
+    }
+    .perm-table td {
+        padding: 14px 16px;
+        vertical-align: middle;
+    }
+    .perm-table td:not(:first-child) {
+        text-align: center;
+    }
+    .module-cell {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
     .module-icon-wrap {
-        width: 36px; height: 36px; border-radius: 10px; background: #edf4ff;
-        display: flex; align-items: center; justify-content: center; flex-shrink: 0;
-        color: #1b75d0; font-size: 1rem;
+        width: 40px;
+        height: 40px;
+        border-radius: 10px;
+        background: #edf4ff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        color: #1b75d0;
+        font-size: 1.1rem;
     }
-    .module-name { font-weight: 600; color: #1a2332; font-size: 0.92rem; }
-
-    /* Custom checkbox */
+    .module-name {
+        font-weight: 600;
+        color: #1a2332;
+        font-size: 0.92rem;
+    }
     .perm-check {
-        width: 20px; height: 20px; cursor: pointer; accent-color: #1b75d0;
-        border-radius: 6px; display: inline-block;
+        width: 20px;
+        height: 20px;
+        cursor: pointer;
+        accent-color: #1b75d0;
+        border-radius: 4px;
     }
-    .perm-check:disabled { opacity: .35; cursor: not-allowed; }
-
-    /* --- Right panel: Audit log --- */
-    .rbac-sidebar { width: 280px; flex-shrink: 0; }
-    .audit-card { background: #fff; border-radius: 16px; box-shadow: 0 1px 8px rgba(0,0,0,.07); overflow: hidden; }
-    .audit-card-header { padding: 16px 20px; border-bottom: 1.5px solid #eef0f7; display: flex; justify-content: space-between; align-items: center; }
-    .audit-card-header h3 { margin: 0; font-size: 1rem; font-weight: 700; color: #1a2332; }
-    .audit-card-header a { font-size: 0.82rem; color: #1b75d0; text-decoration: none; }
-    .audit-list { list-style: none; margin: 0; padding: 0; }
-    .audit-item { padding: 14px 20px; border-bottom: 1px solid #f1f3f8; display: flex; gap: 12px; }
-    .audit-item:last-child { border-bottom: none; }
-    .audit-dot { width: 8px; height: 8px; border-radius: 50%; background: #1b75d0; flex-shrink: 0; margin-top: 6px; }
-    .audit-dot.danger { background: #e53935; }
-    .audit-content { font-size: 0.83rem; }
-    .audit-content strong { display: block; color: #1a2332; font-weight: 600; margin-bottom: 2px; line-height: 1.35; }
-    .audit-content span { color: #6b7a90; display: block; font-size: 0.78rem; margin-bottom: 3px; }
-    .audit-content time { color: #a0aec0; font-size: 0.75rem; }
-
-    .security-badge {
-        margin: 16px; padding: 12px 16px; border-radius: 12px;
-        background: #f0f7ff; border: 1px solid #c5dff8; display: flex; gap: 10px;
-        font-size: 0.82rem; color: #1b75d0;
+    .perm-check:disabled {
+        opacity: 0.3;
+        cursor: not-allowed;
     }
 
-    /* --- Confirmation modal --- */
+    /* ──── AUDIT LOG SECTION ──── */
+    .rbac-audit-card {
+        background: #fff;
+        border-radius: 16px;
+        box-shadow: 0 1px 8px rgba(0, 0, 0, 0.07);
+        overflow: hidden;
+    }
+    .audit-card-header {
+        padding: 20px 24px;
+        border-bottom: 1.5px solid #eef0f7;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    .audit-card-header h2 {
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: #1a2332;
+    }
+    .audit-card-header a {
+        font-size: 0.85rem;
+        color: #1b75d0;
+        text-decoration: none;
+        font-weight: 600;
+    }
+    .audit-list {
+        list-style: none;
+        max-height: 400px;
+        overflow-y: auto;
+    }
+    .audit-item {
+        padding: 14px 24px;
+        border-bottom: 1px solid #f1f3f8;
+        display: flex;
+        gap: 12px;
+    }
+    .audit-item:last-child {
+        border-bottom: none;
+    }
+    .audit-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: #1b75d0;
+        flex-shrink: 0;
+        margin-top: 6px;
+    }
+    .audit-dot.danger {
+        background: #e53935;
+    }
+    .audit-content {
+        font-size: 0.8rem;
+        flex: 1;
+    }
+    .audit-content strong {
+        display: block;
+        color: #1a2332;
+        font-weight: 600;
+        margin-bottom: 3px;
+    }
+    .audit-content .action {
+        color: #6b7a90;
+        font-size: 0.75rem;
+        margin-bottom: 2px;
+    }
+    .audit-content time {
+        color: #a0aec0;
+        font-size: 0.72rem;
+    }
+
+    /* ──── MODAL ──── */
     .modal-overlay {
-        position: fixed; inset: 0; background: rgba(20,30,50,.45); z-index: 9000;
-        display: none; align-items: center; justify-content: center;
-        backdrop-filter: blur(2px);
+        position: fixed;
+        inset: 0;
+        background: rgba(20, 30, 50, 0.5);
+        z-index: 9000;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        backdrop-filter: blur(3px);
     }
-    .modal-overlay.show { display: flex; }
+    .modal-overlay.show {
+        display: flex;
+    }
     .modal-box {
-        background: #fff; border-radius: 20px; padding: 32px;
-        width: 460px; max-width: 95vw; box-shadow: 0 20px 60px rgba(0,0,0,.2);
-        animation: modalIn .2s ease;
+        background: #fff;
+        border-radius: 20px;
+        padding: 32px;
+        width: 460px;
+        max-width: 95vw;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25);
+        animation: modalIn 0.3s ease;
     }
-    @@keyframes modalIn { from { transform: translateY(16px); opacity: 0; } to { transform: none; opacity: 1; } }
-    .modal-icon { width: 48px; height: 48px; border-radius: 14px; background: #edf4ff; display: flex; align-items: center; justify-content: center; color: #1b75d0; font-size: 1.4rem; margin-bottom: 16px; }
-    .modal-box h3 { font-size: 1.2rem; font-weight: 700; color: #1a2332; margin: 0 0 6px; }
-    .modal-box p  { color: #6b7a90; font-size: 0.9rem; margin: 0 0 20px; }
-    .modal-summary { background: #f8f9fc; border-radius: 12px; padding: 14px 16px; margin-bottom: 16px; font-size: 0.85rem; }
-    .modal-summary .role-label { font-weight: 700; color: #1a2332; margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }
-    .change-tag { display: inline-block; border-radius: 6px; padding: 2px 10px; font-size: 0.8rem; font-weight: 600; margin: 2px 4px 2px 0; }
-    .change-tag.added   { background: #e8f5e9; color: #2e7d32; }
-    .change-tag.removed { background: #fce4ec; color: #c62828; }
-    .modal-note { font-size: 0.82rem; color: #6b7a90; display: flex; gap: 8px; align-items: flex-start; margin-bottom: 20px; }
-    .modal-note i { color: #1b75d0; flex-shrink: 0; margin-top: 1px; }
-    .modal-actions { display: flex; gap: 10px; justify-content: flex-end; }
-    .btn-cancel { background: #f1f3f8; border: none; color: #3a4a5c; font-weight: 600; border-radius: 10px; padding: 10px 20px; cursor: pointer; font-size: 0.9rem; }
-    .btn-confirm { background: #1b75d0; border: none; color: #fff; font-weight: 600; border-radius: 10px; padding: 10px 22px; cursor: pointer; font-size: 0.9rem; }
-    .btn-confirm:hover { background: #155faa; }
+    @@keyframes modalIn {
+        from { transform: translateY(20px); opacity: 0; }
+        to { transform: none; opacity: 1; }
+    }
+    .modal-icon {
+        width: 52px;
+        height: 52px;
+        border-radius: 12px;
+        background: #edf4ff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #1b75d0;
+        font-size: 1.6rem;
+        margin-bottom: 16px;
+    }
+    .modal-box h3 {
+        font-size: 1.2rem;
+        font-weight: 700;
+        color: #1a2332;
+        margin: 0 0 8px 0;
+    }
+    .modal-box p {
+        color: #6b7a90;
+        font-size: 0.9rem;
+        margin: 0 0 20px 0;
+        line-height: 1.5;
+    }
+    .modal-summary {
+        background: #f8f9fc;
+        border-radius: 12px;
+        padding: 16px;
+        margin-bottom: 16px;
+        font-size: 0.85rem;
+    }
+    .modal-summary .role-label {
+        font-weight: 700;
+        color: #1a2332;
+        margin-bottom: 10px;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+    .change-tag {
+        display: inline-block;
+        border-radius: 6px;
+        padding: 4px 12px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        margin: 3px 4px 3px 0;
+    }
+    .change-tag.added {
+        background: #e8f5e9;
+        color: #2e7d32;
+    }
+    .change-tag.removed {
+        background: #fce4ec;
+        color: #c62828;
+    }
+    .modal-actions {
+        display: flex;
+        gap: 12px;
+        justify-content: flex-end;
+        margin-top: 24px;
+    }
+    .btn-cancel {
+        background: #f1f3f8;
+        border: none;
+        color: #3a4a5c;
+        font-weight: 600;
+        border-radius: 10px;
+        padding: 10px 20px;
+        cursor: pointer;
+        font-size: 0.9rem;
+        transition: all 0.2s ease;
+    }
+    .btn-cancel:hover {
+        background: #e8ebf5;
+    }
+    .btn-confirm {
+        background: #1b75d0;
+        border: none;
+        color: #fff;
+        font-weight: 600;
+        border-radius: 10px;
+        padding: 10px 22px;
+        cursor: pointer;
+        font-size: 0.9rem;
+        transition: all 0.2s ease;
+    }
+    .btn-confirm:hover {
+        background: #155faa;
+    }
 
+    /* ──── TOAST ──── */
     .toast-success {
-        position: fixed; bottom: 28px; right: 28px; background: #1b75d0;
-        color: #fff; padding: 14px 22px; border-radius: 12px;
-        box-shadow: 0 8px 24px rgba(27,117,208,.3); font-weight: 600;
-        display: none; align-items: center; gap: 10px; z-index: 9999;
-        animation: slideUp .25s ease;
+        position: fixed;
+        bottom: 28px;
+        right: 28px;
+        background: #1b75d0;
+        color: #fff;
+        padding: 14px 22px;
+        border-radius: 12px;
+        box-shadow: 0 8px 24px rgba(27, 117, 208, 0.3);
+        font-weight: 600;
+        display: none;
+        align-items: center;
+        gap: 10px;
+        z-index: 9999;
+        animation: slideUp 0.25s ease;
     }
-    .toast-success.show { display: flex; }
-    @@keyframes slideUp { from { transform: translateY(16px); opacity: 0; } to { transform: none; opacity: 1; } }
+    .toast-success.show {
+        display: flex;
+    }
+    @@keyframes slideUp {
+        from { transform: translateY(16px); opacity: 0; }
+        to { transform: none; opacity: 1; }
+    }
+
+    /* ──── RESPONSIVE ──── */
+    @@media (max-width: 768px) {
+        .rbac-container { padding: 20px 16px; }
+        .rbac-header-section { flex-direction: column; }
+        .rbac-header-actions { width: 100%; flex-direction: column; }
+        .btn-primary, .btn-secondary { width: 100%; justify-content: center; }
+        .stats-grid { grid-template-columns: 1fr; }
+        .role-tabs { overflow-x: auto; padding-bottom: 24px; }
+    }
 </style>
 
-<div class="rbac-page">
-    <!-- ========== LEFT PANEL ========== -->
-    <div class="rbac-main">
-        <div class="rbac-header">
-            <div>
-                <h1><i class="bi bi-shield-check me-2 text-primary"></i>Phân quyền hệ thống</h1>
-                <p>Quản lý quyền truy cập cho từng vai trò trong phòng khám.</p>
+<div class="rbac-page-wrapper">
+    <!-- ========== LEFT SIDEBAR ========== -->
+    <aside class="rbac-sidebar-nav">
+        <div style="margin-bottom: 24px;">
+            <a href="javascript:history.back()" style="display: inline-flex; align-items: center; gap: 8px; color: #1b75d0; text-decoration: none; font-weight: 600; font-size: 0.9rem;">
+                <i class="bi bi-arrow-left"></i> Quay lại
+            </a>
+        </div>
+        
+        <nav>
+            <div style="font-size: 0.75rem; font-weight: 700; color: #6b7a90; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 12px; padding: 0 8px;">Quản lý hệ thống</div>
+            <a href="/RolePermission" style="display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 10px; color: #1a2332; text-decoration: none; font-weight: 600; font-size: 0.9rem; background: #edf4ff; transition: all 0.2s;">
+                <i class="bi bi-shield-check" style="color: #1b75d0;"></i> Phân quyền
+            </a>
+            <a href="#" style="display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 10px; color: #6b7a90; text-decoration: none; font-weight: 500; font-size: 0.9rem; margin-top: 8px; transition: all 0.2s;" onmouseover="this.style.color='#1a2332'; this.style.background='#f8f9fc';" onmouseout="this.style.color='#6b7a90'; this.style.background='transparent';">
+                <i class="bi bi-clock-history"></i> Nhật ký hoạt động
+            </a>
+            <a href="#" style="display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 10px; color: #6b7a90; text-decoration: none; font-weight: 500; font-size: 0.9rem; margin-top: 8px; transition: all 0.2s;" onmouseover="this.style.color='#1a2332'; this.style.background='#f8f9fc';" onmouseout="this.style.color='#6b7a90'; this.style.background='transparent';">
+                <i class="bi bi-shield-exclamation"></i> Cảnh báo bảo mật
+            </a>
+        </nav>
+    </aside>
+
+    <!-- ========== MAIN CONTENT ========== -->
+    <main class="rbac-main-content">
+    <div class="rbac-header-section">
+        <div class="rbac-header-left">
+            <h1><i class="bi bi-shield-check me-2 text-primary"></i>Phân quyền hệ thống</h1>
+            <p>Quản lý quyền truy cập của từng vai trò trong hệ thống.</p>
+        </div>
+        <div class="rbac-header-actions">
+            <button class="btn-secondary" onclick="handleReset()" title="Khôi phục phân quyền mặc định cho vai trò hiện tại">
+                <i class="bi bi-arrow-counterclockwise"></i> Khôi phục mặc định
+            </button>
+            <button class="btn-primary" onclick="handleSave()" title="Lưu các thay đổi phân quyền">
+                <i class="bi bi-check-circle"></i> Lưu thay đổi
+            </button>
+        </div>
+    </div>
+
+    <!-- ========== STATISTICS CARDS ========== -->
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-icon blue">
+                <i class="bi bi-diagram-3"></i>
             </div>
-            <div class="rbac-actions">
-                <button class="btn-reset" onclick="handleReset()">
-                    <i class="bi bi-arrow-counterclockwise me-1"></i>Khôi phục mặc định
-                </button>
-                <button class="btn-save" onclick="handleSave()">
-                    <i class="bi bi-floppy me-1"></i>Lưu thay đổi quyền
-                </button>
+            <div class="stat-content">
+                <h3>Tổng vai trò</h3>
+                <div class="value">@totalRoles</div>
             </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon green">
+                <i class="bi bi-layers"></i>
+            </div>
+            <div class="stat-content">
+                <h3>Tổng module</h3>
+                <div class="value">@totalModules</div>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon orange">
+                <i class="bi bi-clock-history"></i>
+            </div>
+            <div class="stat-content">
+                <h3>Thay đổi gần đây</h3>
+                <div class="value">@auditLogs.Count</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========== MAIN CONTENT: PERMISSIONS ========== -->
+    <div class="rbac-main-card">
+        <div class="rbac-main-card-header">
+            <h2>
+                <i class="bi bi-lock-fill me-2" style="color: #1b75d0;"></i>Quản lý quyền truy cập
+            </h2>
         </div>
 
         <!-- Role tabs -->
@@ -152,14 +584,15 @@
             @foreach (var r in roles)
             {
                 <button class="role-tab @(r.Key == "Admin" ? "active" : "")"
-                        onclick="switchRole('@r.Key', this)">
+                        onclick="switchRole('@r.Key', this)"
+                        title="Bấm để xem quyền hạn của vai trò '@r.Label'">
                     <i class="bi @r.Icon"></i> @r.Label
                 </button>
             }
         </div>
 
         <!-- Permission table -->
-        <div class="perm-card">
+        <div class="perm-table-wrapper">
             <table class="perm-table">
                 <thead>
                     <tr>
@@ -192,7 +625,7 @@
                                            data-module="@mod.ModuleKey"
                                            @(isAllowed ? "checked" : "")
                                            @(isAdmin ? "disabled" : "")
-                                           title="@(isAdmin ? "Admin luôn có toàn quyền" : "")" />
+                                           title="@(isAdmin ? "Admin luôn có toàn quyền" : "Bấm để bật/tắt quyền này")" />
                                 </td>
                             }
                         </tr>
@@ -202,43 +635,45 @@
         </div>
     </div>
 
-    <!-- ========== RIGHT PANEL ========== -->
-    <div class="rbac-sidebar">
-        <div class="audit-card">
-            <div class="audit-card-header">
-                <h3>Nhật ký thay đổi</h3>
-                <a href="#">Xem tất cả</a>
-            </div>
+    <!-- ========== AUDIT LOG ========== -->
+    <div class="rbac-audit-card">
+        <div class="audit-card-header">
+            <h2><i class="bi bi-clock-history me-2" style="color: #1b75d0;"></i>Nhật ký thay đổi</h2>
+            <a href="#" title="Xem toàn bộ nhật ký">Xem tất cả</a>
+        </div>
+        @if (auditLogs.Count == 0)
+        {
             <ul class="audit-list">
-                @if (auditLogs.Count == 0)
-                {
-                    <li class="audit-item">
-                        <div class="audit-dot"></div>
-                        <div class="audit-content">
-                            <strong>Hệ thống đã lưu dữ liệu phân quyền</strong>
-                            <span>Khởi tạo ban đầu</span>
-                            <time>Hôm nay</time>
-                        </div>
-                    </li>
-                }
+                <li class="audit-item">
+                    <div class="audit-dot"></div>
+                    <div class="audit-content">
+                        <strong>Hệ thống đã lưu dữ liệu phân quyền</strong>
+                        <div class="action">Khởi tạo ban đầu</div>
+                        <time>Hôm nay</time>
+                    </div>
+                </li>
+            </ul>
+        }
+        else
+        {
+            <ul class="audit-list">
                 @foreach (var log in auditLogs)
                 {
                     bool isDanger = log.Details?.Contains("Thu hồi") == true || log.Details?.Contains("-") == true;
                     <li class="audit-item">
                         <div class="audit-dot @(isDanger ? "danger" : "")"></div>
                         <div class="audit-content">
-                            <strong>@log.Username @log.Action</strong>
-                            <span style="font-size:0.76rem;color:#8898aa;">@(log.Details?.Length > 60 ? log.Details.Substring(0, 60) + "…" : log.Details)</span>
-                            <time>@log.Timestamp.ToString("HH:mm dd/MM/yyyy")</time>
+                            <strong>@log.Username</strong>
+                            <div class="action">@log.Action</div>
+                            <div style="font-size: 0.75rem; color: #8898aa; margin: 4px 0;">
+                                @(log.Details?.Length > 70 ? log.Details.Substring(0, 70) + "…" : log.Details)
+                            </div>
+                            <time>@log.Timestamp.ToString("HH:mm • dd/MM/yyyy")</time>
                         </div>
                     </li>
                 }
             </ul>
-            <div class="security-badge">
-                <i class="bi bi-shield-check fs-5"></i>
-                <span>Hệ thống đang ở trạng thái an toàn cao.</span>
-            </div>
-        </div>
+        }
     </div>
 </div>
 

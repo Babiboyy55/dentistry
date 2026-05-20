@@ -95,7 +95,7 @@
                         };
 
                         <tr>
-                            <td class="text-muted">NV@staff.Id</td>
+                            <td class="text-muted">@($"NV{staff.Id:0000}")</td>
                             <td class="fw-semibold">@staff.FullName</td>
                             <td>@staff.Email</td>
                             <td><span class="badge @roleBadge">@roleLabel</span></td>
@@ -131,6 +131,9 @@
 
                                     <a class="btn btn-light btn-sm" href="/Staff/Edit/@staff.Id" title="Sửa thông tin">
                                         <i class="bi bi-pencil"></i>
+                                    </a>
+                                    <a class="btn btn-outline-danger btn-sm" href="/Staff/Delete/@staff.Id" title="Xóa tài khoản" onclick="return confirm('Bạn có chắc chắn muốn xóa tài khoản này?');">
+                                        <i class="bi bi-trash"></i>
                                     </a>
                                 </div>
                             </td>

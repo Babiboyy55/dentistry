@@ -40,7 +40,7 @@ app.MapStaticAssets();
 app.MapControllerRoute(
     name: "root",
     pattern: "",
-    defaults: new { controller = "Auth", action = "Login" });
+    defaults: new { controller = "Home", action = "Index" });
 
 app.MapControllerRoute(
     name: "default",

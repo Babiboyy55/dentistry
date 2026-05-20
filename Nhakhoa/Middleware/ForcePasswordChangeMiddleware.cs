@@ -40,16 +40,8 @@ namespace Nhakhoa.Middleware
                     var user = await dbContext.Users.FindAsync(userId);
                     if (user != null)
                     {
-                        // 1. Force logout nếu SecurityStamp không khớp (tài khoản bị thay đổi/bị khóa)
-                        var securityStampClaim = context.User.FindFirst("SecurityStamp")?.Value;
-                        System.Console.WriteLine($"[DEBUG] DB Stamp: {user.SecurityStamp}, Claim: {securityStampClaim}"); if (!string.IsNullOrEmpty(securityStampClaim) && securityStampClaim != user.SecurityStamp)
-                        {
-                            await context.SignOutAsync("Cookies");
-                            context.Response.Redirect("/Auth/Login");
-                            return;
-                        }
-
-                        // 2. Bắt buộc đổi mật khẩu nếu đang dùng mật khẩu tạm
+                        // Chỉ kiểm tra mật khẩu tạm - bỏ check SecurityStamp tạm thời
+                        // 1. Bắt buộc đổi mật khẩu nếu đang dùng mật khẩu tạm
                         if (user.IsTemporaryPassword && !path.Equals("/Auth/ChangePassword", StringComparison.OrdinalIgnoreCase))
                         {
                             context.Response.Redirect("/Auth/ChangePassword");
