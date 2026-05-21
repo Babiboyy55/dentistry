@@ -10,7 +10,7 @@
         <p class="text-muted">Chỉnh sửa thông tin cơ bản, hồ sơ cá nhân và lương thưởng</p>
     </div>
 
-    <form asp-action="Edit" method="post">
+    <form asp-action="Edit" method="post" enctype="multipart/form-data">
         <input type="hidden" asp-for="Id" />
         <div asp-validation-summary="All" class="text-danger mb-3"></div>
 
@@ -102,29 +102,130 @@
         <div class="row g-4 mb-4">
             <div class="col-md-4">
                 <label class="form-label fw-semibold text-dark small mb-2">Lương cơ bản (đ)</label>
-                <input asp-for="BaseSalary" type="number" class="form-control" />
+                <input type="hidden" asp-for="BaseSalary" />
+                <input id="BaseSalary_Display" type="text" class="form-control currency-input" data-target="BaseSalary" />
             </div>
             <div class="col-md-4">
-                <label class="form-label fw-semibold text-dark small mb-2">Hệ số bằng cấp</label>
-                <input asp-for="DegreeMultiplier" type="number" step="0.1" class="form-control" />
+                <label class="form-label fw-semibold text-dark small mb-2">Hệ số học vị</label>
+                <input asp-for="DegreeMultiplier" type="number" step="0.01" class="form-control" />
+                <span class="text-muted small" style="font-size: 0.75rem;">(Hệ số tự động tính theo học vị cao nhất)</span>
             </div>
             <div class="col-md-4">
-                <label class="form-label fw-semibold text-dark small mb-2">Tên bằng cấp xét lương</label>
+                <label class="form-label fw-semibold text-dark small mb-2">Học vị xét lương</label>
                 <input asp-for="DegreeTitle" class="form-control" />
+                <span class="text-muted small" style="font-size: 0.75rem;">(Tự động cập nhật theo học vị cao nhất)</span>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label fw-semibold text-dark small mb-2">Hệ số học hàm</label>
+                <input asp-for="RankMultiplier" type="number" step="0.01" class="form-control" />
+                <span class="text-muted small" style="font-size: 0.75rem;">(Hệ số tự động tính theo học hàm cao nhất)</span>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label fw-semibold text-dark small mb-2">Học hàm xét lương</label>
+                <input asp-for="RankTitle" class="form-control" />
+                <span class="text-muted small" style="font-size: 0.75rem;">(Tự động cập nhật theo học hàm cao nhất)</span>
             </div>
             <div class="col-md-4">
                 <label class="form-label fw-semibold text-dark small mb-2">Phụ cấp chuyên môn (đ)</label>
-                <input asp-for="SpecializationAllowance" type="number" class="form-control" />
+                <input type="hidden" asp-for="SpecializationAllowance" />
+                <input id="SpecializationAllowance_Display" type="text" class="form-control currency-input" data-target="SpecializationAllowance" />
             </div>
             <div class="col-md-4">
                 <label class="form-label fw-semibold text-dark small mb-2">Phụ cấp thâm niên (đ)</label>
-                <input asp-for="SeniorityAllowance" type="number" class="form-control" />
+                <input type="hidden" asp-for="SeniorityAllowance" />
+                <input id="SeniorityAllowance_Display" type="text" class="form-control currency-input" data-target="SeniorityAllowance" />
             </div>
             <div class="col-md-4">
                 <label class="form-label fw-semibold text-dark small mb-2">Thưởng KPI tháng (đ)</label>
-                <input asp-for="MonthlyBonus" type="number" class="form-control" />
+                <input type="hidden" asp-for="MonthlyBonus" />
+                <input id="MonthlyBonus_Display" type="text" class="form-control currency-input" data-target="MonthlyBonus" />
             </div>
         </div>
+
+        <hr class="text-muted my-4" />
+        <h5 class="fw-bold text-primary mb-3"><i class="bi bi-mortarboard me-2"></i>Bằng cấp &amp; Chứng chỉ</h5>
+        
+        <div id="qualifications-container">
+            @for (int i = 0; i < Model.Qualifications.Count; i++)
+            {
+                <div class="qualification-row border rounded-3 p-3 mb-3 bg-light position-relative" data-index="@i">
+                    <input type="hidden" name="Qualifications[@i].Id" value="@Model.Qualifications[i].Id" />
+                    <input type="hidden" name="Qualifications[@i].ImagePath" value="@Model.Qualifications[i].ImagePath" />
+                    <input type="hidden" class="delete-flag" name="Qualifications[@i].IsDeleted" value="false" />
+
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h6 class="fw-bold text-dark mb-0">Mục #@(i + 1)</h6>
+                        <button type="button" class="btn btn-sm btn-outline-danger remove-qualification-btn">
+                            <i class="bi bi-trash"></i> Xóa
+                        </button>
+                    </div>
+
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold text-dark small mb-1">Tên bằng cấp / chứng chỉ <span class="text-danger">*</span></label>
+                            <input name="Qualifications[@i].Title" class="form-control" value="@Model.Qualifications[i].Title" required />
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold text-dark small mb-1">Chuyên ngành</label>
+                            <input name="Qualifications[@i].Major" class="form-control" value="@Model.Qualifications[i].Major" />
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold text-dark small mb-1">Tổ chức cấp</label>
+                            <input name="Qualifications[@i].Institution" class="form-control" value="@Model.Qualifications[i].Institution" />
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold text-dark small mb-1">Năm cấp</label>
+                            <input type="number" name="Qualifications[@i].Year" class="form-control" value="@Model.Qualifications[i].Year" />
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold text-dark small mb-1">Loại</label>
+                            <select name="Qualifications[@i].Category" class="form-select">
+                                <option value="Degree" selected="@(Model.Qualifications[i].Category == "Degree")">Bằng cấp</option>
+                                <option value="Certificate" selected="@(Model.Qualifications[i].Category == "Certificate")">Chứng chỉ</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold text-dark small mb-1">Học vị</label>
+                            <select name="Qualifications[@i].AcademicDegree" class="form-select academic-degree-select">
+                                <option value="" selected="@(string.IsNullOrEmpty(Model.Qualifications[i].AcademicDegree))">-- Chọn học vị --</option>
+                                <option value="Cử nhân" selected="@(Model.Qualifications[i].AcademicDegree == "Cử nhân")">Cử nhân (Hệ số 1.10)</option>
+                                <option value="Thạc sĩ" selected="@(Model.Qualifications[i].AcademicDegree == "Thạc sĩ")">Thạc sĩ (Hệ số 1.20)</option>
+                                <option value="Bác sĩ CKI" selected="@(Model.Qualifications[i].AcademicDegree == "Bác sĩ CKI")">Bác sĩ CKI (Hệ số 1.30)</option>
+                                <option value="Bác sĩ CKII" selected="@(Model.Qualifications[i].AcademicDegree == "Bác sĩ CKII")">Bác sĩ CKII (Hệ số 1.40)</option>
+                                <option value="Tiến sĩ" selected="@(Model.Qualifications[i].AcademicDegree == "Tiến sĩ")">Tiến sĩ (Hệ số 1.50)</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold text-dark small mb-1">Học hàm</label>
+                            <select name="Qualifications[@i].AcademicRank" class="form-select academic-rank-select">
+                                <option value="" selected="@(string.IsNullOrEmpty(Model.Qualifications[i].AcademicRank))">-- Chọn học hàm --</option>
+                                <option value="Phó Giáo sư" selected="@(Model.Qualifications[i].AcademicRank == "Phó Giáo sư")">Phó Giáo sư (Hệ số 1.20)</option>
+                                <option value="Giáo sư" selected="@(Model.Qualifications[i].AcademicRank == "Giáo sư")">Giáo sư (Hệ số 1.30)</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold text-dark small mb-1">Ảnh bằng cấp/chứng chỉ</label>
+                            @if (!string.IsNullOrEmpty(Model.Qualifications[i].ImagePath))
+                            {
+                                <div class="d-flex align-items-center gap-2 mb-2">
+                                    <a href="@Model.Qualifications[i].ImagePath" target="_blank">
+                                        <img src="@Model.Qualifications[i].ImagePath" class="rounded border" style="width: 40px; height: 40px; object-fit: cover;" />
+                                    </a>
+                                    <span class="small text-muted text-truncate" style="max-width: 150px;">
+                                        @System.IO.Path.GetFileName(Model.Qualifications[i].ImagePath)
+                                    </span>
+                                </div>
+                            }
+                            <input type="file" name="Qualifications[@i].ImageFile" class="form-control" accept="image/*" />
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+
+        <button type="button" id="add-qualification-btn" class="btn btn-outline-primary btn-sm rounded-pill mb-4">
+            <i class="bi bi-plus-lg me-1"></i> Thêm bằng cấp / chứng chỉ
+        </button>
 
         <div class="d-flex justify-content-end gap-3 mt-4">
             <a href="/Staff/Details/@Model.Id" class="btn btn-light px-4 py-2 fw-semibold" style="border: 1px solid #dee2e6; color: #5b6b7a;">Hủy</a>
@@ -137,4 +238,199 @@
 
 @section Scripts {
     @await Html.PartialAsync("_ValidationScriptsPartial")
+    
+    <script>
+        let qualificationIndex = @Model.Qualifications.Count;
+
+        const degreeMultiplierMap = {
+            "Cử nhân": 1.1,
+            "Thạc sĩ": 1.2,
+            "Bác sĩ CKI": 1.3,
+            "Bác sĩ CKII": 1.4,
+            "Tiến sĩ": 1.5,
+            "Khác": 1.0,
+            "": 1.0
+        };
+
+        const rankMultiplierMap = {
+            "Phó Giáo sư": 1.2,
+            "Giáo sư": 1.3,
+            "Khác": 1.0,
+            "": 1.0
+        };
+
+        function updateSalaryFromQualifications() {
+            let maxDegreeMult = 1.0;
+            let maxDegreeTitle = "Chưa có";
+            let maxRankMult = 1.0;
+            let maxRankTitle = "Chưa có";
+            
+            const rows = document.querySelectorAll('.qualification-row');
+            rows.forEach(row => {
+                if (row.style.display !== 'none') {
+                    const titleInput = row.querySelector('input[name*="Title"]');
+                    const degreeSelect = row.querySelector('select[name*="AcademicDegree"]');
+                    const rankSelect = row.querySelector('select[name*="AcademicRank"]');
+                    
+                    const title = titleInput ? titleInput.value.trim() : "";
+                    const degree = degreeSelect ? degreeSelect.value : "";
+                    const rank = rankSelect ? rankSelect.value : "";
+                    
+                    const degMult = degreeMultiplierMap[degree] || 1.0;
+                    if (degMult > maxDegreeMult) {
+                        maxDegreeMult = degMult;
+                        maxDegreeTitle = degree + (title ? ` (${title})` : "");
+                    }
+
+                    const rkMult = rankMultiplierMap[rank] || 1.0;
+                    if (rkMult > maxRankMult) {
+                        maxRankMult = rkMult;
+                        maxRankTitle = rank + (title ? ` (${title})` : "");
+                    }
+                }
+            });
+            
+            const degreeMultiplierInput = document.getElementById('DegreeMultiplier');
+            const degreeTitleInput = document.getElementById('DegreeTitle');
+            const rankMultiplierInput = document.getElementById('RankMultiplier');
+            const rankTitleInput = document.getElementById('RankTitle');
+            
+            if (degreeMultiplierInput) degreeMultiplierInput.value = maxDegreeMult.toFixed(2);
+            if (degreeTitleInput) degreeTitleInput.value = maxDegreeTitle;
+            if (rankMultiplierInput) rankMultiplierInput.value = maxRankMult.toFixed(2);
+            if (rankTitleInput) rankTitleInput.value = maxRankTitle;
+        }
+
+        document.getElementById('add-qualification-btn').addEventListener('click', function () {
+            const container = document.getElementById('qualifications-container');
+            const html = `
+                <div class="qualification-row border rounded-3 p-3 mb-3 bg-light position-relative" data-index="${qualificationIndex}">
+                    <input type="hidden" name="Qualifications[${qualificationIndex}].Id" value="0" />
+                    <input type="hidden" class="delete-flag" name="Qualifications[${qualificationIndex}].IsDeleted" value="false" />
+
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h6 class="fw-bold text-dark mb-0">Mục #${qualificationIndex + 1} (Mới)</h6>
+                        <button type="button" class="btn btn-sm btn-outline-danger remove-qualification-btn">
+                            <i class="bi bi-trash"></i> Xóa
+                        </button>
+                    </div>
+
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold text-dark small mb-1">Tên bằng cấp / chứng chỉ <span class="text-danger">*</span></label>
+                            <input name="Qualifications[${qualificationIndex}].Title" class="form-control" required />
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold text-dark small mb-1">Chuyên ngành</label>
+                            <input name="Qualifications[${qualificationIndex}].Major" class="form-control" />
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold text-dark small mb-1">Tổ chức cấp</label>
+                            <input name="Qualifications[${qualificationIndex}].Institution" class="form-control" />
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold text-dark small mb-1">Năm cấp</label>
+                            <input type="number" name="Qualifications[${qualificationIndex}].Year" class="form-control" />
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold text-dark small mb-1">Loại</label>
+                            <select name="Qualifications[${qualificationIndex}].Category" class="form-select">
+                                <option value="Degree">Bằng cấp</option>
+                                <option value="Certificate">Chứng chỉ</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold text-dark small mb-1">Học vị</label>
+                            <select name="Qualifications[\${qualificationIndex}].AcademicDegree" class="form-select academic-degree-select">
+                                <option value="">-- Chọn học vị --</option>
+                                <option value="Cử nhân">Cử nhân (Hệ số 1.10)</option>
+                                <option value="Thạc sĩ">Thạc sĩ (Hệ số 1.20)</option>
+                                <option value="Bác sĩ CKI">Bác sĩ CKI (Hệ số 1.30)</option>
+                                <option value="Bác sĩ CKII">Bác sĩ CKII (Hệ số 1.40)</option>
+                                <option value="Tiến sĩ">Tiến sĩ (Hệ số 1.50)</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold text-dark small mb-1">Học hàm</label>
+                            <select name="Qualifications[\${qualificationIndex}].AcademicRank" class="form-select academic-rank-select">
+                                <option value="">-- Chọn học hàm --</option>
+                                <option value="Phó Giáo sư">Phó Giáo sư (Hệ số 1.20)</option>
+                                <option value="Giáo sư">Giáo sư (Hệ số 1.30)</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold text-dark small mb-1">Ảnh bằng cấp/chứng chỉ</label>
+                            <input type="file" name="Qualifications[${qualificationIndex}].ImageFile" class="form-control" accept="image/*" />
+                        </div>
+                    </div>
+                </div>
+            `;
+            container.insertAdjacentHTML('beforeend', html);
+            qualificationIndex++;
+            updateRowHeaders();
+        });
+
+        // Event delegation for remove buttons
+        const qContainer = document.getElementById('qualifications-container');
+        qContainer.addEventListener('click', function (e) {
+            if (e.target.closest('.remove-qualification-btn')) {
+                const row = e.target.closest('.qualification-row');
+                row.querySelector('.delete-flag').value = 'true';
+                row.style.display = 'none'; // hide it
+                updateRowHeaders();
+                updateSalaryFromQualifications();
+            }
+        });
+
+        // Bind events for automatic salary updates
+        qContainer.addEventListener('input', function (e) {
+            if (e.target.name && (e.target.name.includes('Title') || e.target.name.includes('AcademicDegree') || e.target.name.includes('AcademicRank'))) {
+                updateSalaryFromQualifications();
+            }
+        });
+        qContainer.addEventListener('change', function (e) {
+            if (e.target.name && (e.target.name.includes('Title') || e.target.name.includes('AcademicDegree') || e.target.name.includes('AcademicRank'))) {
+                updateSalaryFromQualifications();
+            }
+        });
+
+        // Auto formatting currency fields
+        function formatNumber(val) {
+            let num = val.toString().replace(/\D/g, "");
+            if (!num) return "";
+            return new Intl.NumberFormat('vi-VN').format(num);
+        }
+
+        function unformatNumber(val) {
+            return val.replace(/\./g, "");
+        }
+
+        document.querySelectorAll('.currency-input').forEach(displayInput => {
+            const targetId = displayInput.getAttribute('data-target');
+            const hiddenInput = document.getElementById(targetId);
+            
+            // Format on load
+            if (hiddenInput && hiddenInput.value) {
+                let val = Math.round(parseFloat(hiddenInput.value) || 0).toString();
+                displayInput.value = formatNumber(val);
+            }
+            
+            displayInput.addEventListener('input', function () {
+                let cursorPosition = this.selectionStart;
+                let originalLength = this.value.length;
+                
+                let rawVal = unformatNumber(this.value);
+                if (hiddenInput) {
+                    hiddenInput.value = rawVal;
+                }
+                
+                let formatted = formatNumber(rawVal);
+                this.value = formatted;
+                
+                let newLength = formatted.length;
+                cursorPosition = cursorPosition + (newLength - originalLength);
+                this.setSelectionRange(cursorPosition, cursorPosition);
+            });
+        });
+    </script>
 }

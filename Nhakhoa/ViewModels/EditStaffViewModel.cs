@@ -37,8 +37,39 @@ namespace Nhakhoa.ViewModels
         public decimal? BaseSalary { get; set; }
         public decimal? DegreeMultiplier { get; set; } = 1m;
         public string? DegreeTitle { get; set; }
+        public decimal? RankMultiplier { get; set; } = 1m;
+        public string? RankTitle { get; set; }
         public decimal? SpecializationAllowance { get; set; }
         public decimal? SeniorityAllowance { get; set; }
         public decimal? MonthlyBonus { get; set; }
+
+        // --- Qualifications ---
+        public List<EditQualificationViewModel> Qualifications { get; set; } = new List<EditQualificationViewModel>();
+    }
+
+    public class EditQualificationViewModel
+    {
+        public int Id { get; set; }
+        
+        public string Title { get; set; }
+        
+        public string? Major { get; set; }
+        
+        public string? Institution { get; set; }
+        
+        public int? Year { get; set; }
+        
+        [Required]
+        public string Category { get; set; } = "Degree"; // Degree, Certificate
+        
+        public string? ImagePath { get; set; }
+        
+        public Microsoft.AspNetCore.Http.IFormFile? ImageFile { get; set; }
+        
+        public bool IsDeleted { get; set; } = false;
+
+        public string? AcademicRank { get; set; }
+
+        public string? AcademicDegree { get; set; }
     }
 }

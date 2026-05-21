@@ -27,5 +27,14 @@ namespace Nhakhoa.Models
         [Required]
         [MaxLength(30)]
         public string Category { get; set; } // Degree, Certificate
+
+        [MaxLength(255)]
+        public string? ImagePath { get; set; }
+
+        [MaxLength(50)]
+        public string? AcademicRank { get; set; }
+
+        [MaxLength(50)]
+        public string? AcademicDegree { get; set; }
     }
 }

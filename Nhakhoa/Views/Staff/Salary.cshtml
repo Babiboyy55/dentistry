@@ -1,0 +1,223 @@
+@model Nhakhoa.ViewModels.StaffProfileViewModel
+@{
+    Layout = "_AdminLayout";
+    ViewData["Title"] = "Thông tin lương - " + Model.FullName;
+
+    string FormatMoney(decimal amount) =>
+        amount == 0 ? "—" : amount.ToString("N0") + " ₫";
+
+    string Fallback(string? val) =>
+        string.IsNullOrWhiteSpace(val) ? "Chưa cập nhật" : val;
+
+    string GetNamePrefix(string? degree, string? rank)
+    {
+        if (!string.IsNullOrEmpty(rank))
+        {
+            if (rank.Contains("Giáo sư") && !rank.Contains("Phó")) return "GS. ";
+            if (rank.Contains("Phó Giáo sư")) return "PGS. ";
+        }
+        if (!string.IsNullOrEmpty(degree))
+        {
+            if (degree.Contains("Tiến sĩ")) return "TS. ";
+            if (degree.Contains("Thạc sĩ")) return "ThS. ";
+            if (degree.Contains("Cử nhân")) return "CN. ";
+            if (degree.Contains("Bác sĩ")) return "BS. ";
+        }
+        return "";
+    }
+
+    var totalSalary = (Model.Salary.BaseSalary * Model.Salary.DegreeMultiplier * Model.Salary.RankMultiplier)
+                     + Model.Salary.SpecializationAllowance
+                     + Model.Salary.SeniorityAllowance
+                     + Model.Salary.MonthlyBonus;
+}
+
+<!-- Page Header -->
+<div class="d-flex align-items-center justify-content-between gap-3 mb-4">
+    <div>
+        <h4 class="fw-bold text-dark mb-0">
+            <i class="bi bi-cash-stack text-primary me-2"></i>Bảng lương nhân sự
+        </h4>
+        <div class="text-muted small mt-1">Chi tiết tính toán lương của @GetNamePrefix(Model.Salary.DegreeTitle, Model.Salary.RankTitle)@Model.FullName</div>
+    </div>
+    <div class="d-flex gap-2">
+        <a href="/Staff/Details/@Model.Id" class="btn btn-outline-secondary btn-sm px-3 rounded-pill d-inline-flex align-items-center gap-1">
+            <i class="bi bi-person-vcard"></i> Hồ sơ
+        </a>
+        <a href="/Staff" class="btn btn-outline-secondary btn-sm px-3 rounded-pill d-inline-flex align-items-center gap-1">
+            <i class="bi bi-arrow-left"></i> Quay lại
+        </a>
+        <a href="/Staff/Edit/@Model.Id" class="btn btn-primary btn-sm px-3 rounded-pill d-inline-flex align-items-center gap-1" style="background:#1b75d0; border-color:#1b75d0;">
+            <i class="bi bi-pencil-square"></i> Cập nhật lương
+        </a>
+    </div>
+</div>
+
+<!-- Employee Identity Card -->
+<div class="card border-0 shadow-sm rounded-4 mb-4" style="background: linear-gradient(135deg, #1b75d0 0%, #0d4fa0 100%); padding: 28px;">
+    <div class="d-flex align-items-center gap-4">
+        <div class="rounded-4 d-flex align-items-center justify-content-center text-white fw-bold"
+             style="width: 72px; height: 72px; background: rgba(255,255,255,0.2); font-size: 1.8rem; flex-shrink: 0;">
+            @(Model.FullName?.Substring(0, 1).ToUpper() ?? "?")
+        </div>
+        <div class="flex-grow-1">
+            <h4 class="fw-bold text-white mb-1">@GetNamePrefix(Model.Salary.DegreeTitle, Model.Salary.RankTitle)@Model.FullName</h4>
+            <div class="d-flex flex-wrap gap-2">
+                <span class="badge rounded-pill px-3 py-1 fw-medium" style="background: rgba(255,255,255,0.2); color:#fff; font-size:0.8rem;">
+                    <i class="bi bi-briefcase me-1"></i>@Fallback(Model.PositionTitle)
+                </span>
+                <span class="badge rounded-pill px-3 py-1 fw-medium" style="background: rgba(255,255,255,0.2); color:#fff; font-size:0.8rem;">
+                    <i class="bi bi-building me-1"></i>@Fallback(Model.Department)
+                </span>
+                <span class="badge rounded-pill px-3 py-1 fw-medium" style="background: rgba(255,255,255,0.2); color:#fff; font-size:0.8rem;">
+                    ID: @Fallback(Model.StaffCode)
+                </span>
+            </div>
+        </div>
+        <div class="text-end">
+            <div class="text-white-50 small mb-1">Tổng lương tháng</div>
+            <div class="fw-bold text-white" style="font-size: 2rem; letter-spacing: -0.5px;">@FormatMoney(totalSalary)</div>
+            <div class="text-white-50 small">Đã bao gồm phụ cấp & thưởng</div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4">
+    <!-- Left: Salary Breakdown -->
+    <div class="col-lg-7">
+        <div class="card border-0 shadow-sm rounded-4 h-100" style="padding: 28px;">
+            <h5 class="fw-bold mb-4 text-dark d-flex align-items-center gap-2">
+                <i class="bi bi-calculator-fill text-primary"></i> Chi tiết tính toán lương
+            </h5>
+
+            <!-- Base Salary -->
+            <div class="d-flex justify-content-between align-items-center py-3 border-bottom">
+                <div>
+                    <div class="fw-semibold text-dark">Lương cơ bản</div>
+                    <div class="text-muted small">Mức lương theo hợp đồng</div>
+                </div>
+                <span class="fw-bold text-dark fs-5">@FormatMoney(Model.Salary.BaseSalary)</span>
+            </div>
+
+            <!-- Degree Multiplier -->
+            <div class="d-flex justify-content-between align-items-center py-3 border-bottom">
+                <div>
+                    <div class="fw-semibold text-dark">Hệ số học vị</div>
+                    <div class="text-muted small">@Fallback(Model.Salary.DegreeTitle)</div>
+                </div>
+                <span class="badge bg-primary-subtle text-primary px-3 py-2 fs-6 fw-bold rounded-pill">
+                    × @Model.Salary.DegreeMultiplier.ToString("0.00")
+                </span>
+            </div>
+
+            <!-- Rank Multiplier -->
+            <div class="d-flex justify-content-between align-items-center py-3 border-bottom">
+                <div>
+                    <div class="fw-semibold text-dark">Hệ số học hàm</div>
+                    <div class="text-muted small">@Fallback(Model.Salary.RankTitle)</div>
+                </div>
+                <span class="badge bg-success-subtle text-success px-3 py-2 fs-6 fw-bold rounded-pill">
+                    × @Model.Salary.RankMultiplier.ToString("0.00")
+                </span>
+            </div>
+
+            <!-- Salary after multipliers -->
+            <div class="d-flex justify-content-between align-items-center py-3 border-bottom bg-light rounded-3 px-3 my-2">
+                <div>
+                    <div class="fw-semibold text-dark">Lương sau hệ số</div>
+                    <div class="text-muted small">= Lương cơ bản × Hệ số HV × Hệ số HH</div>
+                </div>
+                <span class="fw-bold text-primary fs-5">@FormatMoney(Model.Salary.BaseSalary * Model.Salary.DegreeMultiplier * Model.Salary.RankMultiplier)</span>
+            </div>
+
+            <!-- Allowances -->
+            <div class="d-flex justify-content-between align-items-center py-3 border-bottom">
+                <div>
+                    <div class="fw-semibold text-dark">Phụ cấp chuyên môn</div>
+                    <div class="text-muted small">Phụ cấp theo chuyên ngành</div>
+                </div>
+                <span class="fw-semibold text-success">+@FormatMoney(Model.Salary.SpecializationAllowance)</span>
+            </div>
+            <div class="d-flex justify-content-between align-items-center py-3 border-bottom">
+                <div>
+                    <div class="fw-semibold text-dark">Phụ cấp thâm niên</div>
+                    <div class="text-muted small">Theo số năm công tác</div>
+                </div>
+                <span class="fw-semibold text-success">+@FormatMoney(Model.Salary.SeniorityAllowance)</span>
+            </div>
+            <div class="d-flex justify-content-between align-items-center py-3 border-bottom">
+                <div>
+                    <div class="fw-semibold text-dark">Thưởng KPI tháng</div>
+                    <div class="text-muted small">Thưởng hiệu suất làm việc</div>
+                </div>
+                <span class="fw-semibold text-warning">+@FormatMoney(Model.Salary.MonthlyBonus)</span>
+            </div>
+
+            <!-- Total -->
+            <div class="d-flex justify-content-between align-items-center pt-4 mt-2">
+                <div>
+                    <div class="fw-bold text-dark fs-6">TỔNG LƯƠNG DỰ KIẾN / THÁNG</div>
+                    <div class="text-muted" style="font-size: 0.7rem;">= (LCB × HS HV × HS HH) + Phụ cấp + Thưởng</div>
+                </div>
+                <span class="fw-bold text-primary" style="font-size: 1.8rem;">@FormatMoney(totalSalary)</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Right: Summary Cards -->
+    <div class="col-lg-5">
+        <!-- Formula Card -->
+        <div class="card border-0 shadow-sm rounded-4 mb-4" style="padding: 24px; background: #f8fbff;">
+            <h6 class="fw-bold text-primary mb-3 d-flex align-items-center gap-2">
+                <i class="bi bi-info-circle-fill"></i> Công thức tính lương
+            </h6>
+            <div class="bg-white rounded-3 p-3 border" style="font-family: monospace; font-size: 0.82rem; line-height: 1.8; color: #1a2332;">
+                <div><span class="text-primary fw-bold">Lương cơ bản</span> = @FormatMoney(Model.Salary.BaseSalary)</div>
+                <div><span class="text-primary fw-bold">× Hệ số HV</span> = @Model.Salary.DegreeMultiplier.ToString("0.00")</div>
+                <div><span class="text-success fw-bold">× Hệ số HH</span> = @Model.Salary.RankMultiplier.ToString("0.00")</div>
+                <div class="border-top mt-2 pt-2"><span class="text-warning fw-bold">+ Phụ cấp CM</span> = @FormatMoney(Model.Salary.SpecializationAllowance)</div>
+                <div><span class="text-warning fw-bold">+ Phụ cấp TN</span> = @FormatMoney(Model.Salary.SeniorityAllowance)</div>
+                <div><span class="text-warning fw-bold">+ Thưởng KPI</span> = @FormatMoney(Model.Salary.MonthlyBonus)</div>
+                <div class="border-top mt-2 pt-2 fw-bold text-danger">= @FormatMoney(totalSalary)</div>
+            </div>
+        </div>
+
+        <!-- Stats Cards -->
+        <div class="row g-3">
+            <div class="col-6">
+                <div class="card border-0 shadow-sm rounded-4 text-center p-3">
+                    <div class="text-muted small mb-1">Hệ số học vị</div>
+                    <div class="fw-bold text-primary fs-4">@Model.Salary.DegreeMultiplier.ToString("0.00")</div>
+                    <div class="text-muted" style="font-size: 0.72rem;">@Fallback(Model.Salary.DegreeTitle)</div>
+                </div>
+            </div>
+            <div class="col-6">
+                <div class="card border-0 shadow-sm rounded-4 text-center p-3">
+                    <div class="text-muted small mb-1">Hệ số học hàm</div>
+                    <div class="fw-bold text-success fs-4">@Model.Salary.RankMultiplier.ToString("0.00")</div>
+                    <div class="text-muted" style="font-size: 0.72rem;">@Fallback(Model.Salary.RankTitle)</div>
+                </div>
+            </div>
+            <div class="col-6">
+                <div class="card border-0 shadow-sm rounded-4 text-center p-3">
+                    <div class="text-muted small mb-1">Tổng phụ cấp</div>
+                    <div class="fw-bold text-warning fs-5">@FormatMoney(Model.Salary.SpecializationAllowance + Model.Salary.SeniorityAllowance)</div>
+                </div>
+            </div>
+            <div class="col-6">
+                <div class="card border-0 shadow-sm rounded-4 text-center p-3">
+                    <div class="text-muted small mb-1">Thưởng KPI</div>
+                    <div class="fw-bold text-info fs-5">@FormatMoney(Model.Salary.MonthlyBonus)</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Note -->
+        <div class="alert alert-info border-0 rounded-4 mt-3 d-flex gap-2 align-items-start py-3 px-3" style="background:#e8f4ff;">
+            <i class="bi bi-shield-lock-fill text-primary mt-1 flex-shrink-0"></i>
+            <div class="small text-secondary">
+                Thông tin lương được bảo mật và chỉ hiển thị cho <strong>Quản trị viên</strong>. Mọi thay đổi đều được ghi vào nhật ký hệ thống.
+            </div>
+        </div>
+    </div>
+</div>

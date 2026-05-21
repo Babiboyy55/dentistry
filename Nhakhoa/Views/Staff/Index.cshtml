@@ -11,14 +11,23 @@
             <p class="text-muted mb-0">Quản lý quyền truy cập và thông tin nhân sự</p>
         </div>
         <div class="d-flex gap-2">
-            <a class="btn btn-outline-secondary px-4 py-2 fw-semibold" href="/Staff/ActivityLog">
-                <i class="bi bi-clock-history me-1"></i>
-                Lịch sử hoạt động
-            </a>
-            <a class="btn btn-primary px-4 py-2 fw-semibold" style="background-color: #1b75d0; border-color: #1b75d0;" href="/Staff/Create">
-                <i class="bi bi-plus-circle me-1"></i>
-                Thêm tài khoản mới
-            </a>
+            @if (User.IsInRole("Admin"))
+            {
+                <a class="btn btn-outline-secondary px-4 py-2 fw-semibold" href="/Staff/ActivityLog">
+                    <i class="bi bi-clock-history me-1"></i>
+                    Lịch sử hoạt động
+                </a>
+                <a class="btn btn-primary px-4 py-2 fw-semibold" style="background-color: #1b75d0; border-color: #1b75d0;" href="/Staff/Create">
+                    <i class="bi bi-plus-circle me-1"></i>
+                    Thêm tài khoản mới
+                </a>
+            }
+            else
+            {
+                <span class="badge bg-info-subtle text-info px-3 py-2 rounded-pill fw-semibold d-flex align-items-center gap-1">
+                    <i class="bi bi-eye me-1"></i> Chế độ xem
+                </span>
+            }
         </div>
     </div>
 
@@ -114,27 +123,30 @@
                                     <a class="btn btn-outline-primary btn-sm" href="/Staff/Details/@staff.Id" title="Xem hồ sơ">
                                         <i class="bi bi-person-vcard"></i>
                                     </a>
-                                    <form asp-controller="Staff" asp-action="ResetPassword" asp-route-id="@staff.Id" method="post" class="d-inline" onsubmit="return confirm('Bạn có chắc chắn muốn cấp lại mật khẩu mặc định (123456) cho nhân sự này?')">
-                                        <button type="submit" class="btn btn-outline-warning btn-sm" title="Cấp lại mật khẩu (mặc định: 123456)">
-                                            <i class="bi bi-key"></i>
-                                        </button>
-                                    </form>
-
-                                    @if (User.Identity?.Name != staff.Username)
+                                    @if (User.IsInRole("Admin"))
                                     {
-                                        <form asp-controller="Staff" asp-action="ToggleStatus" asp-route-id="@staff.Id" method="post" class="d-inline">
-                                            <button type="submit" class="btn btn-outline-@(staff.IsActive ? "danger" : "success") btn-sm" title="@(staff.IsActive ? "Khóa tài khoản" : "Mở khóa tài khoản")">
-                                                <i class="bi bi-@(staff.IsActive ? "lock" : "unlock")"></i>
+                                        <form asp-controller="Staff" asp-action="ResetPassword" asp-route-id="@staff.Id" method="post" class="d-inline" onsubmit="return confirm('Bạn có chắc chắn muốn cấp lại mật khẩu mặc định (123456) cho nhân sự này?')">
+                                            <button type="submit" class="btn btn-outline-warning btn-sm" title="Cấp lại mật khẩu (mặc định: 123456)">
+                                                <i class="bi bi-key"></i>
                                             </button>
                                         </form>
-                                    }
 
-                                    <a class="btn btn-light btn-sm" href="/Staff/Edit/@staff.Id" title="Sửa thông tin">
-                                        <i class="bi bi-pencil"></i>
-                                    </a>
-                                    <a class="btn btn-outline-danger btn-sm" href="/Staff/Delete/@staff.Id" title="Xóa tài khoản" onclick="return confirm('Bạn có chắc chắn muốn xóa tài khoản này?');">
-                                        <i class="bi bi-trash"></i>
-                                    </a>
+                                        @if (User.Identity?.Name != staff.Username)
+                                        {
+                                            <form asp-controller="Staff" asp-action="ToggleStatus" asp-route-id="@staff.Id" method="post" class="d-inline">
+                                                <button type="submit" class="btn btn-outline-@(staff.IsActive ? "danger" : "success") btn-sm" title="@(staff.IsActive ? "Khóa tài khoản" : "Mở khóa tài khoản")">
+                                                    <i class="bi bi-@(staff.IsActive ? "lock" : "unlock")"></i>
+                                                </button>
+                                            </form>
+                                        }
+
+                                        <a class="btn btn-light btn-sm" href="/Staff/Edit/@staff.Id" title="Sửa thông tin">
+                                            <i class="bi bi-pencil"></i>
+                                        </a>
+                                        <a class="btn btn-outline-danger btn-sm" href="/Staff/Delete/@staff.Id" title="Xóa tài khoản" onclick="return confirm('Bạn có chắc chắn muốn xóa tài khoản này?');">
+                                            <i class="bi bi-trash"></i>
+                                        </a>
+                                    }
                                 </div>
                             </td>
                         </tr>

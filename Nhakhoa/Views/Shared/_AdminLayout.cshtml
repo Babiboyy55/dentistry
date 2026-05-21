@@ -110,6 +110,9 @@
                 <a asp-controller="Staff" asp-action="Index" class="@(controller == "Staff" ? "active" : "")"><i class="bi bi-people"></i> Nhân sự</a>
                 @if (User.IsInRole("Admin"))
                 {
+                    <a href="/Staff" class="@(action == "Salary" ? "active" : "")" style="padding-left:32px; font-size:0.88rem;">
+                        <i class="bi bi-cash-stack"></i> Bảng lương
+                    </a>
                     <a asp-controller="RolePermission" asp-action="Index" class="@(controller == "RolePermission" ? "active" : "")">
                         <i class="bi bi-shield-lock"></i> Phân quyền
                     </a>

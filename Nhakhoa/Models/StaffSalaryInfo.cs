@@ -20,7 +20,13 @@ namespace Nhakhoa.Models
         public decimal DegreeMultiplier { get; set; } = 1m;
 
         [MaxLength(100)]
-        public string DegreeTitle { get; set; }
+        public string? DegreeTitle { get; set; }
+
+        [Column(TypeName = "decimal(5,2)")]
+        public decimal RankMultiplier { get; set; } = 1m;
+
+        [MaxLength(100)]
+        public string? RankTitle { get; set; }
 
         [Column(TypeName = "decimal(18,2)")]
         public decimal SpecializationAllowance { get; set; }

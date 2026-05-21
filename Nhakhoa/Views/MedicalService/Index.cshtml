@@ -11,9 +11,18 @@
             <h1 class="h2 fw-bold text-dark mb-1">Danh mục dịch vụ y tế</h1>
             <p class="text-secondary mb-0">Quản lý dịch vụ khám chữa bệnh và đơn giá hệ thống</p>
         </div>
-        <button class="btn btn-primary px-4 py-2 fw-semibold d-flex align-items-center gap-2 shadow-sm" onclick="openCreatePanel()">
-            <i class="bi bi-plus-lg"></i> Thêm dịch vụ mới
-        </button>
+        @if (User.IsInRole("Admin"))
+        {
+            <button class="btn btn-primary px-4 py-2 fw-semibold d-flex align-items-center gap-2 shadow-sm" onclick="openCreatePanel()">
+                <i class="bi bi-plus-lg"></i> Thêm dịch vụ mới
+            </button>
+        }
+        else
+        {
+            <span class="badge bg-info-subtle text-info px-3 py-2 rounded-pill fw-semibold d-flex align-items-center gap-1">
+                <i class="bi bi-eye me-1"></i> Chế độ xem
+            </span>
+        }
     </div>
 
     <!-- Stats Cards -->
@@ -189,12 +198,15 @@
                                     <button class="btn btn-icon btn-light rounded-circle" onclick="viewDetails(@item.Id)" title="Xem chi tiết">
                                         <i class="bi bi-eye text-primary"></i>
                                     </button>
-                                    <button class="btn btn-icon btn-light rounded-circle" onclick="openEditPanel(@item.Id)" title="Chỉnh sửa">
-                                        <i class="bi bi-pencil text-warning"></i>
-                                    </button>
-                                    <button class="btn btn-icon btn-light rounded-circle" onclick="confirmDelete(@item.Id)" title="Xóa/Ẩn">
-                                        <i class="bi bi-eye-slash text-danger"></i>
-                                    </button>
+                                    @if (User.IsInRole("Admin"))
+                                    {
+                                        <button class="btn btn-icon btn-light rounded-circle" onclick="openEditPanel(@item.Id)" title="Chỉnh sửa">
+                                            <i class="bi bi-pencil text-warning"></i>
+                                        </button>
+                                        <button class="btn btn-icon btn-light rounded-circle" onclick="confirmDelete(@item.Id)" title="Xóa/Ẩn">
+                                            <i class="bi bi-eye-slash text-danger"></i>
+                                        </button>
+                                    }
                                 </div>
                             </td>
                         </tr>

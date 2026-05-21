@@ -4,10 +4,12 @@ using Microsoft.EntityFrameworkCore;
 using Nhakhoa.Data;
 using Nhakhoa.Models;
 using Nhakhoa.ViewModels;
+using System.IO;
+using Microsoft.AspNetCore.Http;
 
 namespace Nhakhoa.Controllers
 {
-    [Authorize(Roles = "Admin")]
+    [Authorize]
     public class StaffController : Controller
     {
         private readonly ApplicationDbContext _context;
@@ -38,6 +40,7 @@ namespace Nhakhoa.Controllers
         }
 
         // GET: Staff/Create
+        [Authorize(Roles = "Admin")]
         public IActionResult Create()
         {
             return View();
@@ -49,6 +52,7 @@ namespace Nhakhoa.Controllers
             var user = await _context.Users
                 .Include(u => u.StaffProfile)
                 .Include(u => u.StaffSalaryInfo)
+                .Include(u => u.StaffQualifications)
                 .FirstOrDefaultAsync(u => u.Id == id);
             if (user == null)
             {
@@ -74,9 +78,26 @@ namespace Nhakhoa.Controllers
                 BaseSalary = user.StaffSalaryInfo?.BaseSalary ?? 0m,
                 DegreeMultiplier = user.StaffSalaryInfo?.DegreeMultiplier ?? 1m,
                 DegreeTitle = user.StaffSalaryInfo?.DegreeTitle,
+                RankMultiplier = user.StaffSalaryInfo?.RankMultiplier ?? 1m,
+                RankTitle = user.StaffSalaryInfo?.RankTitle,
                 SpecializationAllowance = user.StaffSalaryInfo?.SpecializationAllowance ?? 0m,
                 SeniorityAllowance = user.StaffSalaryInfo?.SeniorityAllowance ?? 0m,
-                MonthlyBonus = user.StaffSalaryInfo?.MonthlyBonus ?? 0m
+                MonthlyBonus = user.StaffSalaryInfo?.MonthlyBonus ?? 0m,
+                Qualifications = user.StaffQualifications
+                    .Select(q => new EditQualificationViewModel
+                    {
+                        Id = q.Id,
+                        Title = q.Title,
+                        Major = q.Major,
+                        Institution = q.Institution,
+                        Year = q.Year,
+                        Category = q.Category,
+                        ImagePath = q.ImagePath,
+                        IsDeleted = false,
+                        AcademicRank = q.AcademicRank,
+                        AcademicDegree = q.AcademicDegree
+                    })
+                    .ToList()
             };
 
             return View(model);
@@ -99,6 +120,7 @@ namespace Nhakhoa.Controllers
             var profile = user.StaffProfile;
             var salary = user.StaffSalaryInfo;
             var degreeMultiplier = salary?.DegreeMultiplier ?? 1m;
+            var rankMultiplier = salary?.RankMultiplier ?? 1m;
 
             var model = new StaffProfileViewModel
             {
@@ -120,6 +142,8 @@ namespace Nhakhoa.Controllers
                     BaseSalary = salary?.BaseSalary ?? 0m,
                     DegreeMultiplier = degreeMultiplier,
                     DegreeTitle = salary?.DegreeTitle,
+                    RankMultiplier = rankMultiplier,
+                    RankTitle = salary?.RankTitle,
                     SpecializationAllowance = salary?.SpecializationAllowance ?? 0m,
                     SeniorityAllowance = salary?.SeniorityAllowance ?? 0m,
                     MonthlyBonus = salary?.MonthlyBonus ?? 0m
@@ -132,9 +156,56 @@ namespace Nhakhoa.Controllers
                         Major = q.Major,
                         Institution = q.Institution,
                         Year = q.Year,
-                        Category = q.Category
+                        Category = q.Category,
+                        ImagePath = q.ImagePath,
+                        AcademicRank = q.AcademicRank,
+                        AcademicDegree = q.AcademicDegree
                     })
                     .ToList()
+            };
+
+            return View(model);
+        }
+
+        // GET: Staff/Salary/5
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> Salary(int id)
+        {
+            var user = await _context.Users
+                .Include(u => u.StaffProfile)
+                .Include(u => u.StaffSalaryInfo)
+                .FirstOrDefaultAsync(u => u.Id == id);
+
+            if (user == null)
+                return NotFound();
+
+            var profile = user.StaffProfile;
+            var salary = user.StaffSalaryInfo;
+
+            var model = new StaffProfileViewModel
+            {
+                Id = user.Id,
+                FullName = user.FullName,
+                Role = user.Role,
+                Email = user.Email,
+                PhoneNumber = user.PhoneNumber,
+                IsActive = user.IsActive,
+                StaffCode = profile?.StaffCode,
+                PositionTitle = profile?.PositionTitle,
+                Department = profile?.Department,
+                JoinDate = profile?.JoinDate,
+                Salary = new StaffSalaryInfoViewModel
+                {
+                    BaseSalary = salary?.BaseSalary ?? 0m,
+                    DegreeMultiplier = salary?.DegreeMultiplier ?? 1m,
+                    DegreeTitle = salary?.DegreeTitle,
+                    RankMultiplier = salary?.RankMultiplier ?? 1m,
+                    RankTitle = salary?.RankTitle,
+                    SpecializationAllowance = salary?.SpecializationAllowance ?? 0m,
+                    SeniorityAllowance = salary?.SeniorityAllowance ?? 0m,
+                    MonthlyBonus = salary?.MonthlyBonus ?? 0m
+                },
+                Qualifications = new List<StaffQualificationViewModel>()
             };
 
             return View(model);
@@ -143,6 +214,7 @@ namespace Nhakhoa.Controllers
         // POST: Staff/Create
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Create(CreateStaffViewModel model)
         {
             if (ModelState.IsValid)
@@ -191,8 +263,22 @@ namespace Nhakhoa.Controllers
         // POST: Staff/Edit/5
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Edit(EditStaffViewModel model)
         {
+            // Manual validation for Qualifications
+            if (model.Qualifications != null)
+            {
+                for (int i = 0; i < model.Qualifications.Count; i++)
+                {
+                    var q = model.Qualifications[i];
+                    if (!q.IsDeleted && string.IsNullOrWhiteSpace(q.Title))
+                    {
+                        ModelState.AddModelError($"Qualifications[{i}].Title", "Vui lòng nhập tên bằng cấp/chứng chỉ");
+                    }
+                }
+            }
+
             if (!ModelState.IsValid)
             {
                 return View(model);
@@ -201,6 +287,7 @@ namespace Nhakhoa.Controllers
             var user = await _context.Users
                 .Include(u => u.StaffProfile)
                 .Include(u => u.StaffSalaryInfo)
+                .Include(u => u.StaffQualifications)
                 .FirstOrDefaultAsync(u => u.Id == model.Id);
             if (user == null)
             {
@@ -241,9 +328,76 @@ namespace Nhakhoa.Controllers
             user.StaffSalaryInfo.BaseSalary = model.BaseSalary ?? 0m;
             user.StaffSalaryInfo.DegreeMultiplier = model.DegreeMultiplier ?? 1m;
             user.StaffSalaryInfo.DegreeTitle = model.DegreeTitle;
+            user.StaffSalaryInfo.RankMultiplier = model.RankMultiplier ?? 1m;
+            user.StaffSalaryInfo.RankTitle = model.RankTitle;
             user.StaffSalaryInfo.SpecializationAllowance = model.SpecializationAllowance ?? 0m;
             user.StaffSalaryInfo.SeniorityAllowance = model.SeniorityAllowance ?? 0m;
             user.StaffSalaryInfo.MonthlyBonus = model.MonthlyBonus ?? 0m;
+
+            // --- Process Qualifications ---
+            if (model.Qualifications != null)
+            {
+                foreach (var qModel in model.Qualifications)
+                {
+                    if (qModel.IsDeleted)
+                    {
+                        if (qModel.Id > 0)
+                        {
+                            var existing = user.StaffQualifications.FirstOrDefault(q => q.Id == qModel.Id);
+                            if (existing != null)
+                            {
+                                _context.StaffQualifications.Remove(existing);
+                                DeleteQualificationImage(existing.ImagePath);
+                            }
+                        }
+                    }
+                    else if (qModel.Id == 0)
+                    {
+                        if (!string.IsNullOrWhiteSpace(qModel.Title))
+                        {
+                            var newQual = new StaffQualification
+                            {
+                                UserId = user.Id,
+                                User = user,
+                                Title = qModel.Title,
+                                Major = qModel.Major ?? "",
+                                Institution = qModel.Institution ?? "",
+                                Year = qModel.Year,
+                                Category = qModel.Category ?? "Degree",
+                                AcademicRank = qModel.AcademicRank,
+                                AcademicDegree = qModel.AcademicDegree
+                            };
+
+                            if (qModel.ImageFile != null)
+                            {
+                                newQual.ImagePath = await SaveQualificationImageAsync(qModel.ImageFile);
+                            }
+
+                            _context.StaffQualifications.Add(newQual);
+                        }
+                    }
+                    else
+                    {
+                        var existing = user.StaffQualifications.FirstOrDefault(q => q.Id == qModel.Id);
+                        if (existing != null)
+                        {
+                            existing.Title = qModel.Title;
+                            existing.Major = qModel.Major ?? "";
+                            existing.Institution = qModel.Institution ?? "";
+                            existing.Year = qModel.Year;
+                            existing.Category = qModel.Category ?? "Degree";
+                            existing.AcademicRank = qModel.AcademicRank;
+                            existing.AcademicDegree = qModel.AcademicDegree;
+
+                            if (qModel.ImageFile != null)
+                            {
+                                DeleteQualificationImage(existing.ImagePath);
+                                existing.ImagePath = await SaveQualificationImageAsync(qModel.ImageFile);
+                            }
+                        }
+                    }
+                }
+            }
 
             await _context.SaveChangesAsync();
 
@@ -267,6 +421,7 @@ namespace Nhakhoa.Controllers
         }
 
         // GET: Staff/Delete/5
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Delete(int id)
         {
             var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == id);
@@ -288,6 +443,7 @@ namespace Nhakhoa.Controllers
         // POST: Staff/Delete/5
         [HttpPost, ActionName("Delete")]
         [ValidateAntiForgeryToken]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> DeleteConfirmed(int id)
         {
             var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == id);
@@ -322,6 +478,7 @@ namespace Nhakhoa.Controllers
         // POST: Staff/ToggleStatus/5
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> ToggleStatus(int id)
         {
             var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == id);
@@ -359,6 +516,7 @@ namespace Nhakhoa.Controllers
         // POST: Staff/ResetPassword/5
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> ResetPassword(int id)
         {
             var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == id);
@@ -389,6 +547,7 @@ namespace Nhakhoa.Controllers
         }
 
         // GET: Staff/ActivityLog
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> ActivityLog()
         {
             var logs = await _context.ActivityLogs
@@ -396,6 +555,45 @@ namespace Nhakhoa.Controllers
                 .ToListAsync();
 
             return View(logs);
+        }
+
+        private async Task<string?> SaveQualificationImageAsync(IFormFile? file)
+        {
+            if (file == null || file.Length == 0) return null;
+
+            var uploadsFolder = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads", "qualifications");
+            if (!Directory.Exists(uploadsFolder))
+            {
+                Directory.CreateDirectory(uploadsFolder);
+            }
+
+            var uniqueFileName = Guid.NewGuid().ToString() + "_" + Path.GetFileName(file.FileName);
+            var filePath = Path.Combine(uploadsFolder, uniqueFileName);
+
+            using (var fileStream = new FileStream(filePath, FileMode.Create))
+            {
+                await file.CopyToAsync(fileStream);
+            }
+
+            return "/uploads/qualifications/" + uniqueFileName;
+        }
+
+        private void DeleteQualificationImage(string? imagePath)
+        {
+            if (string.IsNullOrEmpty(imagePath)) return;
+
+            var filePath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", imagePath.TrimStart('/'));
+            if (System.IO.File.Exists(filePath))
+            {
+                try
+                {
+                    System.IO.File.Delete(filePath);
+                }
+                catch
+                {
+                    // Ignore
+                }
+            }
         }
     }
 }

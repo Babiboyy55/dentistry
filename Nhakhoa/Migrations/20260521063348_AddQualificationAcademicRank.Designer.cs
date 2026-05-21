@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Nhakhoa.Data;
 
@@ -11,9 +12,11 @@ using Nhakhoa.Data;
 namespace Nhakhoa.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260521063348_AddQualificationAcademicRank")]
+    partial class AddQualificationAcademicRank
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -570,10 +573,6 @@ namespace Nhakhoa.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<string>("AcademicDegree")
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
                     b.Property<string>("AcademicRank")
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
@@ -630,18 +629,12 @@ namespace Nhakhoa.Migrations
                         .HasColumnType("decimal(5,2)");
 
                     b.Property<string>("DegreeTitle")
+                        .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
                     b.Property<decimal>("MonthlyBonus")
                         .HasColumnType("decimal(18,2)");
-
-                    b.Property<decimal>("RankMultiplier")
-                        .HasColumnType("decimal(5,2)");
-
-                    b.Property<string>("RankTitle")
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
 
                     b.Property<decimal>("SeniorityAllowance")
                         .HasColumnType("decimal(18,2)");

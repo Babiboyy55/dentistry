@@ -28,12 +28,14 @@ namespace Nhakhoa.ViewModels
     {
         public decimal BaseSalary { get; set; }
         public decimal DegreeMultiplier { get; set; } = 1m;
-        public string DegreeTitle { get; set; }
+        public string? DegreeTitle { get; set; }
+        public decimal RankMultiplier { get; set; } = 1m;
+        public string? RankTitle { get; set; }
         public decimal SpecializationAllowance { get; set; }
         public decimal SeniorityAllowance { get; set; }
         public decimal MonthlyBonus { get; set; }
 
-        public decimal MonthlyTotal => (BaseSalary * DegreeMultiplier) + SpecializationAllowance + SeniorityAllowance + MonthlyBonus;
+        public decimal MonthlyTotal => (BaseSalary * DegreeMultiplier * RankMultiplier) + SpecializationAllowance + SeniorityAllowance + MonthlyBonus;
     }
 
     public class StaffQualificationViewModel
@@ -43,5 +45,8 @@ namespace Nhakhoa.ViewModels
         public string Institution { get; set; }
         public int? Year { get; set; }
         public string Category { get; set; }
+        public string? ImagePath { get; set; }
+        public string? AcademicRank { get; set; }
+        public string? AcademicDegree { get; set; }
     }
 }

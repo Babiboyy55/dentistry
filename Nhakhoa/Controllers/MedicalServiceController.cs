@@ -9,7 +9,7 @@ using Nhakhoa.Models;
 
 namespace Nhakhoa.Controllers
 {
-    [Authorize(Roles = "Admin")]
+    [Authorize]
     public class MedicalServiceController : Controller
     {
         private readonly ApplicationDbContext _context;
@@ -93,6 +93,7 @@ namespace Nhakhoa.Controllers
         // POST: MedicalService/Save
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Save(int id, string name, string description, decimal price, string department, bool isActive)
         {
             var currentUser = User.Identity?.Name ?? "Admin System";
@@ -199,6 +200,7 @@ namespace Nhakhoa.Controllers
         // POST: MedicalService/HideService/5
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> HideService(int id)
         {
             var service = await _context.MedicalServices.FindAsync(id);
@@ -229,6 +231,7 @@ namespace Nhakhoa.Controllers
         // POST: MedicalService/ToggleStatus/5
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> ToggleStatus(int id)
         {
             var service = await _context.MedicalServices.FindAsync(id);
@@ -260,6 +263,7 @@ namespace Nhakhoa.Controllers
         // POST: MedicalService/Delete/5
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Delete(int id)
         {
             var service = await _context.MedicalServices.FindAsync(id);
