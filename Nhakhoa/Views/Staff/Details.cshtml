@@ -1,18 +1,18 @@
 @model Nhakhoa.ViewModels.StaffProfileViewModel
 @{
     Layout = "_AdminLayout";
-    ViewData["Title"] = "Hồ sơ nhân sự";
+    ViewData["Title"] = "Chi tiết hồ sơ nhân sự";
 }
 
 @functions {
     string FormatMoney(decimal value) => value.ToString("N0") + " đ";
-    string Fallback(string value) => string.IsNullOrWhiteSpace(value) ? "Chưa cập nhật" : value;
+    string Fallback(string? value) => string.IsNullOrWhiteSpace(value) ? "Chưa cập nhật" : value;
     string Initials(string name)
     {
         if (string.IsNullOrWhiteSpace(name)) return "?";
         return name.Trim().Substring(0, 1).ToUpperInvariant();
     }
-    string GetNamePrefix(string degreeTitle, string rankTitle)
+    string GetNamePrefix(string? degreeTitle, string? rankTitle)
     {
         if (!string.IsNullOrEmpty(rankTitle))
         {
@@ -34,44 +34,83 @@
     .form-control:disabled, .form-control[disabled] {
         background-color: #f8f9fa !important;
         opacity: 1;
-        color: #212529;
+        color: #1a202c;
+        border: 1px solid #e2e8f0;
     }
-    .last-border-0:last-child {
-        border-bottom: 0 !important;
+    .profile-card {
+        border-radius: 16px;
+        border: none;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.04);
+        background: #fff;
+        padding: 24px;
+    }
+    .section-title {
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: #1a202c;
+        border-bottom: 2px solid #edf2f7;
+        padding-bottom: 10px;
+        margin-bottom: 20px;
     }
 </style>
 
 <div class="d-flex align-items-center justify-content-between gap-3 mb-4">
     <div>
-        <h4 class="fw-bold text-dark mb-0">Hồ sơ cá nhân</h4>
-        <div class="text-muted small">Thông tin hồ sơ nhân sự của bạn</div>
+        <h4 class="fw-bold text-dark mb-0">Hồ sơ cá nhân nhân viên</h4>
+        <div class="text-muted small">Xem lý lịch pháp lý, học thuật và hành chính chi tiết</div>
     </div>
     <div class="d-flex gap-2">
-        <a href="/Staff" class="btn btn-outline-secondary btn-sm px-3 rounded-pill d-inline-flex align-items-center gap-1">
-            <i class="bi bi-arrow-left"></i> Quay lại
-        </a>
+        @if (User.IsInRole("Admin"))
+        {
+            <a href="/Staff" class="btn btn-outline-secondary btn-sm px-3 rounded-pill d-inline-flex align-items-center gap-1">
+                <i class="bi bi-arrow-left"></i> Danh sách nhân viên
+            </a>
+        }
         <a href="/" class="btn btn-outline-primary btn-sm px-3 rounded-pill d-inline-flex align-items-center gap-1">
             <i class="bi bi-house"></i> Trang chính
         </a>
     </div>
 </div>
 
-<!-- Security Alert Banner -->
-<div class="alert alert-info border-0 shadow-sm rounded-3 d-flex align-items-center gap-2 mb-4" style="background-color: #e8f4ff; color: #1d68b8;">
-    <i class="bi bi-shield-lock-fill fs-5"></i>
-    <div class="small fw-medium">
-        <strong>Lưu ý bảo mật:</strong> Bạn chỉ có quyền xem hồ sơ cá nhân của chính mình. Mọi thay đổi thông tin vui lòng liên hệ Phòng Hành chính - Nhân sự.
+<!-- Security Alert Banner for Non-Admin -->
+@if (!User.IsInRole("Admin"))
+{
+    <div class="alert alert-info border-0 shadow-sm rounded-4 d-flex align-items-center gap-2 mb-4" style="background-color: #e8f4ff; color: #1d68b8;">
+        <i class="bi bi-shield-lock-fill fs-5"></i>
+        <div class="small fw-medium">
+            <strong>Chế độ chỉ đọc:</strong> Bạn chỉ có quyền xem hồ sơ cá nhân của mình (Read-Only). Để cập nhật các thông tin pháp lý hoặc chức danh, vui lòng liên hệ phòng hành chính nhân sự.
+        </div>
     </div>
-</div>
+}
+
+<!-- Expiration Warning Alert Banner (ALT-5) -->
+@if (Model.CchnExpiryDate.HasValue)
+{
+    var daysRemaining = (Model.CchnExpiryDate.Value.Date - DateTime.Today).Days;
+    if (daysRemaining >= 0 && daysRemaining <= 30)
+    {
+        <div class="alert alert-warning border-0 shadow-sm rounded-4 d-flex align-items-center gap-3 mb-4" style="background-color: #fff8eb; border-left: 5px solid #ff9800; color: #b26a00;">
+            <i class="bi bi-exclamation-triangle-fill fs-3 text-warning"></i>
+            <div class="flex-grow-1">
+                <strong class="d-block mb-1 text-dark" style="font-size: 1rem;">Cảnh báo thời hạn Chứng chỉ hành nghề</strong>
+                <span class="small">Chứng chỉ hành nghề của bác sĩ <strong>@Model.FullName</strong> sẽ hết hạn vào ngày <strong>@Model.CchnExpiryDate.Value.ToString("dd/MM/yyyy")</strong> (Còn lại <strong>@daysRemaining ngày</strong>). Vui lòng cập nhật thông tin.</span>
+            </div>
+            @if (User.IsInRole("Admin"))
+            {
+                <a href="/Staff/Edit/@Model.Id" class="btn btn-warning btn-sm rounded-pill px-3 fw-semibold text-white" style="background-color: #ff9800; border: none;">Cập nhật ngay</a>
+            }
+        </div>
+    }
+}
 
 <!-- Header Profile Panel -->
-<div class="card border-0 shadow-sm rounded-4 mb-4" style="background-color: #fff; padding: 24px;">
+<div class="profile-card mb-4">
     <div class="d-flex flex-wrap align-items-center justify-content-between gap-4">
         <div class="d-flex align-items-center gap-4">
             <div class="position-relative rounded-4 overflow-hidden" style="width: 100px; height: 100px; background: linear-gradient(135deg, #1b75d0, #00d2ff); display: grid; place-items: center; color: #fff; font-size: 2.2rem; font-weight: 700; box-shadow: 0 4px 12px rgba(27, 117, 208, 0.2);">
                 @Initials(Model.FullName)
                 <div class="position-absolute bottom-0 start-0 end-0 bg-success text-white text-center py-1 fw-bold" style="font-size: 0.65rem; letter-spacing: 0.5px; opacity: 0.95; line-height: 1.2;">
-                    Hoạt động
+                    @(Model.IsActive ? "Hoạt động" : "Tạm khóa")
                 </div>
             </div>
             <div>
@@ -80,17 +119,17 @@
                 </h3>
                 <div class="d-flex flex-wrap gap-2 mb-2">
                     <span class="badge bg-primary-subtle text-primary px-2.5 py-1 rounded-pill small">
-                        <i class="bi bi-award me-1"></i> @Fallback(Model.Salary.DegreeTitle)
+                        <i class="bi bi-award me-1"></i> @Fallback(Model.JobRank)
                     </span>
                     <span class="badge bg-info-subtle text-info px-2.5 py-1 rounded-pill small">
                         <i class="bi bi-building me-1"></i> @Fallback(Model.Department)
                     </span>
                     <span class="badge bg-secondary-subtle text-secondary px-2.5 py-1 rounded-pill small">
-                        ID: @Fallback(Model.StaffCode)
+                        Mã: @Fallback(Model.StaffCode)
                     </span>
                 </div>
-                <p class="text-muted small mb-0 max-w-xl">
-                    Chuyên gia hàng đầu trong lĩnh vực @(string.IsNullOrEmpty(Model.Department) ? "y tế" : Model.Department.ToLower()) với nhiều năm kinh nghiệm thực tiễn tại các cơ sở của hệ thống PulseCare.
+                <p class="text-muted small mb-0">
+                    Vai trò hệ thống: <strong>@Model.Role</strong> | Ngày gia nhập: @(Model.JoinDate?.ToString("dd/MM/yyyy") ?? "Chưa rõ")
                 </p>
             </div>
         </div>
@@ -98,13 +137,13 @@
             @if (User.IsInRole("Admin"))
             {
                 <a href="/Staff/Edit/@Model.Id" class="btn btn-primary px-4 py-2 rounded-pill fw-semibold shadow-sm d-inline-flex align-items-center gap-2" style="background-color: #1b75d0; border-color: #1b75d0;">
-                    <i class="bi bi-pencil-square"></i> Cập nhật thông tin
+                    <i class="bi bi-pencil-square"></i> Cập nhật hồ sơ
                 </a>
             }
             else
             {
-                <span class="badge bg-info-subtle text-info px-3 py-2 rounded-pill fw-semibold d-inline-flex align-items-center gap-1" style="font-size: 0.85rem;">
-                    <i class="bi bi-eye me-1"></i> Chế độ xem
+                <span class="badge bg-light text-dark border px-3 py-2 rounded-pill fw-semibold d-inline-flex align-items-center gap-1" style="font-size: 0.85rem;">
+                    <i class="bi bi-lock me-1"></i> Chỉ xem hồ sơ
                 </span>
             }
         </div>
@@ -112,156 +151,173 @@
 </div>
 
 <div class="row g-4">
-    <!-- Left Column: Personal Info -->
-    <div class="col-lg-7">
-        <div class="card border-0 shadow-sm rounded-4 h-100" style="background-color: #fff; padding: 24px;">
-            <h5 class="fw-bold mb-4 text-dark d-flex align-items-center">
-                <i class="bi bi-person-fill text-primary me-2"></i> Thông tin cá nhân
-            </h5>
-            <div class="row">
-                <div class="col-md-6 mb-3">
-                    <label class="form-label text-muted small mb-1">Họ và tên</label>
-                    <input type="text" class="form-control bg-light border-0 py-2 px-3 text-dark fw-medium" value="@Model.FullName" disabled />
+    <!-- Left Column: Personal Info & Practicing Certificate -->
+    <div class="col-lg-8">
+        <!-- Thông tin cá nhân -->
+        <div class="profile-card mb-4">
+            <h5 class="section-title"><i class="bi bi-person-bounding-box text-primary me-2"></i> 1. Thông tin cá nhân &amp; Pháp lý</h5>
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label text-muted small fw-semibold mb-1">Họ và tên</label>
+                    <input type="text" class="form-control" value="@Model.FullName" disabled />
                 </div>
-                <div class="col-md-6 mb-3">
-                    <label class="form-label text-muted small mb-1">Ngày sinh</label>
-                    <input type="text" class="form-control bg-light border-0 py-2 px-3 text-dark fw-medium" value="15/08/1978" disabled />
+                <div class="col-md-6">
+                    <label class="form-label text-muted small fw-semibold mb-1">Số Căn cước công dân (CCCD)</label>
+                    <input type="text" class="form-control fw-bold" value="@Fallback(Model.Cccd)" disabled />
                 </div>
-                <div class="col-md-6 mb-3">
-                    <label class="form-label text-muted small mb-1">Giới tính</label>
-                    <input type="text" class="form-control bg-light border-0 py-2 px-3 text-dark fw-medium" value="@Fallback(Model.Gender)" disabled />
+                <div class="col-md-6">
+                    <label class="form-label text-muted small fw-semibold mb-1">Ngày sinh</label>
+                    <input type="text" class="form-control" value="@(Model.DateOfBirth?.ToString("dd/MM/yyyy") ?? "Chưa cập nhật")" disabled />
                 </div>
-                <div class="col-md-6 mb-3">
-                    <label class="form-label text-muted small mb-1">Số điện thoại</label>
-                    <input type="text" class="form-control bg-light border-0 py-2 px-3 text-dark fw-medium" value="@Fallback(Model.PhoneNumber)" disabled />
+                <div class="col-md-6">
+                    <label class="form-label text-muted small fw-semibold mb-1">Giới tính</label>
+                    <input type="text" class="form-control" value="@Fallback(Model.Gender)" disabled />
                 </div>
-                <div class="col-12 mb-3">
-                    <label class="form-label text-muted small mb-1">Email công vụ</label>
-                    <input type="text" class="form-control bg-light border-0 py-2 px-3 text-dark fw-medium" value="@Fallback(Model.Email)" disabled />
+                <div class="col-md-6">
+                    <label class="form-label text-muted small fw-semibold mb-1">Số điện thoại liên hệ</label>
+                    <input type="text" class="form-control" value="@Fallback(Model.PhoneNumber)" disabled />
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label text-muted small fw-semibold mb-1">Địa chỉ Email</label>
+                    <input type="text" class="form-control" value="@Fallback(Model.Email)" disabled />
                 </div>
                 <div class="col-12">
-                    <label class="form-label text-muted small mb-1">Địa chỉ thường trú</label>
-                    <textarea class="form-control bg-light border-0 py-2 px-3 text-dark fw-medium" rows="2" style="resize: none;" disabled>@Fallback(Model.Address)</textarea>
+                    <label class="form-label text-muted small fw-semibold mb-1">Địa chỉ thường trú</label>
+                    <input type="text" class="form-control" value="@Fallback(Model.Address)" disabled />
+                </div>
+            </div>
+        </div>
+
+        <!-- Chứng chỉ hành nghề -->
+        <div class="profile-card mb-4">
+            <h5 class="section-title"><i class="bi bi-journal-check text-primary me-2"></i> 2. Chứng chỉ hành nghề (CCHN)</h5>
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label text-muted small fw-semibold mb-1">Số chứng chỉ hành nghề</label>
+                    <input type="text" class="form-control fw-bold" value="@Fallback(Model.CchnNumber)" disabled />
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label text-muted small fw-semibold mb-1">Cơ quan cấp chứng chỉ</label>
+                    <input type="text" class="form-control" value="@Fallback(Model.CchnProvider)" disabled />
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label text-muted small fw-semibold mb-1">Ngày cấp chứng chỉ</label>
+                    <input type="text" class="form-control" value="@(Model.CchnIssueDate?.ToString("dd/MM/yyyy") ?? "Chưa cập nhật")" disabled />
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label text-muted small fw-semibold mb-1">Ngày hết hạn chứng chỉ</label>
+                    <input type="text" class="form-control fw-bold @(Model.CchnExpiryDate.HasValue && (Model.CchnExpiryDate.Value.Date - DateTime.Today).Days <= 30 ? "text-danger bg-danger-subtle" : "")" 
+                           value="@(Model.CchnExpiryDate?.ToString("dd/MM/yyyy") ?? "Chưa cập nhật")" disabled />
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Right Column: Education & Salary -->
-    <div class="col-lg-5">
-        <!-- Trình độ học vấn -->
-        <div class="card border-0 shadow-sm rounded-4 mb-4" style="background-color: #fff; padding: 24px;">
-            <h5 class="fw-bold mb-4 text-dark d-flex align-items-center">
-                <i class="bi bi-mortarboard-fill text-primary me-2"></i> Trình độ học vấn
-            </h5>
-            @{
-                var degrees = Model.Qualifications.Where(q => q.Category == "Degree").ToList();
-            }
-            @if (!degrees.Any())
+    <!-- Right Column: Academic & Administrative Info -->
+    <div class="col-lg-4">
+        <!-- Học thuật & Học vị -->
+        <div class="profile-card mb-4">
+            <h5 class="section-title"><i class="bi bi-mortarboard-fill text-primary me-2"></i> 3. Học thuật &amp; Học hàm</h5>
+            <div class="mb-3">
+                <label class="form-label text-muted small fw-semibold mb-1">Học hàm</label>
+                <input type="text" class="form-control" value="@Fallback(Model.AcademicRank)" disabled />
+            </div>
+            <div class="mb-3">
+                <label class="form-label text-muted small fw-semibold mb-1">Học vị cao nhất</label>
+                <input type="text" class="form-control" value="@Fallback(Model.AcademicDegree)" disabled />
+            </div>
+        </div>
+
+        <!-- Hành chính & Tổ chức -->
+        <div class="profile-card mb-4">
+            <h5 class="section-title"><i class="bi bi-briefcase-fill text-primary me-2"></i> 4. Hành chính &amp; Lương</h5>
+            
+            <div class="mb-3">
+                <label class="form-label text-muted small fw-semibold mb-1">Hạng chức danh hiện tại</label>
+                <input type="text" class="form-control fw-bold" value="@Fallback(Model.JobRank)" disabled />
+            </div>
+
+            <!-- Pending change logic for JobRank (ALT-6) -->
+            @if (Model.Salary.IsRankChangePending)
             {
-                <div class="text-muted small text-center py-3">Chưa cập nhật thông tin bằng cấp</div>
+                <div class="alert alert-info border-0 p-2 rounded-3 mb-3" style="background-color: #f0f7ff; color: #1b75d0; font-size: 0.85rem;">
+                    <i class="bi bi-info-circle-fill me-1"></i>
+                    Chờ chuyển sang: <strong>@Model.Salary.PendingRankTitle</strong> (áp dụng từ kỳ lương tiếp theo).
+                </div>
             }
-            else
+
+            <div class="mb-3">
+                <label class="form-label text-muted small fw-semibold mb-1">Thâm niên (Số năm kinh nghiệm)</label>
+                <input type="text" class="form-control" value="@(Model.ExperienceYears.HasValue ? Model.ExperienceYears.Value + " năm" : "Chưa cập nhật")" disabled />
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label text-muted small fw-semibold mb-1">Cơ sở/Phòng làm việc chính</label>
+                <input type="text" class="form-control" value="@Fallback(Model.PrimaryClinic)" disabled />
+            </div>
+
+            @if (User.IsInRole("Admin"))
             {
-                <div class="d-flex flex-column gap-3">
-                    @foreach (var deg in degrees)
-                    {
-                        <div class="d-flex gap-3 align-items-start border-bottom pb-3 last-border-0">
-                            @if (!string.IsNullOrEmpty(deg.ImagePath))
-                            {
-                                <a href="@deg.ImagePath" target="_blank" title="Xem ảnh bằng cấp">
-                                    <img src="@deg.ImagePath" alt="@deg.Title" class="rounded border" style="width: 48px; height: 48px; object-fit: cover; flex-shrink: 0;" />
-                                </a>
-                            }
-                            else
-                            {
-                                <div class="rounded-3 bg-primary-subtle text-primary d-flex align-items-center justify-content-center" style="width: 48px; height: 48px; flex-shrink: 0;">
-                                    <i class="bi bi-award-fill fs-4"></i>
-                                </div>
-                            }
-                            <div>
-                                <div class="fw-bold text-dark mb-0">@deg.Title</div>
-                                <div class="text-muted small">@Fallback(deg.Institution) (@(deg.Year?.ToString() ?? "N/A"))</div>
-                                <div class="text-muted small">Chuyên ngành: @Fallback(deg.Major)</div>
-                                @if (!string.IsNullOrEmpty(deg.ImagePath))
-                                {
-                                    <div class="mt-1">
-                                        <a href="@deg.ImagePath" target="_blank" class="text-primary small text-decoration-none d-inline-flex align-items-center gap-1" style="font-size: 0.75rem; font-weight: 500;">
-                                            <i class="bi bi-zoom-in"></i> Phóng to ảnh bằng cấp
-                                        </a>
-                                    </div>
-                                }
-                            </div>
-                        </div>
-                    }
+                <div class="mt-4 pt-3 border-top">
+                    <a href="/Staff/Salary/@Model.Id" class="btn btn-outline-primary btn-sm w-100 fw-semibold d-flex align-items-center justify-content-center gap-1 py-2 rounded-3">
+                        <i class="bi bi-cash-coin"></i> Xem chi tiết bảng lương
+                    </a>
                 </div>
             }
         </div>
-
-        @if (User.IsInRole("Admin"))
-        {
-            <!-- Lương - Link to Salary page -->
-            <div class="card border-0 shadow-sm rounded-4" style="background: linear-gradient(135deg, #f0f7ff, #e8f4ff); padding: 24px;">
-                <h5 class="fw-bold mb-3 text-dark d-flex align-items-center">
-                    <i class="bi bi-cash-stack text-primary me-2"></i> Thông tin lương
-                </h5>
-                <p class="text-muted small mb-3">Xem chi tiết bảng lương, hệ số học vị, học hàm và các khoản phụ cấp của nhân sự này.</p>
-                <a href="/Staff/Salary/@Model.Id" class="btn btn-primary w-100 fw-semibold d-flex align-items-center justify-content-center gap-2 rounded-3 py-2" style="background:#1b75d0; border-color:#1b75d0;">
-                    <i class="bi bi-cash-coin"></i> Xem bảng lương chi tiết
-                </a>
-            </div>
-        }
     </div>
 </div>
 
-<!-- Section: Certificates -->
-<div class="card border-0 shadow-sm rounded-4 mt-4" style="background-color: #fff; padding: 24px;">
-    <h5 class="fw-bold mb-4 text-dark d-flex align-items-center">
-        <i class="bi bi-file-earmark-text-fill text-primary me-2"></i> Chứng chỉ &amp; Giấy phép hành nghề
-    </h5>
-    @{
-        var certificates = Model.Qualifications.Where(q => q.Category == "Certificate").ToList();
-    }
-    @if (!certificates.Any())
+<!-- Section: Bằng cấp & Chứng chỉ chi tiết -->
+<div class="profile-card mb-4">
+    <h5 class="section-title"><i class="bi bi-patch-check-fill text-primary me-2"></i> 5. Tài liệu Bằng cấp &amp; Chứng chỉ tải lên</h5>
+    @if (!Model.Qualifications.Any())
     {
-        <div class="text-muted small text-center py-3">Chưa cập nhật chứng chỉ hoặc giấy phép</div>
+        <div class="text-muted small text-center py-4">Chưa có bằng cấp hoặc chứng chỉ được tải lên hệ thống.</div>
     }
     else
     {
         <div class="table-responsive">
-            <table class="table align-middle">
+            <table class="table align-middle table-hover">
                 <thead>
-                    <tr class="text-muted small" style="background-color: #f8f9fa;">
-                        <th class="ps-3 py-2 border-0">Tên chứng chỉ</th>
-                        <th class="py-2 border-0">Chuyên ngành</th>
-                        <th class="py-2 border-0">Tổ chức cấp</th>
-                        <th class="py-2 border-0">Năm cấp</th>
-                        <th class="py-2 border-0 text-center">Hình ảnh</th>
-                        <th class="pe-3 py-2 border-0 text-end">Trạng thái</th>
+                    <tr class="text-muted small table-light">
+                        <th class="ps-3 border-0">Tên bằng cấp/chứng chỉ</th>
+                        <th class="border-0">Chuyên ngành</th>
+                        <th class="border-0">Nơi cấp</th>
+                        <th class="border-0">Năm cấp</th>
+                        <th class="border-0">Phân loại</th>
+                        <th class="pe-3 border-0 text-end">Tài liệu đính kèm</th>
                     </tr>
                 </thead>
                 <tbody>
-                    @foreach (var cert in certificates)
+                    @foreach (var item in Model.Qualifications)
                     {
                         <tr>
-                            <td class="ps-3 fw-semibold text-dark">@cert.Title</td>
-                            <td>@Fallback(cert.Major)</td>
-                            <td>@Fallback(cert.Institution)</td>
-                            <td>@(cert.Year?.ToString() ?? "N/A")</td>
-                            <td class="text-center">
-                                @if (!string.IsNullOrEmpty(cert.ImagePath))
+                            <td class="ps-3 fw-semibold text-dark">@item.Title</td>
+                            <td>@Fallback(item.Major)</td>
+                            <td>@Fallback(item.Institution)</td>
+                            <td>@(item.Year?.ToString() ?? "N/A")</td>
+                            <td>
+                                @if (item.Category == "Degree")
                                 {
-                                    <a href="@cert.ImagePath" target="_blank" class="btn btn-sm btn-outline-secondary py-1 px-2" style="font-size: 0.75rem;">
-                                        <i class="bi bi-image me-1"></i> Xem ảnh
+                                    <span class="badge bg-primary-subtle text-primary">Bằng cấp</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-secondary-subtle text-secondary">Chứng chỉ</span>
+                                }
+                            </td>
+                            <td class="pe-3 text-end">
+                                @if (!string.IsNullOrEmpty(item.ImagePath))
+                                {
+                                    <a href="@item.ImagePath" target="_blank" class="btn btn-sm btn-outline-primary px-3 py-1 rounded-pill">
+                                        <i class="bi bi-file-earmark-image"></i> Xem tệp
                                     </a>
                                 }
                                 else
                                 {
                                     <span class="text-muted small">Không có</span>
                                 }
-                            </td>
-                            <td class="pe-3 text-end">
-                                <span class="badge bg-success-subtle text-success py-1 px-2" style="font-size: 0.75rem;">Hợp lệ</span>
                             </td>
                         </tr>
                     }
@@ -271,44 +327,14 @@
     }
 </div>
 
-<!-- Section: Administrative & Management Info -->
-<div class="card border-0 shadow-sm rounded-4 mt-4 mb-4" style="background-color: #fff; padding: 24px;">
-    <h5 class="fw-bold mb-4 text-dark d-flex align-items-center">
-        <i class="bi bi-shield-lock-fill text-primary me-2"></i> Thông tin hành chính &amp; Quản trị
-    </h5>
-    <div class="row">
-        <div class="col-md-4 mb-3">
-            <label class="form-label text-muted small mb-1">Ngày vào làm</label>
-            <input type="text" class="form-control bg-light border-0 py-2 px-3 text-dark fw-medium" value="@(Model.JoinDate?.ToString("dd/MM/yyyy") ?? "Chưa cập nhật")" disabled />
-        </div>
-        <div class="col-md-4 mb-3">
-            <label class="form-label text-muted small mb-1">Cơ sở làm việc</label>
-            <input type="text" class="form-control bg-light border-0 py-2 px-3 text-dark fw-medium" value="@Fallback(Model.PrimaryClinic)" disabled />
-        </div>
-        <div class="col-md-4 mb-3">
-            <label class="form-label text-muted small mb-1">Tên đăng nhập hệ thống</label>
-            <input type="text" class="form-control bg-light border-0 py-2 px-3 text-primary fw-medium" value="@Fallback(Model.Email)" disabled />
-        </div>
-        <div class="col-md-4 mb-3">
-            <label class="form-label text-muted small mb-1">Loại hợp đồng</label>
-            <input type="text" class="form-control bg-light border-0 py-2 px-3 text-dark fw-medium" value="Hợp đồng không xác định thời hạn" disabled />
-        </div>
-        <div class="col-md-4 mb-3">
-            <label class="form-label text-muted small mb-1">Phòng ban</label>
-            <input type="text" class="form-control bg-light border-0 py-2 px-3 text-dark fw-medium" value="@Fallback(Model.Department)" disabled />
-        </div>
-        <div class="col-md-4 mb-3">
-            <label class="form-label text-muted small mb-1">Quyền truy cập</label>
-            <input type="text" class="form-control bg-light border-0 py-2 px-3 text-dark fw-medium" value="@Fallback(Model.Role)" disabled />
-        </div>
-    </div>
-</div>
-
 <div class="d-flex justify-content-between align-items-center text-muted small mt-4 pt-3 border-top">
-    <div>Dữ liệu cập nhật lần cuối: @(Model.JoinDate?.ToString("dd/MM/yyyy HH:mm") ?? DateTime.Now.ToString("dd/MM/yyyy HH:mm"))</div>
+    <div>Dữ liệu hồ sơ cập nhật: @DateTime.Now.ToString("dd/MM/yyyy HH:mm")</div>
     <div>
-        <a href="/Staff/Edit/@Model.Id" class="btn btn-outline-primary btn-sm px-4 py-1.5 rounded-pill fw-semibold">
-            Chỉnh sửa thông tin
-        </a>
+        @if (User.IsInRole("Admin"))
+        {
+            <a href="/Staff/Edit/@Model.Id" class="btn btn-outline-primary btn-sm px-4 py-1.5 rounded-pill fw-semibold">
+                <i class="bi bi-pencil"></i> Chỉnh sửa thông tin
+            </a>
+        }
     </div>
 </div>

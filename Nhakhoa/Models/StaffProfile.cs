@@ -33,6 +33,32 @@ namespace Nhakhoa.Models
         [MaxLength(100)]
         public string PrimaryClinic { get; set; }
 
+        public DateTime? DateOfBirth { get; set; }
+
+        [MaxLength(12)]
+        public string? Cccd { get; set; }
+
+        [MaxLength(50)]
+        public string? CchnNumber { get; set; }
+
+        public DateTime? CchnIssueDate { get; set; }
+
+        public DateTime? CchnExpiryDate { get; set; }
+
+        [MaxLength(200)]
+        public string? CchnProvider { get; set; }
+
+        [MaxLength(100)]
+        public string? AcademicRank { get; set; }
+
+        [MaxLength(100)]
+        public string? AcademicDegree { get; set; }
+
+        [MaxLength(100)]
+        public string? JobRank { get; set; }
+
+        public int? ExperienceYears { get; set; }
+
         public ICollection<DoctorSpecialty> DoctorSpecialties { get; set; } = new List<DoctorSpecialty>();
     }
 }

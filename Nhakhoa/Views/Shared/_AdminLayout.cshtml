@@ -154,6 +154,9 @@
                                 <strong>@User.Identity?.Name</strong>
                                 @User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value
                             </div>
+                            <a asp-controller="Staff" asp-action="PersonalProfile">
+                                <i class="bi bi-file-earmark-person"></i> Hồ sơ cá nhân
+                            </a>
                             <a asp-controller="Auth" asp-action="ChangePassword">
                                 <i class="bi bi-key"></i> Đổi mật khẩu
                             </a>

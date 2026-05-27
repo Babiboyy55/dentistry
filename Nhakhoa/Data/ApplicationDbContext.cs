@@ -102,10 +102,38 @@ namespace Nhakhoa.Data
 
             // Seed StaffProfiles
             modelBuilder.Entity<StaffProfile>().HasData(
-                new StaffProfile { Id = 201, UserId = 201, StaffCode = "DOC-102", PositionTitle = "Y học cổ truyền", Department = "Nội tổng quát", Gender = "Nam", Address = "Hà Nội", JoinDate = new DateTime(2022, 5, 10), PrimaryClinic = "Phòng khám A1" },
-                new StaffProfile { Id = 202, UserId = 202, StaffCode = "DOC-205", PositionTitle = "Chẩn đoán hình ảnh", Department = "Chẩn đoán hình ảnh", Gender = "Nữ", Address = "Đà Nẵng", JoinDate = new DateTime(2021, 8, 15), PrimaryClinic = "Phòng B2" },
-                new StaffProfile { Id = 203, UserId = 203, StaffCode = "DOC-098", PositionTitle = "Thần kinh học", Department = "Thần kinh", Gender = "Nam", Address = "Hồ Chí Minh", JoinDate = new DateTime(2023, 1, 20), PrimaryClinic = "Phòng C1" },
-                new StaffProfile { Id = 204, UserId = 204, StaffCode = "DOC-110", PositionTitle = "Chuyên gia Tim mạch", Department = "Tim mạch", Gender = "Nữ", Address = "Hà Nội", JoinDate = new DateTime(2023, 4, 1), PrimaryClinic = "Phòng khám A1" }
+                new StaffProfile 
+                { 
+                    Id = 201, UserId = 201, StaffCode = "DOC-102", PositionTitle = "Y học cổ truyền", Department = "Nội tổng quát", 
+                    Gender = "Nam", Address = "Hà Nội", JoinDate = new DateTime(2022, 5, 10), PrimaryClinic = "Phòng khám A1",
+                    DateOfBirth = new DateTime(1980, 5, 12), Cccd = "123456789012", CchnNumber = "CCHN-002341",
+                    CchnIssueDate = new DateTime(2015, 6, 1), CchnExpiryDate = new DateTime(2035, 6, 1), CchnProvider = "Sở Y tế Hà Nội",
+                    AcademicRank = "Không", AcademicDegree = "Bác sĩ thường", JobRank = "Bác sĩ", ExperienceYears = 8
+                },
+                new StaffProfile 
+                { 
+                    Id = 202, UserId = 202, StaffCode = "DOC-205", PositionTitle = "Chẩn đoán hình ảnh", Department = "Chẩn đoán hình ảnh", 
+                    Gender = "Nữ", Address = "Đà Nẵng", JoinDate = new DateTime(2021, 8, 15), PrimaryClinic = "Phòng B2",
+                    DateOfBirth = new DateTime(1985, 10, 20), Cccd = "234567890123", CchnNumber = "CCHN-009842",
+                    CchnIssueDate = new DateTime(2018, 9, 15), CchnExpiryDate = new DateTime(2038, 9, 15), CchnProvider = "Sở Y tế Đà Nẵng",
+                    AcademicRank = "Không", AcademicDegree = "Bác sĩ chuyên khoa I", JobRank = "Bác sĩ", ExperienceYears = 5
+                },
+                new StaffProfile 
+                { 
+                    Id = 203, UserId = 203, StaffCode = "DOC-098", PositionTitle = "Thần kinh học", Department = "Thần kinh", 
+                    Gender = "Nam", Address = "Hồ Chí Minh", JoinDate = new DateTime(2023, 1, 20), PrimaryClinic = "Phòng C1",
+                    DateOfBirth = new DateTime(1978, 12, 1), Cccd = "345678901234", CchnNumber = "CCHN-005612",
+                    CchnIssueDate = new DateTime(2012, 4, 10), CchnExpiryDate = new DateTime(2032, 4, 10), CchnProvider = "Bộ Y tế",
+                    AcademicRank = "Không", AcademicDegree = "Bác sĩ thường", JobRank = "Bác sĩ chính", ExperienceYears = 12
+                },
+                new StaffProfile 
+                { 
+                    Id = 204, UserId = 204, StaffCode = "DOC-110", PositionTitle = "Chuyên gia Tim mạch", Department = "Tim mạch", 
+                    Gender = "Nữ", Address = "Hà Nội", JoinDate = new DateTime(2023, 4, 1), PrimaryClinic = "Phòng khám A1",
+                    DateOfBirth = new DateTime(1988, 3, 15), Cccd = "001085002931", CchnNumber = "CCHN-007788",
+                    CchnIssueDate = new DateTime(2016, 6, 8), CchnExpiryDate = new DateTime(2026, 6, 8), CchnProvider = "Sở Y tế Hà Nội",
+                    AcademicRank = "Không", AcademicDegree = "Bác sĩ chuyên khoa II", JobRank = "Bác sĩ cao cấp", ExperienceYears = 15
+                }
             );
 
             // Seed Specialties

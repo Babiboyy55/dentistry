@@ -1,0 +1,13 @@
+- [x] Extend StaffProfile model with new fields
+- [x] Extend StaffSalaryInfo with pending rank fields
+- [x] Update seed data in ApplicationDbContext
+- [x] Update EditStaffViewModel and StaffProfileViewModel
+- [x] Implement GET Edit with admin check and logging
+- [x] Implement GET Details with ownership check and logging
+- [x] Implement POST Edit with validation, logging, rank change pending, CCHN warning, audit changes
+- [x] Add PersonalProfile action and menu link
+- [x] Create premium Details view with read‑only mode, CCHN expiration banner, admin edit button
+- [x] Create enhanced Edit view with grouped sections, change preview sidebar, dynamic salary calculation, validation
+- [x] Resolve variable naming conflicts in StaffController
+- [/] Run build and confirm compilation success
+- [ ] Verify functionality manually according to verification plan (login as doctor, admin, test IDOR, CCHN warning, rank change, etc.)

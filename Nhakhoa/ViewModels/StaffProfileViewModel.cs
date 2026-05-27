@@ -19,6 +19,16 @@ namespace Nhakhoa.ViewModels
         public string Address { get; set; }
         public DateTime? JoinDate { get; set; }
         public string PrimaryClinic { get; set; }
+        public DateTime? DateOfBirth { get; set; }
+        public string? Cccd { get; set; }
+        public string? CchnNumber { get; set; }
+        public DateTime? CchnIssueDate { get; set; }
+        public DateTime? CchnExpiryDate { get; set; }
+        public string? CchnProvider { get; set; }
+        public string? AcademicRank { get; set; }
+        public string? AcademicDegree { get; set; }
+        public string? JobRank { get; set; }
+        public int? ExperienceYears { get; set; }
 
         public StaffSalaryInfoViewModel Salary { get; set; } = new StaffSalaryInfoViewModel();
         public List<StaffQualificationViewModel> Qualifications { get; set; } = new List<StaffQualificationViewModel>();
@@ -34,6 +44,8 @@ namespace Nhakhoa.ViewModels
         public decimal SpecializationAllowance { get; set; }
         public decimal SeniorityAllowance { get; set; }
         public decimal MonthlyBonus { get; set; }
+        public string? PendingRankTitle { get; set; }
+        public bool IsRankChangePending { get; set; }
 
         public decimal MonthlyTotal => (BaseSalary * DegreeMultiplier * RankMultiplier) + SpecializationAllowance + SeniorityAllowance + MonthlyBonus;
     }

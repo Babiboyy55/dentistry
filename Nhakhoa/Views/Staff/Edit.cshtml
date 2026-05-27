@@ -1,240 +1,375 @@
 @model Nhakhoa.ViewModels.EditStaffViewModel
 @{
     Layout = "_AdminLayout";
-    ViewData["Title"] = "Cập nhật nhân sự";
+    ViewData["Title"] = "Cập nhật hồ sơ nhân sự";
 }
 
-<div class="card border-0 shadow-sm rounded-4" style="background-color: #fff; padding: 32px;">
-    <div class="mb-4">
-        <h2 class="fw-bold mb-1" style="color: #0b1f35;">Cập nhật hồ sơ nhân sự</h2>
-        <p class="text-muted">Chỉnh sửa thông tin cơ bản, hồ sơ cá nhân và lương thưởng</p>
-    </div>
+<style>
+    .sticky-sidebar {
+        position: sticky;
+        top: 20px;
+        z-index: 10;
+    }
+    .preview-card {
+        border-radius: 14px;
+        border: 1px solid #eef0f7;
+        background: #fff;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.03);
+    }
+    .form-section-card {
+        border-radius: 14px;
+        border: none;
+        background: #fff;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.02);
+        padding: 24px;
+        margin-bottom: 24px;
+    }
+    .section-title-edit {
+        font-size: 1.05rem;
+        font-weight: 700;
+        color: #1a202c;
+        border-bottom: 2px solid #edf2f7;
+        padding-bottom: 8px;
+        margin-bottom: 20px;
+    }
+</style>
 
-    <form asp-action="Edit" method="post" enctype="multipart/form-data">
-        <input type="hidden" asp-for="Id" />
-        <div asp-validation-summary="All" class="text-danger mb-3"></div>
-
-        <h5 class="fw-bold text-primary mb-3"><i class="bi bi-person-badge me-2"></i>Thông tin cơ bản</h5>
-        <div class="row g-4 mb-4">
-            <div class="col-md-6">
-                <div class="form-group mb-4">
-                    <label class="form-label fw-semibold text-dark small mb-2" asp-for="FullName">Họ tên</label>
-                    <input asp-for="FullName" class="form-control" />
-                    <span asp-validation-for="FullName" class="text-danger small"></span>
-                </div>
-                <div class="form-group">
-                    <label class="form-label fw-semibold text-dark small mb-2" asp-for="Email">Email</label>
-                    <input asp-for="Email" class="form-control" />
-                    <span asp-validation-for="Email" class="text-danger small"></span>
-                </div>
-            </div>
-            <div class="col-md-6">
-                <div class="form-group mb-4">
-                    <label class="form-label fw-semibold text-dark small mb-2" asp-for="Username">Tên đăng nhập</label>
-                    <input asp-for="Username" class="form-control" readonly />
-                </div>
-                <div class="form-group">
-                    <label class="form-label fw-semibold text-dark small mb-2" asp-for="PhoneNumber">Số điện thoại</label>
-                    <input asp-for="PhoneNumber" class="form-control" />
-                    <span asp-validation-for="PhoneNumber" class="text-danger small"></span>
-                </div>
-            </div>
-        </div>
-        <div class="row mb-4">
-            <div class="col-md-6">
-                <label class="form-label fw-semibold text-dark small mb-2" asp-for="Role">Vai trò</label>
-                <select asp-for="Role" class="form-select">
-                    <option value="Admin">Quản trị viên</option>
-                    <option value="Doctor">Bác sĩ</option>
-                    <option value="Receptionist">Lễ tân</option>
-                </select>
-                <span asp-validation-for="Role" class="text-danger small"></span>
-            </div>
-            <div class="col-md-6">
-                <label class="form-label fw-semibold text-dark small mb-2" asp-for="IsActive">Trạng thái</label>
-                <select asp-for="IsActive" class="form-select">
-                    <option value="true">Đang hoạt động</option>
-                    <option value="false">Tạm khóa</option>
-                </select>
-            </div>
-        </div>
-
-        <hr class="text-muted my-4" />
-        <h5 class="fw-bold text-primary mb-3"><i class="bi bi-file-earmark-person me-2"></i>Hồ sơ cá nhân</h5>
-        <div class="row g-4 mb-4">
-            <div class="col-md-4">
-                <label class="form-label fw-semibold text-dark small mb-2">Mã nhân sự</label>
-                <input asp-for="StaffCode" class="form-control" />
-            </div>
-            <div class="col-md-4">
-                <label class="form-label fw-semibold text-dark small mb-2">Chức danh</label>
-                <input asp-for="PositionTitle" class="form-control" />
-            </div>
-            <div class="col-md-4">
-                <label class="form-label fw-semibold text-dark small mb-2">Phòng ban</label>
-                <input asp-for="Department" class="form-control" />
-            </div>
-            <div class="col-md-4">
-                <label class="form-label fw-semibold text-dark small mb-2">Giới tính</label>
-                <select asp-for="Gender" class="form-select">
-                    <option value="">-- Chọn --</option>
-                    <option value="Nam">Nam</option>
-                    <option value="Nữ">Nữ</option>
-                    <option value="Khác">Khác</option>
-                </select>
-            </div>
-            <div class="col-md-4">
-                <label class="form-label fw-semibold text-dark small mb-2">Ngày gia nhập</label>
-                <input asp-for="JoinDate" type="date" class="form-control" />
-            </div>
-            <div class="col-md-4">
-                <label class="form-label fw-semibold text-dark small mb-2">Cơ sở chính</label>
-                <input asp-for="PrimaryClinic" class="form-control" />
-            </div>
-            <div class="col-12">
-                <label class="form-label fw-semibold text-dark small mb-2">Địa chỉ</label>
-                <input asp-for="Address" class="form-control" />
-            </div>
-        </div>
-
-        <hr class="text-muted my-4" />
-        <h5 class="fw-bold text-primary mb-3"><i class="bi bi-cash-coin me-2"></i>Tính toán lương</h5>
-        <div class="row g-4 mb-4">
-            <div class="col-md-4">
-                <label class="form-label fw-semibold text-dark small mb-2">Lương cơ bản (đ)</label>
-                <input type="hidden" asp-for="BaseSalary" />
-                <input id="BaseSalary_Display" type="text" class="form-control currency-input" data-target="BaseSalary" />
-            </div>
-            <div class="col-md-4">
-                <label class="form-label fw-semibold text-dark small mb-2">Hệ số học vị</label>
-                <input asp-for="DegreeMultiplier" type="number" step="0.01" class="form-control" />
-                <span class="text-muted small" style="font-size: 0.75rem;">(Hệ số tự động tính theo học vị cao nhất)</span>
-            </div>
-            <div class="col-md-4">
-                <label class="form-label fw-semibold text-dark small mb-2">Học vị xét lương</label>
-                <input asp-for="DegreeTitle" class="form-control" />
-                <span class="text-muted small" style="font-size: 0.75rem;">(Tự động cập nhật theo học vị cao nhất)</span>
-            </div>
-            <div class="col-md-4">
-                <label class="form-label fw-semibold text-dark small mb-2">Hệ số học hàm</label>
-                <input asp-for="RankMultiplier" type="number" step="0.01" class="form-control" />
-                <span class="text-muted small" style="font-size: 0.75rem;">(Hệ số tự động tính theo học hàm cao nhất)</span>
-            </div>
-            <div class="col-md-4">
-                <label class="form-label fw-semibold text-dark small mb-2">Học hàm xét lương</label>
-                <input asp-for="RankTitle" class="form-control" />
-                <span class="text-muted small" style="font-size: 0.75rem;">(Tự động cập nhật theo học hàm cao nhất)</span>
-            </div>
-            <div class="col-md-4">
-                <label class="form-label fw-semibold text-dark small mb-2">Phụ cấp chuyên môn (đ)</label>
-                <input type="hidden" asp-for="SpecializationAllowance" />
-                <input id="SpecializationAllowance_Display" type="text" class="form-control currency-input" data-target="SpecializationAllowance" />
-            </div>
-            <div class="col-md-4">
-                <label class="form-label fw-semibold text-dark small mb-2">Phụ cấp thâm niên (đ)</label>
-                <input type="hidden" asp-for="SeniorityAllowance" />
-                <input id="SeniorityAllowance_Display" type="text" class="form-control currency-input" data-target="SeniorityAllowance" />
-            </div>
-            <div class="col-md-4">
-                <label class="form-label fw-semibold text-dark small mb-2">Thưởng KPI tháng (đ)</label>
-                <input type="hidden" asp-for="MonthlyBonus" />
-                <input id="MonthlyBonus_Display" type="text" class="form-control currency-input" data-target="MonthlyBonus" />
-            </div>
-        </div>
-
-        <hr class="text-muted my-4" />
-        <h5 class="fw-bold text-primary mb-3"><i class="bi bi-mortarboard me-2"></i>Bằng cấp &amp; Chứng chỉ</h5>
-        
-        <div id="qualifications-container">
-            @for (int i = 0; i < Model.Qualifications.Count; i++)
-            {
-                <div class="qualification-row border rounded-3 p-3 mb-3 bg-light position-relative" data-index="@i">
-                    <input type="hidden" name="Qualifications[@i].Id" value="@Model.Qualifications[i].Id" />
-                    <input type="hidden" name="Qualifications[@i].ImagePath" value="@Model.Qualifications[i].ImagePath" />
-                    <input type="hidden" class="delete-flag" name="Qualifications[@i].IsDeleted" value="false" />
-
-                    <div class="d-flex justify-content-between align-items-center mb-3">
-                        <h6 class="fw-bold text-dark mb-0">Mục #@(i + 1)</h6>
-                        <button type="button" class="btn btn-sm btn-outline-danger remove-qualification-btn">
-                            <i class="bi bi-trash"></i> Xóa
-                        </button>
-                    </div>
-
-                    <div class="row g-3">
-                        <div class="col-md-4">
-                            <label class="form-label fw-semibold text-dark small mb-1">Tên bằng cấp / chứng chỉ <span class="text-danger">*</span></label>
-                            <input name="Qualifications[@i].Title" class="form-control" value="@Model.Qualifications[i].Title" required />
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label fw-semibold text-dark small mb-1">Chuyên ngành</label>
-                            <input name="Qualifications[@i].Major" class="form-control" value="@Model.Qualifications[i].Major" />
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label fw-semibold text-dark small mb-1">Tổ chức cấp</label>
-                            <input name="Qualifications[@i].Institution" class="form-control" value="@Model.Qualifications[i].Institution" />
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label fw-semibold text-dark small mb-1">Năm cấp</label>
-                            <input type="number" name="Qualifications[@i].Year" class="form-control" value="@Model.Qualifications[i].Year" />
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label fw-semibold text-dark small mb-1">Loại</label>
-                            <select name="Qualifications[@i].Category" class="form-select">
-                                <option value="Degree" selected="@(Model.Qualifications[i].Category == "Degree")">Bằng cấp</option>
-                                <option value="Certificate" selected="@(Model.Qualifications[i].Category == "Certificate")">Chứng chỉ</option>
-                            </select>
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label fw-semibold text-dark small mb-1">Học vị</label>
-                            <select name="Qualifications[@i].AcademicDegree" class="form-select academic-degree-select">
-                                <option value="" selected="@(string.IsNullOrEmpty(Model.Qualifications[i].AcademicDegree))">-- Chọn học vị --</option>
-                                <option value="Cử nhân" selected="@(Model.Qualifications[i].AcademicDegree == "Cử nhân")">Cử nhân (Hệ số 1.10)</option>
-                                <option value="Thạc sĩ" selected="@(Model.Qualifications[i].AcademicDegree == "Thạc sĩ")">Thạc sĩ (Hệ số 1.20)</option>
-                                <option value="Bác sĩ CKI" selected="@(Model.Qualifications[i].AcademicDegree == "Bác sĩ CKI")">Bác sĩ CKI (Hệ số 1.30)</option>
-                                <option value="Bác sĩ CKII" selected="@(Model.Qualifications[i].AcademicDegree == "Bác sĩ CKII")">Bác sĩ CKII (Hệ số 1.40)</option>
-                                <option value="Tiến sĩ" selected="@(Model.Qualifications[i].AcademicDegree == "Tiến sĩ")">Tiến sĩ (Hệ số 1.50)</option>
-                            </select>
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label fw-semibold text-dark small mb-1">Học hàm</label>
-                            <select name="Qualifications[@i].AcademicRank" class="form-select academic-rank-select">
-                                <option value="" selected="@(string.IsNullOrEmpty(Model.Qualifications[i].AcademicRank))">-- Chọn học hàm --</option>
-                                <option value="Phó Giáo sư" selected="@(Model.Qualifications[i].AcademicRank == "Phó Giáo sư")">Phó Giáo sư (Hệ số 1.20)</option>
-                                <option value="Giáo sư" selected="@(Model.Qualifications[i].AcademicRank == "Giáo sư")">Giáo sư (Hệ số 1.30)</option>
-                            </select>
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label fw-semibold text-dark small mb-1">Ảnh bằng cấp/chứng chỉ</label>
-                            @if (!string.IsNullOrEmpty(Model.Qualifications[i].ImagePath))
-                            {
-                                <div class="d-flex align-items-center gap-2 mb-2">
-                                    <a href="@Model.Qualifications[i].ImagePath" target="_blank">
-                                        <img src="@Model.Qualifications[i].ImagePath" class="rounded border" style="width: 40px; height: 40px; object-fit: cover;" />
-                                    </a>
-                                    <span class="small text-muted text-truncate" style="max-width: 150px;">
-                                        @System.IO.Path.GetFileName(Model.Qualifications[i].ImagePath)
-                                    </span>
-                                </div>
-                            }
-                            <input type="file" name="Qualifications[@i].ImageFile" class="form-control" accept="image/*" />
-                        </div>
-                    </div>
-                </div>
-            }
-        </div>
-
-        <button type="button" id="add-qualification-btn" class="btn btn-outline-primary btn-sm rounded-pill mb-4">
-            <i class="bi bi-plus-lg me-1"></i> Thêm bằng cấp / chứng chỉ
-        </button>
-
-        <div class="d-flex justify-content-end gap-3 mt-4">
-            <a href="/Staff/Details/@Model.Id" class="btn btn-light px-4 py-2 fw-semibold" style="border: 1px solid #dee2e6; color: #5b6b7a;">Hủy</a>
-            <button type="submit" class="btn btn-primary px-4 py-2 fw-semibold" style="background-color: #1b75d0; border-color: #1b75d0;">
-                Lưu thay đổi
-            </button>
-        </div>
-    </form>
+<div class="mb-4">
+    <h2 class="fw-bold mb-1" style="color: #0b1f35;">Cập nhật hồ sơ nhân sự</h2>
+    <p class="text-muted small">Cập nhật thông tin cơ bản, lý lịch cá nhân, chứng chỉ hành nghề và bằng cấp.</p>
 </div>
+
+<form asp-action="Edit" method="post" enctype="multipart/form-data">
+    <input type="hidden" asp-for="Id" />
+    <div asp-validation-summary="All" class="text-danger mb-4"></div>
+
+    <div class="row g-4">
+        <!-- Left Side: Form Fields -->
+        <div class="col-lg-9">
+            <!-- 1. Thông tin cơ bản -->
+            <div class="form-section-card">
+                <h5 class="section-title-edit text-primary"><i class="bi bi-person-badge-fill me-2"></i>1. Thông tin cơ bản hệ thống</h5>
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold text-dark small mb-1" asp-for="FullName">Họ tên nhân sự <span class="text-danger">*</span></label>
+                        <input asp-for="FullName" class="form-control" data-initial="@Model.FullName" />
+                        <span asp-validation-for="FullName" class="text-danger small"></span>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold text-dark small mb-1" asp-for="Username">Tên đăng nhập (Username)</label>
+                        <input asp-for="Username" class="form-control bg-light" readonly />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold text-dark small mb-1" asp-for="Email">Email <span class="text-danger">*</span></label>
+                        <input asp-for="Email" class="form-control" data-initial="@Model.Email" />
+                        <span asp-validation-for="Email" class="text-danger small"></span>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold text-dark small mb-1" asp-for="PhoneNumber">Số điện thoại <span class="text-danger">*</span></label>
+                        <input asp-for="PhoneNumber" class="form-control" data-initial="@Model.PhoneNumber" />
+                        <span asp-validation-for="PhoneNumber" class="text-danger small"></span>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold text-dark small mb-1" asp-for="Role">Vai trò tài khoản <span class="text-danger">*</span></label>
+                        <select asp-for="Role" class="form-select" data-initial="@Model.Role">
+                            <option value="Admin">Quản trị viên</option>
+                            <option value="Doctor">Bác sĩ</option>
+                            <option value="Receptionist">Lễ tân</option>
+                        </select>
+                        <span asp-validation-for="Role" class="text-danger small"></span>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold text-dark small mb-1" asp-for="IsActive">Trạng thái hoạt động</label>
+                        <select asp-for="IsActive" class="form-select" data-initial="@(Model.IsActive.ToString().ToLower())">
+                            <option value="true">Đang hoạt động</option>
+                            <option value="false">Tạm khóa</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 2. Thông tin cá nhân & Pháp lý -->
+            <div class="form-section-card">
+                <h5 class="section-title-edit text-primary"><i class="bi bi-person-bounding-box me-2"></i>2. Thông tin cá nhân &amp; Lý lịch</h5>
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold text-dark small mb-1">Mã nhân sự</label>
+                        <input asp-for="StaffCode" class="form-control" />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold text-dark small mb-1">Số Căn cước công dân (CCCD)</label>
+                        <input asp-for="Cccd" class="form-control fw-bold" placeholder="Nhập đúng 12 chữ số" data-initial="@Model.Cccd" />
+                        <span asp-validation-for="Cccd" class="text-danger small"></span>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold text-dark small mb-1">Ngày sinh</label>
+                        <input asp-for="DateOfBirth" type="date" class="form-control" />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold text-dark small mb-1">Giới tính</label>
+                        <select asp-for="Gender" class="form-select">
+                            <option value="">-- Chọn --</option>
+                            <option value="Nam">Nam</option>
+                            <option value="Nữ">Nữ</option>
+                            <option value="Khác">Khác</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold text-dark small mb-1">Phòng ban/Chuyên khoa</label>
+                        <input asp-for="Department" class="form-control" />
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label fw-semibold text-dark small mb-1">Địa chỉ thường trú</label>
+                        <input asp-for="Address" class="form-control" />
+                    </div>
+                </div>
+            </div>
+
+            <!-- 3. Chứng chỉ hành nghề -->
+            <div class="form-section-card">
+                <h5 class="section-title-edit text-primary"><i class="bi bi-file-earmark-medical-fill me-2"></i>3. Chứng chỉ hành nghề (CCHN)</h5>
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold text-dark small mb-1">Số chứng chỉ hành nghề</label>
+                        <input asp-for="CchnNumber" class="form-control fw-bold" placeholder="Ví dụ: CCHN-01928" />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold text-dark small mb-1">Cơ quan cấp CCHN</label>
+                        <input asp-for="CchnProvider" class="form-control" placeholder="Ví dụ: Sở Y tế Hà Nội" />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold text-dark small mb-1">Ngày cấp chứng chỉ</label>
+                        <input asp-for="CchnIssueDate" type="date" class="form-control" />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold text-dark small mb-1">Ngày hết hạn chứng chỉ</label>
+                        <input asp-for="CchnExpiryDate" type="date" class="form-control fw-bold" data-initial="@(Model.CchnExpiryDate?.ToString("yyyy-MM-dd"))" />
+                        <span asp-validation-for="CchnExpiryDate" class="text-danger small"></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 4. Học thuật & Hành chính -->
+            <div class="form-section-card">
+                <h5 class="section-title-edit text-primary"><i class="bi bi-award-fill me-2"></i>4. Học hàm, Học vị &amp; Hành chính</h5>
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold text-dark small mb-1">Học hàm</label>
+                        <select asp-for="AcademicRank" class="form-select">
+                            <option value="Không">Không</option>
+                            <option value="Phó Giáo sư">Phó Giáo sư</option>
+                            <option value="Giáo sư">Giáo sư</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold text-dark small mb-1">Học vị</label>
+                        <select asp-for="AcademicDegree" class="form-select">
+                            <option value="Bác sĩ thường">Bác sĩ thường</option>
+                            <option value="Bác sĩ chuyên khoa I">Bác sĩ chuyên khoa I (CKI)</option>
+                            <option value="Bác sĩ chuyên khoa II">Bác sĩ chuyên khoa II (CKII)</option>
+                            <option value="Thạc sĩ">Thạc sĩ</option>
+                            <option value="Tiến sĩ">Tiến sĩ</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold text-dark small mb-1">Hạng chức danh <span class="text-danger">*</span></label>
+                        <select asp-for="JobRank" class="form-select" data-initial="@Model.JobRank">
+                            <option value="Bác sĩ">Bác sĩ</option>
+                            <option value="Bác sĩ chính">Bác sĩ chính</option>
+                            <option value="Bác sĩ cao cấp">Bác sĩ cao cấp</option>
+                            <option value="Lễ tân">Lễ tân</option>
+                            <option value="Lễ tân chính">Lễ tân chính</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold text-dark small mb-1">Thâm niên (Số năm kinh nghiệm)</label>
+                        <input asp-for="ExperienceYears" type="number" class="form-control" min="0" />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold text-dark small mb-1">Ngày vào làm</label>
+                        <input asp-for="JoinDate" type="date" class="form-control" />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold text-dark small mb-1">Chức vụ cụ thể</label>
+                        <input asp-for="PositionTitle" class="form-control" />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold text-dark small mb-1">Cơ sở/Phòng làm việc chính</label>
+                        <input asp-for="PrimaryClinic" class="form-control" />
+                    </div>
+                </div>
+            </div>
+
+            <!-- 5. Lương thưởng -->
+            <div class="form-section-card">
+                <h5 class="section-title-edit text-primary"><i class="bi bi-cash-coin me-2"></i>5. Thông số lương thưởng</h5>
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold text-dark small mb-1">Lương cơ bản (đ)</label>
+                        <input type="hidden" asp-for="BaseSalary" />
+                        <input id="BaseSalary_Display" type="text" class="form-control currency-input" data-target="BaseSalary" />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold text-dark small mb-1">Hệ số học vị</label>
+                        <input asp-for="DegreeMultiplier" type="number" step="0.01" class="form-control" />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold text-dark small mb-1">Học vị xét lương</label>
+                        <input asp-for="DegreeTitle" class="form-control" />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold text-dark small mb-1">Hệ số học hàm</label>
+                        <input asp-for="RankMultiplier" type="number" step="0.01" class="form-control" />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold text-dark small mb-1">Học hàm xét lương</label>
+                        <input asp-for="RankTitle" class="form-control" />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold text-dark small mb-1">Phụ cấp chuyên môn (đ)</label>
+                        <input type="hidden" asp-for="SpecializationAllowance" />
+                        <input id="SpecializationAllowance_Display" type="text" class="form-control currency-input" data-target="SpecializationAllowance" />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold text-dark small mb-1">Phụ cấp thâm niên (đ)</label>
+                        <input type="hidden" asp-for="SeniorityAllowance" />
+                        <input id="SeniorityAllowance_Display" type="text" class="form-control currency-input" data-target="SeniorityAllowance" />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold text-dark small mb-1">Thưởng KPI tháng (đ)</label>
+                        <input type="hidden" asp-for="MonthlyBonus" />
+                        <input id="MonthlyBonus_Display" type="text" class="form-control currency-input" data-target="MonthlyBonus" />
+                    </div>
+                </div>
+            </div>
+
+            <!-- 6. Bằng cấp chi tiết -->
+            <div class="form-section-card">
+                <h5 class="section-title-edit text-primary"><i class="bi bi-mortarboard-fill me-2"></i>6. Các văn bằng &amp; Chứng chỉ tải lên</h5>
+                <div id="qualifications-container">
+                    @for (int i = 0; i < Model.Qualifications.Count; i++)
+                    {
+                        <div class="qualification-row border rounded-3 p-3 mb-3 bg-light position-relative" data-index="@i">
+                            <input type="hidden" name="Qualifications[@i].Id" value="@Model.Qualifications[i].Id" />
+                            <input type="hidden" name="Qualifications[@i].ImagePath" value="@Model.Qualifications[i].ImagePath" />
+                            <input type="hidden" class="delete-flag" name="Qualifications[@i].IsDeleted" value="false" />
+
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <h6 class="fw-bold text-dark mb-0">Tài liệu #@(i + 1)</h6>
+                                <button type="button" class="btn btn-sm btn-outline-danger remove-qualification-btn">
+                                    <i class="bi bi-trash"></i> Xóa tài liệu
+                                </button>
+                            </div>
+
+                            <div class="row g-3">
+                                <div class="col-md-4">
+                                    <label class="form-label fw-semibold text-dark small mb-1">Tên văn bằng/chứng chỉ <span class="text-danger">*</span></label>
+                                    <input name="Qualifications[@i].Title" class="form-control" value="@Model.Qualifications[i].Title" required />
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label fw-semibold text-dark small mb-1">Chuyên ngành</label>
+                                    <input name="Qualifications[@i].Major" class="form-control" value="@Model.Qualifications[i].Major" />
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label fw-semibold text-dark small mb-1">Nơi cấp</label>
+                                    <input name="Qualifications[@i].Institution" class="form-control" value="@Model.Qualifications[i].Institution" />
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label fw-semibold text-dark small mb-1">Năm cấp</label>
+                                    <input type="number" name="Qualifications[@i].Year" class="form-control" value="@Model.Qualifications[i].Year" />
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label fw-semibold text-dark small mb-1">Phân loại</label>
+                                    <select name="Qualifications[@i].Category" class="form-select">
+                                        <option value="Degree" selected="@(Model.Qualifications[i].Category == "Degree")">Bằng cấp</option>
+                                        <option value="Certificate" selected="@(Model.Qualifications[i].Category == "Certificate")">Chứng chỉ</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label fw-semibold text-dark small mb-1">Học vị tương ứng</label>
+                                    <select name="Qualifications[@i].AcademicDegree" class="form-select academic-degree-select">
+                                        <option value="" selected="@(string.IsNullOrEmpty(Model.Qualifications[i].AcademicDegree))">-- Chọn --</option>
+                                        <option value="Bác sĩ thường" selected="@(Model.Qualifications[i].AcademicDegree == "Bác sĩ thường")">Bác sĩ thường</option>
+                                        <option value="Bác sĩ chuyên khoa I" selected="@(Model.Qualifications[i].AcademicDegree == "Bác sĩ chuyên khoa I")">Bác sĩ CKI (Hệ 1.3)</option>
+                                        <option value="Bác sĩ chuyên khoa II" selected="@(Model.Qualifications[i].AcademicDegree == "Bác sĩ chuyên khoa II")">Bác sĩ CKII (Hệ 1.4)</option>
+                                        <option value="Thạc sĩ" selected="@(Model.Qualifications[i].AcademicDegree == "Thạc sĩ")">Thạc sĩ (Hệ 1.2)</option>
+                                        <option value="Tiến sĩ" selected="@(Model.Qualifications[i].AcademicDegree == "Tiến sĩ")">Tiến sĩ (Hệ 1.5)</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label fw-semibold text-dark small mb-1">Học hàm tương ứng</label>
+                                    <select name="Qualifications[@i].AcademicRank" class="form-select academic-rank-select">
+                                        <option value="" selected="@(string.IsNullOrEmpty(Model.Qualifications[i].AcademicRank))">-- Chọn --</option>
+                                        <option value="Phó Giáo sư" selected="@(Model.Qualifications[i].AcademicRank == "Phó Giáo sư")">Phó Giáo sư (Hệ 1.2)</option>
+                                        <option value="Giáo sư" selected="@(Model.Qualifications[i].AcademicRank == "Giáo sư")">Giáo sư (Hệ 1.3)</option>
+                                    </select>
+                                </div>
+                                <div class="col-12">
+                                    <label class="form-label fw-semibold text-dark small mb-1">Tệp hình ảnh văn bằng đính kèm</label>
+                                    @if (!string.IsNullOrEmpty(Model.Qualifications[i].ImagePath))
+                                    {
+                                        <div class="d-flex align-items-center gap-2 mb-2">
+                                            <a href="@Model.Qualifications[i].ImagePath" target="_blank">
+                                                <img src="@Model.Qualifications[i].ImagePath" class="rounded border" style="width: 40px; height: 40px; object-fit: cover;" />
+                                            </a>
+                                            <span class="small text-muted">@System.IO.Path.GetFileName(Model.Qualifications[i].ImagePath)</span>
+                                        </div>
+                                    }
+                                    <input type="file" name="Qualifications[@i].ImageFile" class="form-control" accept="image/*" />
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+                <button type="button" id="add-qualification-btn" class="btn btn-outline-primary btn-sm rounded-pill">
+                    <i class="bi bi-plus-lg me-1"></i> Thêm văn bằng / chứng chỉ mới
+                </button>
+            </div>
+        </div>
+
+        <!-- Right Side: Sticky Changes Tracker & Actions -->
+        <div class="col-lg-3">
+            <div class="sticky-sidebar">
+                <!-- Changes Preview Card -->
+                <div class="card preview-card mb-3">
+                    <div class="card-header bg-light border-bottom-0 py-3">
+                        <h6 class="fw-bold mb-0 text-dark d-flex align-items-center gap-2">
+                            <i class="bi bi-clock-history text-primary"></i> Thay đổi chưa lưu
+                        </h6>
+                    </div>
+                    <div class="card-body py-2">
+                        <div id="changes-list" class="small text-muted py-2">
+                            <div class="text-center py-3">Không có thay đổi nào.</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Action Banners -->
+                <div id="rank-change-banner" class="alert alert-warning border-0 p-3 rounded-4 mb-3" style="display: none; background-color: #fff8eb; color: #b26a00; font-size: 0.85rem;">
+                    <i class="bi bi-exclamation-circle-fill me-1"></i>
+                    <strong>Chú ý:</strong> Thay đổi Hạng chức danh sẽ áp dụng khung lương mới từ kỳ lương tiếp theo.
+                </div>
+
+                <div id="cchn-warning-banner" class="alert alert-danger border-0 p-3 rounded-4 mb-3" style="display: none; background-color: #fff5f5; color: #e53e3e; font-size: 0.85rem;">
+                    <i class="bi bi-exclamation-triangle-fill me-1"></i>
+                    <strong>Cảnh báo:</strong> CCHN mới nhập sắp hết hạn hoặc đã hết hạn trong vòng 30 ngày.
+                </div>
+
+                <!-- Submit / Cancel Card -->
+                <div class="card preview-card">
+                    <div class="card-body p-3 d-flex flex-column gap-2">
+                        <button type="submit" class="btn btn-primary w-100 py-2.5 fw-semibold rounded-3" style="background-color: #1b75d0; border-color: #1b75d0;">
+                            <i class="bi bi-save me-1"></i> Lưu thay đổi
+                        </button>
+                        <a href="/Staff/Details/@Model.Id" class="btn btn-light w-100 py-2.5 fw-semibold border rounded-3 text-muted">
+                            Hủy bỏ
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
 
 @section Scripts {
     @await Html.PartialAsync("_ValidationScriptsPartial")
@@ -243,22 +378,122 @@
         let qualificationIndex = @Model.Qualifications.Count;
 
         const degreeMultiplierMap = {
-            "Cử nhân": 1.1,
+            "Bác sĩ thường": 1.0,
+            "Bác sĩ chuyên khoa I": 1.3,
+            "Bác sĩ chuyên khoa II": 1.4,
             "Thạc sĩ": 1.2,
-            "Bác sĩ CKI": 1.3,
-            "Bác sĩ CKII": 1.4,
             "Tiến sĩ": 1.5,
-            "Khác": 1.0,
             "": 1.0
         };
 
         const rankMultiplierMap = {
             "Phó Giáo sư": 1.2,
             "Giáo sư": 1.3,
-            "Khác": 1.0,
             "": 1.0
         };
 
+        // Track Changes script
+        (function() {
+            const inputsToTrack = [
+                { id: 'FullName', label: 'Họ tên' },
+                { id: 'Email', label: 'Email' },
+                { id: 'PhoneNumber', label: 'Số điện thoại' },
+                { id: 'Role', label: 'Vai trò' },
+                { id: 'IsActive', label: 'Trạng thái' },
+                { id: 'Cccd', label: 'CCCD' },
+                { id: 'JobRank', label: 'Hạng chức danh' },
+                { id: 'CchnExpiryDate', label: 'Ngày hết hạn CCHN' }
+            ];
+
+            function checkChanges() {
+                const changes = [];
+                let hasRankChange = false;
+                let hasCchnExpiryWarning = false;
+
+                inputsToTrack.forEach(item => {
+                    const el = document.getElementById(item.id);
+                    if (!el) return;
+
+                    const initialVal = el.getAttribute('data-initial') || '';
+                    let currentVal = el.value || '';
+
+                    if (item.id === 'IsActive') {
+                        currentVal = currentVal.toString().toLowerCase();
+                    }
+
+                    if (currentVal !== initialVal) {
+                        let displayInitial = initialVal;
+                        let displayCurrent = currentVal;
+
+                        if (item.id === 'IsActive') {
+                            displayInitial = initialVal === 'true' ? 'Đang hoạt động' : 'Tạm khóa';
+                            displayCurrent = currentVal === 'true' ? 'Đang hoạt động' : 'Tạm khóa';
+                        }
+                        if (item.id === 'Role') {
+                            const roles = { 'Admin': 'Quản trị viên', 'Doctor': 'Bác sĩ', 'Receptionist': 'Lễ tân' };
+                            displayInitial = roles[initialVal] || initialVal;
+                            displayCurrent = roles[currentVal] || currentVal;
+                        }
+
+                        changes.push({
+                            label: item.label,
+                            from: displayInitial || '(trống)',
+                            to: displayCurrent || '(trống)'
+                        });
+
+                        if (item.id === 'JobRank') {
+                            hasRankChange = true;
+                        }
+
+                        if (item.id === 'CchnExpiryDate' && currentVal) {
+                            const expiryDate = new Date(currentVal);
+                            const today = new Date();
+                            const diffTime = expiryDate - today;
+                            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                            if (diffDays >= 0 && diffDays <= 30) {
+                                hasCchnExpiryWarning = true;
+                            }
+                        }
+                    }
+                });
+
+                // Render Changes List
+                const listEl = document.getElementById('changes-list');
+                if (changes.length === 0) {
+                    listEl.innerHTML = '<div class="text-center py-3 text-muted">Không có thay đổi nào chưa lưu.</div>';
+                } else {
+                    let html = '<div class="d-flex flex-column gap-2">';
+                    changes.forEach(c => {
+                        html += `
+                            <div class="border-bottom pb-2">
+                                <span class="fw-bold text-dark d-block" style="font-size:0.8rem;">${c.label}</span>
+                                <span class="text-muted text-decoration-line-through">${c.from}</span>
+                                <i class="bi bi-arrow-right mx-1 text-primary"></i>
+                                <span class="fw-semibold text-primary">${c.to}</span>
+                            </div>
+                        `;
+                    });
+                    html += '</div>';
+                    listEl.innerHTML = html;
+                }
+
+                // Show/hide banners
+                document.getElementById('rank-change-banner').style.display = hasRankChange ? 'block' : 'none';
+                document.getElementById('cchn-warning-banner').style.display = hasCchnExpiryWarning ? 'block' : 'none';
+            }
+
+            inputsToTrack.forEach(item => {
+                const el = document.getElementById(item.id);
+                if (el) {
+                    el.addEventListener('input', checkChanges);
+                    el.addEventListener('change', checkChanges);
+                }
+            });
+
+            checkChanges();
+        })();
+
+        // Qualifications logic
         function updateSalaryFromQualifications() {
             let maxDegreeMult = 1.0;
             let maxDegreeTitle = "Chưa có";
@@ -279,13 +514,13 @@
                     const degMult = degreeMultiplierMap[degree] || 1.0;
                     if (degMult > maxDegreeMult) {
                         maxDegreeMult = degMult;
-                        maxDegreeTitle = degree + (title ? ` (${title})` : "");
+                        maxDegreeTitle = degree;
                     }
 
                     const rkMult = rankMultiplierMap[rank] || 1.0;
                     if (rkMult > maxRankMult) {
                         maxRankMult = rkMult;
-                        maxRankTitle = rank + (title ? ` (${title})` : "");
+                        maxRankTitle = rank;
                     }
                 }
             });
@@ -309,15 +544,15 @@
                     <input type="hidden" class="delete-flag" name="Qualifications[${qualificationIndex}].IsDeleted" value="false" />
 
                     <div class="d-flex justify-content-between align-items-center mb-3">
-                        <h6 class="fw-bold text-dark mb-0">Mục #${qualificationIndex + 1} (Mới)</h6>
+                        <h6 class="fw-bold text-dark mb-0">Tài liệu #${qualificationIndex + 1} (Mới)</h6>
                         <button type="button" class="btn btn-sm btn-outline-danger remove-qualification-btn">
-                            <i class="bi bi-trash"></i> Xóa
+                            <i class="bi bi-trash"></i> Xóa tài liệu
                         </button>
                     </div>
 
                     <div class="row g-3">
                         <div class="col-md-4">
-                            <label class="form-label fw-semibold text-dark small mb-1">Tên bằng cấp / chứng chỉ <span class="text-danger">*</span></label>
+                            <label class="form-label fw-semibold text-dark small mb-1">Tên văn bằng/chứng chỉ <span class="text-danger">*</span></label>
                             <input name="Qualifications[${qualificationIndex}].Title" class="form-control" required />
                         </div>
                         <div class="col-md-4">
@@ -325,41 +560,41 @@
                             <input name="Qualifications[${qualificationIndex}].Major" class="form-control" />
                         </div>
                         <div class="col-md-4">
-                            <label class="form-label fw-semibold text-dark small mb-1">Tổ chức cấp</label>
+                            <label class="form-label fw-semibold text-dark small mb-1">Nơi cấp</label>
                             <input name="Qualifications[${qualificationIndex}].Institution" class="form-control" />
                         </div>
-                        <div class="col-md-4">
+                        <div class="col-md-3">
                             <label class="form-label fw-semibold text-dark small mb-1">Năm cấp</label>
                             <input type="number" name="Qualifications[${qualificationIndex}].Year" class="form-control" />
                         </div>
-                        <div class="col-md-4">
-                            <label class="form-label fw-semibold text-dark small mb-1">Loại</label>
+                        <div class="col-md-3">
+                            <label class="form-label fw-semibold text-dark small mb-1">Phân loại</label>
                             <select name="Qualifications[${qualificationIndex}].Category" class="form-select">
                                 <option value="Degree">Bằng cấp</option>
                                 <option value="Certificate">Chứng chỉ</option>
                             </select>
                         </div>
-                        <div class="col-md-4">
-                            <label class="form-label fw-semibold text-dark small mb-1">Học vị</label>
-                            <select name="Qualifications[\${qualificationIndex}].AcademicDegree" class="form-select academic-degree-select">
-                                <option value="">-- Chọn học vị --</option>
-                                <option value="Cử nhân">Cử nhân (Hệ số 1.10)</option>
-                                <option value="Thạc sĩ">Thạc sĩ (Hệ số 1.20)</option>
-                                <option value="Bác sĩ CKI">Bác sĩ CKI (Hệ số 1.30)</option>
-                                <option value="Bác sĩ CKII">Bác sĩ CKII (Hệ số 1.40)</option>
-                                <option value="Tiến sĩ">Tiến sĩ (Hệ số 1.50)</option>
+                        <div class="col-md-3">
+                            <label class="form-label fw-semibold text-dark small mb-1">Học vị tương ứng</label>
+                            <select name="Qualifications[${qualificationIndex}].AcademicDegree" class="form-select academic-degree-select">
+                                <option value="">-- Chọn --</option>
+                                <option value="Bác sĩ thường">Bác sĩ thường</option>
+                                <option value="Bác sĩ chuyên khoa I">Bác sĩ CKI (Hệ 1.3)</option>
+                                <option value="Bác sĩ chuyên khoa II">Bác sĩ CKII (Hệ 1.4)</option>
+                                <option value="Thạc sĩ">Thạc sĩ (Hệ 1.2)</option>
+                                <option value="Tiến sĩ">Tiến sĩ (Hệ 1.5)</option>
                             </select>
                         </div>
-                        <div class="col-md-4">
-                            <label class="form-label fw-semibold text-dark small mb-1">Học hàm</label>
-                            <select name="Qualifications[\${qualificationIndex}].AcademicRank" class="form-select academic-rank-select">
-                                <option value="">-- Chọn học hàm --</option>
-                                <option value="Phó Giáo sư">Phó Giáo sư (Hệ số 1.20)</option>
-                                <option value="Giáo sư">Giáo sư (Hệ số 1.30)</option>
+                        <div class="col-md-3">
+                            <label class="form-label fw-semibold text-dark small mb-1">Học hàm tương ứng</label>
+                            <select name="Qualifications[${qualificationIndex}].AcademicRank" class="form-select academic-rank-select">
+                                <option value="">-- Chọn --</option>
+                                <option value="Phó Giáo sư">Phó Giáo sư (Hệ 1.2)</option>
+                                <option value="Giáo sư">Giáo sư (Hệ 1.3)</option>
                             </select>
                         </div>
-                        <div class="col-md-4">
-                            <label class="form-label fw-semibold text-dark small mb-1">Ảnh bằng cấp/chứng chỉ</label>
+                        <div class="col-12">
+                            <label class="form-label fw-semibold text-dark small mb-1">Tệp hình ảnh văn bằng đính kèm</label>
                             <input type="file" name="Qualifications[${qualificationIndex}].ImageFile" class="form-control" accept="image/*" />
                         </div>
                     </div>
@@ -367,7 +602,7 @@
             `;
             container.insertAdjacentHTML('beforeend', html);
             qualificationIndex++;
-            updateRowHeaders();
+            updateSalaryFromQualifications();
         });
 
         // Event delegation for remove buttons
@@ -377,7 +612,6 @@
                 const row = e.target.closest('.qualification-row');
                 row.querySelector('.delete-flag').value = 'true';
                 row.style.display = 'none'; // hide it
-                updateRowHeaders();
                 updateSalaryFromQualifications();
             }
         });

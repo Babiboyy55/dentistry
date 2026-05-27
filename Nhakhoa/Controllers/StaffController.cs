@@ -49,6 +49,24 @@ namespace Nhakhoa.Controllers
         // GET: Staff/Edit/5
         public async Task<IActionResult> Edit(int id)
         {
+            var username = User.Identity?.Name;
+            var currentUser = await _context.Users.FirstOrDefaultAsync(u => u.Username == username);
+            if (currentUser == null) return Unauthorized();
+
+            // Ràng buộc bảo mật (ALT-1) - Chỉ Admin mới có quyền truy cập trang sửa
+            if (currentUser.Role != "Admin")
+            {
+                var editGetLog = new ActivityLog
+                {
+                    Username = username ?? "System",
+                    Action = "Chỉnh sửa trái phép",
+                    Details = $"Người dùng {username} (vai trò {currentUser.Role}) cố gắng chỉnh sửa trái phép hồ sơ của nhân sự ID {id}."
+                };
+                _context.ActivityLogs.Add(editGetLog);
+                await _context.SaveChangesAsync();
+                return StatusCode(StatusCodes.Status403Forbidden);
+            }
+
             var user = await _context.Users
                 .Include(u => u.StaffProfile)
                 .Include(u => u.StaffSalaryInfo)
@@ -75,6 +93,20 @@ namespace Nhakhoa.Controllers
                 Address = user.StaffProfile?.Address,
                 JoinDate = user.StaffProfile?.JoinDate,
                 PrimaryClinic = user.StaffProfile?.PrimaryClinic,
+                
+                // New profile fields
+                DateOfBirth = user.StaffProfile?.DateOfBirth,
+                Cccd = user.StaffProfile?.Cccd,
+                CchnNumber = user.StaffProfile?.CchnNumber,
+                CchnIssueDate = user.StaffProfile?.CchnIssueDate,
+                CchnExpiryDate = user.StaffProfile?.CchnExpiryDate,
+                CchnProvider = user.StaffProfile?.CchnProvider,
+                AcademicRank = user.StaffProfile?.AcademicRank,
+                AcademicDegree = user.StaffProfile?.AcademicDegree,
+                JobRank = user.StaffProfile?.JobRank,
+                ExperienceYears = user.StaffProfile?.ExperienceYears,
+
+                // Salary info
                 BaseSalary = user.StaffSalaryInfo?.BaseSalary ?? 0m,
                 DegreeMultiplier = user.StaffSalaryInfo?.DegreeMultiplier ?? 1m,
                 DegreeTitle = user.StaffSalaryInfo?.DegreeTitle,
@@ -83,6 +115,9 @@ namespace Nhakhoa.Controllers
                 SpecializationAllowance = user.StaffSalaryInfo?.SpecializationAllowance ?? 0m,
                 SeniorityAllowance = user.StaffSalaryInfo?.SeniorityAllowance ?? 0m,
                 MonthlyBonus = user.StaffSalaryInfo?.MonthlyBonus ?? 0m,
+                PendingRankTitle = user.StaffSalaryInfo?.PendingRankTitle,
+                IsRankChangePending = user.StaffSalaryInfo?.IsRankChangePending ?? false,
+
                 Qualifications = user.StaffQualifications
                     .Select(q => new EditQualificationViewModel
                     {
@@ -106,6 +141,24 @@ namespace Nhakhoa.Controllers
         // GET: Staff/Details/5
         public async Task<IActionResult> Details(int id)
         {
+            var username = User.Identity?.Name;
+            var currentUser = await _context.Users.FirstOrDefaultAsync(u => u.Username == username);
+            if (currentUser == null) return Unauthorized();
+
+            // Ràng buộc bảo mật (ALT-2) - Bác sĩ/Lễ tân chỉ được xem hồ sơ bản thân
+            if (currentUser.Role != "Admin" && currentUser.Id != id)
+            {
+                var detailsLog = new ActivityLog
+                {
+                    Username = username ?? "System",
+                    Action = "Truy cập trái phép",
+                    Details = $"Người dùng {username} cố gắng xem hồ sơ của nhân sự ID {id} trái phép."
+                };
+                _context.ActivityLogs.Add(detailsLog);
+                await _context.SaveChangesAsync();
+                return StatusCode(StatusCodes.Status403Forbidden);
+            }
+
             var user = await _context.Users
                 .Include(u => u.StaffProfile)
                 .Include(u => u.StaffSalaryInfo)
@@ -137,6 +190,19 @@ namespace Nhakhoa.Controllers
                 Address = profile?.Address,
                 JoinDate = profile?.JoinDate,
                 PrimaryClinic = profile?.PrimaryClinic,
+                
+                // New profile fields
+                DateOfBirth = profile?.DateOfBirth,
+                Cccd = profile?.Cccd,
+                CchnNumber = profile?.CchnNumber,
+                CchnIssueDate = profile?.CchnIssueDate,
+                CchnExpiryDate = profile?.CchnExpiryDate,
+                CchnProvider = profile?.CchnProvider,
+                AcademicRank = profile?.AcademicRank,
+                AcademicDegree = profile?.AcademicDegree,
+                JobRank = profile?.JobRank,
+                ExperienceYears = profile?.ExperienceYears,
+
                 Salary = new StaffSalaryInfoViewModel
                 {
                     BaseSalary = salary?.BaseSalary ?? 0m,
@@ -146,7 +212,9 @@ namespace Nhakhoa.Controllers
                     RankTitle = salary?.RankTitle,
                     SpecializationAllowance = salary?.SpecializationAllowance ?? 0m,
                     SeniorityAllowance = salary?.SeniorityAllowance ?? 0m,
-                    MonthlyBonus = salary?.MonthlyBonus ?? 0m
+                    MonthlyBonus = salary?.MonthlyBonus ?? 0m,
+                    PendingRankTitle = salary?.PendingRankTitle,
+                    IsRankChangePending = salary?.IsRankChangePending ?? false
                 },
                 Qualifications = user.StaffQualifications
                     .OrderByDescending(q => q.Year)
@@ -165,6 +233,16 @@ namespace Nhakhoa.Controllers
             };
 
             return View(model);
+        }
+
+        // GET: Staff/PersonalProfile
+        [HttpGet]
+        public async Task<IActionResult> PersonalProfile()
+        {
+            var username = User.Identity?.Name;
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.Username == username);
+            if (user == null) return RedirectToAction("Login", "Auth");
+            return RedirectToAction(nameof(Details), new { id = user.Id });
         }
 
         // GET: Staff/Salary/5
@@ -203,7 +281,9 @@ namespace Nhakhoa.Controllers
                     RankTitle = salary?.RankTitle,
                     SpecializationAllowance = salary?.SpecializationAllowance ?? 0m,
                     SeniorityAllowance = salary?.SeniorityAllowance ?? 0m,
-                    MonthlyBonus = salary?.MonthlyBonus ?? 0m
+                    MonthlyBonus = salary?.MonthlyBonus ?? 0m,
+                    PendingRankTitle = salary?.PendingRankTitle,
+                    IsRankChangePending = salary?.IsRankChangePending ?? false
                 },
                 Qualifications = new List<StaffQualificationViewModel>()
             };
@@ -219,7 +299,6 @@ namespace Nhakhoa.Controllers
         {
             if (ModelState.IsValid)
             {
-                // Kiểm tra user đã tồn tại chưa
                 if (_context.Users.Any(u => u.Username == model.Username))
                 {
                     ModelState.AddModelError("Username", "Tên đăng nhập đã tồn tại.");
@@ -242,7 +321,6 @@ namespace Nhakhoa.Controllers
                 _context.Users.Add(user);
                 await _context.SaveChangesAsync();
 
-                // Lưu lịch sử hoạt động
                 var currentUser = User.Identity?.Name ?? "System";
                 var log = new ActivityLog
                 {
@@ -263,9 +341,45 @@ namespace Nhakhoa.Controllers
         // POST: Staff/Edit/5
         [HttpPost]
         [ValidateAntiForgeryToken]
-        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Edit(EditStaffViewModel model)
         {
+            var username = User.Identity?.Name;
+            var currentUser = await _context.Users.FirstOrDefaultAsync(u => u.Username == username);
+            if (currentUser == null) return Unauthorized();
+
+            // Ràng buộc bảo mật (ALT-1) - Chỉ Admin mới được quyền sửa qua POST API
+            if (currentUser.Role != "Admin")
+            {
+                var editPostLog = new ActivityLog
+                {
+                    Username = username ?? "System",
+                    Action = "Chỉnh sửa trái phép",
+                    Details = $"Người dùng {username} cố gắng chỉnh sửa trái phép hồ sơ của nhân sự ID {model.Id} qua POST API."
+                };
+                _context.ActivityLogs.Add(editPostLog);
+                await _context.SaveChangesAsync();
+                return StatusCode(StatusCodes.Status403Forbidden);
+            }
+
+            // Ràng buộc ALT-3: Kiểm tra định dạng CCCD phải đúng 12 chữ số
+            if (!string.IsNullOrEmpty(model.Cccd))
+            {
+                var cccdRegex = new System.Text.RegularExpressions.Regex(@"^\d{12}$");
+                if (!cccdRegex.IsMatch(model.Cccd))
+                {
+                    ModelState.AddModelError("Cccd", "Số CCCD không hợp lệ — yêu cầu đúng 12 chữ số");
+                }
+            }
+
+            // Ràng buộc ALT-4: Ngày hết hạn CCHN phải sau ngày cấp
+            if (model.CchnExpiryDate.HasValue && model.CchnIssueDate.HasValue)
+            {
+                if (model.CchnExpiryDate.Value <= model.CchnIssueDate.Value)
+                {
+                    ModelState.AddModelError("CchnExpiryDate", "Ngày hết hạn phải sau ngày cấp");
+                }
+            }
+
             // Manual validation for Qualifications
             if (model.Qualifications != null)
             {
@@ -294,14 +408,38 @@ namespace Nhakhoa.Controllers
                 return NotFound();
             }
 
-            var oldRole = user.Role;
-            var oldStatus = user.IsActive;
+            // Track changes for detailed audit log
+            var changesList = new List<string>();
 
-            user.FullName = model.FullName;
-            user.Email = model.Email;
-            user.PhoneNumber = model.PhoneNumber;
-            user.Role = model.Role;
-            user.IsActive = model.IsActive;
+            if (user.FullName != model.FullName)
+            {
+                changesList.Add($"Họ tên: '{user.FullName}' -> '{model.FullName}'");
+                user.FullName = model.FullName;
+            }
+            if (user.Email != model.Email)
+            {
+                changesList.Add($"Email: '{user.Email}' -> '{model.Email}'");
+                user.Email = model.Email;
+            }
+            if (user.PhoneNumber != model.PhoneNumber)
+            {
+                changesList.Add($"Số điện thoại: '{user.PhoneNumber}' -> '{model.PhoneNumber}'");
+                user.PhoneNumber = model.PhoneNumber;
+            }
+            
+            var oldRole = user.Role;
+            if (user.Role != model.Role)
+            {
+                changesList.Add($"Vai trò: '{user.Role}' -> '{model.Role}'");
+                user.Role = model.Role;
+            }
+
+            var oldStatus = user.IsActive;
+            if (user.IsActive != model.IsActive)
+            {
+                changesList.Add($"Trạng thái: '{(user.IsActive ? "Hoạt động" : "Tạm khóa")}' -> '{(model.IsActive ? "Hoạt động" : "Tạm khóa")}'");
+                user.IsActive = model.IsActive;
+            }
 
             if (user.StaffProfile == null)
             {
@@ -310,13 +448,106 @@ namespace Nhakhoa.Controllers
             }
             user.StaffProfile.UserId = user.Id;
             user.StaffProfile.User = user;
-            user.StaffProfile.StaffCode = model.StaffCode;
-            user.StaffProfile.PositionTitle = model.PositionTitle;
-            user.StaffProfile.Department = model.Department;
-            user.StaffProfile.Gender = model.Gender;
-            user.StaffProfile.Address = model.Address;
-            user.StaffProfile.JoinDate = model.JoinDate;
-            user.StaffProfile.PrimaryClinic = model.PrimaryClinic;
+
+            // Profile detail checks
+            if (user.StaffProfile.StaffCode != model.StaffCode)
+            {
+                changesList.Add($"Mã nhân viên: '{user.StaffProfile.StaffCode}' -> '{model.StaffCode}'");
+                user.StaffProfile.StaffCode = model.StaffCode;
+            }
+            if (user.StaffProfile.PositionTitle != model.PositionTitle)
+            {
+                changesList.Add($"Chức vụ: '{user.StaffProfile.PositionTitle}' -> '{model.PositionTitle}'");
+                user.StaffProfile.PositionTitle = model.PositionTitle;
+            }
+            if (user.StaffProfile.Department != model.Department)
+            {
+                changesList.Add($"Phòng ban: '{user.StaffProfile.Department}' -> '{model.Department}'");
+                user.StaffProfile.Department = model.Department;
+            }
+            if (user.StaffProfile.Gender != model.Gender)
+            {
+                changesList.Add($"Giới tính: '{user.StaffProfile.Gender}' -> '{model.Gender}'");
+                user.StaffProfile.Gender = model.Gender;
+            }
+            if (user.StaffProfile.Address != model.Address)
+            {
+                changesList.Add($"Địa chỉ: '{user.StaffProfile.Address}' -> '{model.Address}'");
+                user.StaffProfile.Address = model.Address;
+            }
+            if (user.StaffProfile.JoinDate != model.JoinDate)
+            {
+                changesList.Add($"Ngày gia nhập: '{user.StaffProfile.JoinDate?.ToString("dd/MM/yyyy")}' -> '{model.JoinDate?.ToString("dd/MM/yyyy")}'");
+                user.StaffProfile.JoinDate = model.JoinDate;
+            }
+            if (user.StaffProfile.PrimaryClinic != model.PrimaryClinic)
+            {
+                changesList.Add($"Phòng khám chính: '{user.StaffProfile.PrimaryClinic}' -> '{model.PrimaryClinic}'");
+                user.StaffProfile.PrimaryClinic = model.PrimaryClinic;
+            }
+
+            // New profile fields checks
+            if (user.StaffProfile.DateOfBirth != model.DateOfBirth)
+            {
+                changesList.Add($"Ngày sinh: '{user.StaffProfile.DateOfBirth?.ToString("dd/MM/yyyy")}' -> '{model.DateOfBirth?.ToString("dd/MM/yyyy")}'");
+                user.StaffProfile.DateOfBirth = model.DateOfBirth;
+            }
+            if (user.StaffProfile.Cccd != model.Cccd)
+            {
+                changesList.Add($"CCCD: '{user.StaffProfile.Cccd}' -> '{model.Cccd}'");
+                user.StaffProfile.Cccd = model.Cccd;
+            }
+            if (user.StaffProfile.CchnNumber != model.CchnNumber)
+            {
+                changesList.Add($"Số CCHN: '{user.StaffProfile.CchnNumber}' -> '{model.CchnNumber}'");
+                user.StaffProfile.CchnNumber = model.CchnNumber;
+            }
+            if (user.StaffProfile.CchnIssueDate != model.CchnIssueDate)
+            {
+                changesList.Add($"Ngày cấp CCHN: '{user.StaffProfile.CchnIssueDate?.ToString("dd/MM/yyyy")}' -> '{model.CchnIssueDate?.ToString("dd/MM/yyyy")}'");
+                user.StaffProfile.CchnIssueDate = model.CchnIssueDate;
+            }
+            if (user.StaffProfile.CchnExpiryDate != model.CchnExpiryDate)
+            {
+                changesList.Add($"Ngày hết hạn CCHN: '{user.StaffProfile.CchnExpiryDate?.ToString("dd/MM/yyyy")}' -> '{model.CchnExpiryDate?.ToString("dd/MM/yyyy")}'");
+                user.StaffProfile.CchnExpiryDate = model.CchnExpiryDate;
+            }
+            if (user.StaffProfile.CchnProvider != model.CchnProvider)
+            {
+                changesList.Add($"Cơ quan cấp CCHN: '{user.StaffProfile.CchnProvider}' -> '{model.CchnProvider}'");
+                user.StaffProfile.CchnProvider = model.CchnProvider;
+            }
+            if (user.StaffProfile.AcademicRank != model.AcademicRank)
+            {
+                changesList.Add($"Học hàm: '{user.StaffProfile.AcademicRank}' -> '{model.AcademicRank}'");
+                user.StaffProfile.AcademicRank = model.AcademicRank;
+            }
+            if (user.StaffProfile.AcademicDegree != model.AcademicDegree)
+            {
+                changesList.Add($"Học vị: '{user.StaffProfile.AcademicDegree}' -> '{model.AcademicDegree}'");
+                user.StaffProfile.AcademicDegree = model.AcademicDegree;
+            }
+            if (user.StaffProfile.ExperienceYears != model.ExperienceYears)
+            {
+                changesList.Add($"Thâm niên: '{user.StaffProfile.ExperienceYears}' -> '{model.ExperienceYears}'");
+                user.StaffProfile.ExperienceYears = model.ExperienceYears;
+            }
+
+            // Ràng buộc ALT-6: Admin thay đổi hạng chức danh -> có hiệu lực từ kỳ lương tiếp theo (chốt không hồi tố)
+            if (user.StaffProfile.JobRank != model.JobRank)
+            {
+                if (user.StaffSalaryInfo == null)
+                {
+                    user.StaffSalaryInfo = new StaffSalaryInfo { UserId = user.Id, User = user };
+                    _context.StaffSalaryInfos.Add(user.StaffSalaryInfo);
+                }
+                
+                user.StaffSalaryInfo.PendingRankTitle = model.JobRank;
+                user.StaffSalaryInfo.IsRankChangePending = true;
+                
+                changesList.Add($"Hạng chức danh chờ hiệu lực (kỳ lương sau): '{user.StaffProfile.JobRank}' -> '{model.JobRank}'");
+                // Giữ nguyên hạng chức danh hiện tại của hồ sơ ở kỳ lương hiện tại
+            }
 
             if (user.StaffSalaryInfo == null)
             {
@@ -346,6 +577,7 @@ namespace Nhakhoa.Controllers
                             var existing = user.StaffQualifications.FirstOrDefault(q => q.Id == qModel.Id);
                             if (existing != null)
                             {
+                                changesList.Add($"Xóa bằng cấp: '{existing.Title}'");
                                 _context.StaffQualifications.Remove(existing);
                                 DeleteQualificationImage(existing.ImagePath);
                             }
@@ -373,6 +605,7 @@ namespace Nhakhoa.Controllers
                                 newQual.ImagePath = await SaveQualificationImageAsync(qModel.ImageFile);
                             }
 
+                            changesList.Add($"Thêm bằng cấp mới: '{newQual.Title}'");
                             _context.StaffQualifications.Add(newQual);
                         }
                     }
@@ -381,6 +614,10 @@ namespace Nhakhoa.Controllers
                         var existing = user.StaffQualifications.FirstOrDefault(q => q.Id == qModel.Id);
                         if (existing != null)
                         {
+                            if (existing.Title != qModel.Title || existing.Major != qModel.Major || existing.Institution != qModel.Institution || existing.Year != qModel.Year || existing.AcademicDegree != qModel.AcademicDegree || existing.AcademicRank != qModel.AcademicRank)
+                            {
+                                changesList.Add($"Cập nhật bằng cấp '{existing.Title}': đổi sang '{qModel.Title}', học vị '{qModel.AcademicDegree}', học hàm '{qModel.AcademicRank}'");
+                            }
                             existing.Title = qModel.Title;
                             existing.Major = qModel.Major ?? "";
                             existing.Institution = qModel.Institution ?? "";
@@ -401,22 +638,44 @@ namespace Nhakhoa.Controllers
 
             await _context.SaveChangesAsync();
 
-            // Lưu lịch sử hoạt động
-            var currentUser = User.Identity?.Name ?? "System";
-            var details = $"Cập nhật thông tin nhân sự và hồ sơ: {user.FullName} ({user.Username}).";
-            if (oldRole != model.Role) details += $" Đổi vai trò: {oldRole} -> {model.Role}.";
-            if (oldStatus != model.IsActive) details += $" Trạng thái: {(oldStatus ? "Hoạt động" : "Bị khóa")} -> {(model.IsActive ? "Hoạt động" : "Bị khóa")}.";
+            // Ràng buộc ALT-5: Tạo cảnh báo hết hạn CCHN (gửi Admin/lưu log)
+            if (model.CchnExpiryDate.HasValue)
+            {
+                var remainingDays = (model.CchnExpiryDate.Value.Date - DateTime.Today).Days;
+                if (remainingDays >= 0 && remainingDays <= 30)
+                {
+                    var warningLog = new ActivityLog
+                    {
+                        Username = "System Alert",
+                        Action = "Cảnh báo hết hạn CCHN",
+                        Details = $"Chứng chỉ hành nghề của {user.FullName} sẽ hết hạn vào {model.CchnExpiryDate.Value.ToString("dd/MM/yyyy")} (còn {remainingDays} ngày)."
+                    };
+                    _context.ActivityLogs.Add(warningLog);
+                    await _context.SaveChangesAsync();
+                }
+            }
+
+            // Ghi nhận Audit Log chi tiết các thay đổi
+            var details = $"Cập nhật hồ sơ của nhân sự: {user.FullName} ({user.Username}).";
+            if (changesList.Any())
+            {
+                details += " Các trường thay đổi: " + string.Join(", ", changesList);
+            }
+            else
+            {
+                details += " Không có thay đổi dữ liệu chính.";
+            }
 
             var log = new ActivityLog
             {
-                Username = currentUser,
-                Action = "Cập nhật thông tin",
+                Username = username ?? "System",
+                Action = "Cập nhật hồ sơ",
                 Details = details
             };
             _context.ActivityLogs.Add(log);
             await _context.SaveChangesAsync();
 
-            TempData["SuccessMessage"] = "Cập nhật thông tin cá nhân thành công";
+            TempData["SuccessMessage"] = "Cập nhật hồ sơ thành công";
             return RedirectToAction(nameof(Details), new { id = user.Id });
         }
 
