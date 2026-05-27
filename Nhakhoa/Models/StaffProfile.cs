@@ -32,5 +32,7 @@ namespace Nhakhoa.Models
 
         [MaxLength(100)]
         public string PrimaryClinic { get; set; }
+
+        public ICollection<DoctorSpecialty> DoctorSpecialties { get; set; } = new List<DoctorSpecialty>();
     }
 }

@@ -1,0 +1,672 @@
+@model IEnumerable<Nhakhoa.Models.Specialty>
+@{
+    ViewData["Title"] = "Quản lý chuyên khoa";
+    Layout = "~/Views/Shared/_AdminLayout.cshtml";
+}
+
+<div class="container-fluid px-0">
+    <!-- Header Section -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h2 fw-bold text-dark mb-1">Quản lý chuyên khoa</h1>
+            <p class="text-secondary mb-0">Thiết lập và duy trì các nhóm chuyên môn trong hệ thống phòng khám</p>
+        </div>
+        @if (User.IsInRole("Admin"))
+        {
+            <button class="btn btn-primary px-4 py-2.5 fw-semibold d-flex align-items-center gap-2 shadow-sm rounded-3" onclick="openCreatePanel()">
+                <i class="bi bi-plus-lg"></i> Thêm chuyên khoa mới
+            </button>
+        }
+    </div>
+
+    <!-- Error/Success Alert Banners -->
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <div class="alert alert-danger border-0 rounded-4 p-3 mb-4 d-flex align-items-center gap-3">
+            <div class="alert-icon bg-danger text-white rounded-circle d-grid place-items-center flex-shrink-0">
+                <i class="bi bi-exclamation-triangle fs-5"></i>
+            </div>
+            <div>
+                <span class="fw-semibold text-danger-emphasis">Lỗi hệ thống:</span>
+                <span class="text-secondary-emphasis small mt-0.5 d-block">@TempData["ErrorMessage"]</span>
+            </div>
+        </div>
+    }
+
+    <!-- Stats Cards -->
+    <div class="row g-3 mb-4">
+        <!-- Card 1 -->
+        <div class="col-12 col-md-4">
+            <div class="card border-0 shadow-sm rounded-4 p-4 bg-white h-100 position-relative overflow-hidden stat-card">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <span class="text-secondary fw-semibold text-uppercase tracking-wider small">Tổng chuyên khoa</span>
+                        <h2 class="display-6 fw-bold text-dark mt-2 mb-0">@ViewBag.TotalSpecialties</h2>
+                    </div>
+                    <div class="stat-icon-wrapper bg-primary-subtle text-primary">
+                        <i class="bi bi-heart-pulse fs-4"></i>
+                    </div>
+                </div>
+                <div class="mt-3 d-flex align-items-center gap-2">
+                    <span class="badge bg-success-subtle text-success rounded-pill px-2.5 py-1 fw-semibold small">Hoạt động</span>
+                    <span class="text-muted small">Khắp các cơ sở</span>
+                </div>
+            </div>
+        </div>
+        <!-- Card 2 -->
+        <div class="col-12 col-md-4">
+            <div class="card border-0 shadow-sm rounded-4 p-4 bg-white h-100 position-relative overflow-hidden stat-card">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <span class="text-secondary fw-semibold text-uppercase tracking-wider small">Bác sĩ đã gán</span>
+                        <h2 class="display-6 fw-bold text-dark mt-2 mb-0">@ViewBag.TotalDoctorsLinked</h2>
+                    </div>
+                    <div class="stat-icon-wrapper bg-success-subtle text-success">
+                        <i class="bi bi-people fs-4"></i>
+                    </div>
+                </div>
+                <div class="mt-3 d-flex align-items-center gap-2">
+                    <span class="badge bg-info-subtle text-info rounded-pill px-2.5 py-1 fw-semibold small">Đầy đủ hồ sơ</span>
+                    <span class="text-muted small">Đang trực khám</span>
+                </div>
+            </div>
+        </div>
+        <!-- Card 3 -->
+        <div class="col-12 col-md-4">
+            <div class="card border-0 shadow-sm rounded-4 p-4 bg-white h-100 position-relative overflow-hidden stat-card">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <span class="text-secondary fw-semibold text-uppercase tracking-wider small">Chuyên khoa hoạt động</span>
+                        <h2 class="display-6 fw-bold text-dark mt-2 mb-0">@ViewBag.TotalActiveSpecialties</h2>
+                    </div>
+                    <div class="stat-icon-wrapper bg-warning-subtle text-warning">
+                        <i class="bi bi-shield-check fs-4"></i>
+                    </div>
+                </div>
+                <div class="mt-3 d-flex align-items-center gap-2">
+                    <span class="badge bg-warning-subtle text-warning rounded-pill px-2.5 py-1 fw-semibold small">100%</span>
+                    <span class="text-muted small">Tỷ lệ trực tuyến</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filter & Search Section -->
+    <div class="card border-0 shadow-sm rounded-4 p-3 bg-white mb-4">
+        <form method="get" asp-action="Index" class="row g-3 align-items-center">
+            <!-- Search -->
+            <div class="col-12 col-md-6 col-lg-8">
+                <div class="input-group search-input-group">
+                    <span class="input-group-text bg-light border-0 text-muted"><i class="bi bi-search"></i></span>
+                    <input type="text" name="search" class="form-control bg-light border-0" placeholder="Tìm kiếm chuyên khoa, mã số..." value="@ViewBag.CurrentSearch" />
+                </div>
+            </div>
+            <!-- Buttons -->
+            <div class="col-12 col-md-6 col-lg-4 d-flex gap-2 justify-content-md-end">
+                <button type="submit" class="btn btn-outline-primary btn-sm px-4 py-2.5 fw-semibold d-flex align-items-center gap-1.5 rounded-3">
+                    <i class="bi bi-funnel"></i> Lọc kết quả
+                </button>
+                @if (!string.IsNullOrEmpty(ViewBag.CurrentSearch))
+                {
+                    <a href="/Specialty" class="btn btn-outline-secondary btn-sm px-3 py-2.5 rounded-3 d-flex align-items-center">Xóa bộ lọc</a>
+                }
+            </div>
+        </form>
+    </div>
+
+    <!-- Data Table -->
+    <div class="card border-0 shadow-sm rounded-4 overflow-hidden bg-white mb-5">
+        <div class="table-responsive">
+            <table class="table align-middle mb-0 table-hover table-custom">
+                <thead class="table-light text-secondary small fw-bold text-uppercase tracking-wider">
+                    <tr>
+                        <th scope="col" class="ps-4">Tên chuyên khoa</th>
+                        <th scope="col">Mã chuyên khoa</th>
+                        <th scope="col">Mô tả</th>
+                        <th scope="col">Bác sĩ</th>
+                        <th scope="col">Dịch vụ</th>
+                        <th scope="col">Cập nhật</th>
+                        <th scope="col" class="pe-4 text-end">Hành động</th>
+                    </tr>
+                </thead>
+                <tbody class="border-top-0">
+                    @if (!Model.Any())
+                    {
+                        <tr>
+                            <td colspan="7" class="text-center py-5 text-secondary">
+                                <i class="bi bi-inbox fs-1 d-block mb-2 text-muted"></i>
+                                Không tìm thấy chuyên khoa nào phù hợp.
+                            </td>
+                        </tr>
+                    }
+                    @foreach (var item in Model)
+                    {
+                        <tr>
+                            <td class="ps-4 py-3.5">
+                                <div class="d-flex align-items-center gap-3">
+                                    <div class="icon-avatar bg-primary-subtle text-primary rounded-circle">
+                                        <i class="bi bi-heart-pulse-fill"></i>
+                                    </div>
+                                    <div>
+                                        <div class="fw-semibold text-dark fs-6">@item.Name</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <span class="badge bg-light text-dark border px-2.5 py-1.5 fw-medium text-capitalize rounded">@item.Code</span>
+                            </td>
+                            <td>
+                                <div class="text-secondary small text-truncate-custom" title="@item.Description">@(!string.IsNullOrEmpty(item.Description) ? item.Description : "Không có mô tả.")</div>
+                            </td>
+                            <td>
+                                <a href="/Specialty/Doctors/@item.Id" class="badge bg-primary-subtle text-primary px-3 py-2 rounded fw-semibold text-decoration-none hover-shadow-sm d-inline-flex align-items-center gap-1.5">
+                                    @item.DoctorSpecialties.Count <i class="bi bi-person-gear"></i>
+                                </a>
+                            </td>
+                            <td>
+                                <span class="badge bg-info-subtle text-info px-3 py-2 rounded fw-semibold">
+                                    @item.MedicalServices.Count
+                                </span>
+                            </td>
+                            <td class="text-secondary small">
+                                @item.UpdatedAt.ToString("dd/MM/yyyy")
+                            </td>
+                            <td class="pe-4 text-end">
+                                <div class="d-inline-flex gap-1.5">
+                                    <button class="btn btn-icon btn-light rounded-circle" onclick="viewDetails(@item.Id)" title="Xem chi tiết">
+                                        <i class="bi bi-eye text-primary"></i>
+                                    </button>
+                                    @if (User.IsInRole("Admin"))
+                                    {
+                                        <button class="btn btn-icon btn-light rounded-circle" onclick="openEditPanel(@item.Id)" title="Chỉnh sửa">
+                                            <i class="bi bi-pencil text-warning"></i>
+                                        </button>
+                                        <button class="btn btn-icon btn-light rounded-circle" onclick="confirmDelete(@item.Id)" title="Xóa">
+                                            <i class="bi bi-trash text-danger"></i>
+                                        </button>
+                                    }
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Audit logs widget -->
+    <div class="card border-0 shadow-sm rounded-4 p-4 bg-white mb-4">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h5 class="fw-bold text-dark mb-0 d-flex align-items-center gap-2">
+                <i class="bi bi-clock-history text-primary"></i> Nhật ký hoạt động
+            </h5>
+            <span class="text-muted small">Cập nhật thời gian thực</span>
+        </div>
+
+        <div class="timeline-wrapper">
+            @if (ViewBag.AuditLogs == null || !((List<Nhakhoa.Models.ActivityLog>)ViewBag.AuditLogs).Any())
+            {
+                <p class="text-secondary small py-2 mb-0">Không có nhật ký hoạt động nào gần đây về chuyên khoa.</p>
+            }
+            else
+            {
+                <div class="position-relative ps-4 border-start border-light-subtle d-flex flex-column gap-4 py-2">
+                    @foreach (var log in (List<Nhakhoa.Models.ActivityLog>)ViewBag.AuditLogs)
+                    {
+                        var iconClass = "bi-plus-circle-fill text-primary bg-primary-subtle";
+                        if (log.Action.Contains("Cập nhật") || log.Action.Contains("gán"))
+                            iconClass = "bi-pencil-square text-info bg-info-subtle";
+                        else if (log.Action.Contains("Xóa") || log.Action.Contains("Bỏ"))
+                            iconClass = "bi-trash-fill text-danger bg-danger-subtle";
+
+                        <div class="timeline-item position-relative">
+                            <!-- Timeline dot -->
+                            <div class="timeline-dot position-absolute @iconClass rounded-circle d-grid place-items-center" style="left: -33px; top: 0px; width: 26px; height: 26px; font-size: 0.8rem;">
+                                <i class="bi @iconClass.Split(' ')[0]"></i>
+                            </div>
+                            
+                            <div>
+                                <div class="small fw-semibold text-dark">
+                                    Admin <span class="text-primary">@log.Username</span> @log.Details
+                                </div>
+                                <div class="text-secondary small mt-0.5" style="font-size: 0.75rem;">
+                                    @log.Timestamp.ToString("dd/MM/yyyy HH:mm") • Hệ thống phòng khám
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<!-- Slide-over Offcanvas (Edit/Create Panel) -->
+<div class="offcanvas offcanvas-end offcanvas-custom" tabindex="-1" id="specialtyEditOffcanvas" aria-labelledby="specialtyEditOffcanvasLabel">
+    <div class="offcanvas-header border-bottom py-3.5 px-4 bg-light-subtle d-flex align-items-center justify-content-between">
+        <div>
+            <h5 class="offcanvas-title fw-bold text-dark" id="offcanvasTitle">Chỉnh sửa chuyên khoa</h5>
+            <p class="text-secondary small mb-0 mt-0.5">Cấu hình các thực thể chuyên môn hệ thống</p>
+        </div>
+        <button type="button" class="btn-close text-secondary" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+    </div>
+    
+    <div class="offcanvas-body p-4">
+        <!-- Live Compare Alert Box -->
+        <div id="compareBox" class="card border-info-subtle bg-info-subtle bg-opacity-10 rounded-4 p-3 mb-4 d-none">
+            <h6 class="text-info-emphasis fw-bold mb-2.5 small text-uppercase tracking-wider">So sánh thay đổi</h6>
+            <div class="d-flex flex-column gap-2 small">
+                <!-- Name compare -->
+                <div id="compareNameRow" class="d-flex justify-content-between align-items-center">
+                    <span class="text-secondary">Tên chuyên khoa</span>
+                    <div class="d-flex align-items-center gap-2">
+                        <span id="origName" class="text-muted text-truncate-compare">Tim mạch</span>
+                        <i class="bi bi-arrow-right text-secondary"></i>
+                        <span id="newName" class="badge bg-primary text-white px-2 py-1 fw-bold text-truncate-compare">Tim mạch KTC</span>
+                    </div>
+                </div>
+                <!-- Code compare -->
+                <div id="compareCodeRow" class="d-flex justify-content-between align-items-center mt-1">
+                    <span class="text-secondary">Mã chuyên khoa</span>
+                    <div class="d-flex align-items-center gap-2">
+                        <span id="origCode" class="text-muted">CARD-001</span>
+                        <i class="bi bi-arrow-right text-secondary"></i>
+                        <span id="newCode" class="badge bg-primary text-white px-2 py-1 fw-bold">CARD-NEW</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="alert alert-info border-0 rounded-4 p-3 mb-4 d-flex align-items-start gap-2.5">
+            <i class="bi bi-info-circle-fill text-info fs-5 flex-shrink-0"></i>
+            <div class="small text-info-emphasis">
+                Mã chuyên khoa (ví dụ: <code>CARD-001</code>) là duy nhất và sẽ liên kết trực tiếp với dịch vụ y tế, bác sĩ và ca trực trong tương lai.
+            </div>
+        </div>
+
+        <!-- Form -->
+        <form id="specialtyForm" method="post" asp-action="Save">
+            @Html.AntiForgeryToken()
+            <input type="hidden" id="specialtyId" name="id" value="0" />
+
+            <!-- Input Name -->
+            <div class="mb-3.5">
+                <label for="inputName" class="form-label small fw-bold text-dark">Tên chuyên khoa</label>
+                <input type="text" class="form-control form-control-lg border-light-subtle fs-6 rounded-3" id="inputName" name="name" required placeholder="Ví dụ: Tim mạch, Thần kinh..." />
+            </div>
+
+            <!-- Input Code -->
+            <div class="mb-3.5">
+                <label for="inputCode" class="form-label small fw-bold text-dark">Mã chuyên khoa</label>
+                <input type="text" class="form-control form-control-lg border-light-subtle fs-6 rounded-3 text-uppercase" id="inputCode" name="code" required placeholder="Ví dụ: CARD-001" />
+            </div>
+
+            <!-- Input Description -->
+            <div class="mb-4">
+                <label for="inputDescription" class="form-label small fw-bold text-dark">Mô tả chuyên khoa</label>
+                <textarea class="form-control border-light-subtle fs-6 rounded-3" id="inputDescription" name="description" rows="5" placeholder="Nhập mô tả chi tiết về chuyên môn, dịch vụ khám của chuyên khoa này..." required></textarea>
+            </div>
+
+            <!-- Footer Buttons -->
+            <div class="row g-2.5 mt-2">
+                <div class="col-5">
+                    <button type="button" class="btn btn-outline-secondary w-100 py-2.5 fw-semibold rounded-3" data-bs-dismiss="offcanvas">Hủy bỏ</button>
+                </div>
+                <div class="col-7">
+                    <button type="submit" class="btn btn-primary w-100 py-2.5 fw-semibold rounded-3 d-flex align-items-center justify-content-center gap-1.5 shadow-sm">
+                        <i class="bi bi-save"></i> Lưu chuyên khoa
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Modal: Constraint Error Modal (Không thể xóa chuyên khoa) -->
+<div class="modal fade" id="constraintModal" tabindex="-1" aria-labelledby="constraintModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-custom">
+        <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+            <div class="modal-body p-4.5">
+                <!-- Header Icon & Title -->
+                <div class="d-flex align-items-start gap-3.5">
+                    <div class="modal-warning-icon bg-danger-subtle text-danger rounded-circle d-grid place-items-center flex-shrink-0">
+                        <i class="bi bi-exclamation-triangle fs-4"></i>
+                    </div>
+                    <div>
+                        <h4 class="fw-bold text-dark mb-1">Không thể xóa chuyên khoa</h4>
+                        <p class="text-secondary mb-0 mt-0.5">Chuyên khoa <strong class="text-dark" id="constraintSpecialtyName">"Nội tổng quát"</strong> vẫn còn các dữ liệu liên kết quan trọng trong hệ thống.</p>
+                    </div>
+                </div>
+
+                <!-- Constraint Details Cards -->
+                <div class="mt-4 border border-warning-subtle bg-warning-subtle bg-opacity-10 rounded-4 p-3">
+                    <span class="text-warning-emphasis fw-bold text-uppercase small tracking-wider">Ràng buộc dữ liệu</span>
+                    <div class="row g-3 mt-1.5">
+                        <div class="col-6">
+                            <div class="bg-white rounded-3 p-3 border border-light-subtle shadow-xs text-center">
+                                <span class="text-secondary small d-block">Bác sĩ liên kết</span>
+                                <span class="h3 fw-bold text-dark d-block mt-1" id="countDoctors">0</span>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="bg-white rounded-3 p-3 border border-light-subtle shadow-xs text-center">
+                                <span class="text-secondary small d-block">Dịch vụ đang chạy</span>
+                                <span class="h3 fw-bold text-dark d-block mt-1" id="countServices">0</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Suggestion Box -->
+                <div class="mt-4 p-3 bg-light rounded-4 small text-secondary-emphasis d-flex gap-2">
+                    <i class="bi bi-lightbulb text-warning fs-5 flex-shrink-0"></i>
+                    <div>
+                        <strong>Giải pháp:</strong> Bạn vui lòng bỏ gán tất cả bác sĩ khỏi chuyên khoa này và chuyển các dịch vụ đang liên kết sang chuyên khoa khác trước khi tiến hành xóa vĩnh viễn.
+                    </div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="mt-4.5 d-flex gap-2.5 justify-content-end align-items-center">
+                    <a href="#" id="manageLinksBtn" class="btn btn-primary px-4 py-2.5 fw-semibold rounded-3 d-flex align-items-center gap-1.5 shadow-sm">
+                        <i class="bi bi-gear-fill"></i> Quản lý liên kết
+                    </a>
+                    <button type="button" class="btn btn-outline-secondary px-4 py-2.5 fw-semibold rounded-3" data-bs-dismiss="modal">Đóng</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Standard Confirm Delete Modal -->
+<div class="modal fade" id="deleteConfirmModal" tabindex="-1" aria-labelledby="deleteConfirmModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-custom">
+        <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+            <div class="modal-body p-4.5">
+                <div class="d-flex align-items-start gap-3.5">
+                    <div class="modal-warning-icon bg-warning-subtle text-warning rounded-circle d-grid place-items-center flex-shrink-0">
+                        <i class="bi bi-trash fs-4"></i>
+                    </div>
+                    <div>
+                        <h4 class="fw-bold text-dark mb-1">Xác nhận xóa chuyên khoa</h4>
+                        <p class="text-secondary mb-0 mt-0.5">Bạn có chắc chắn muốn xóa chuyên khoa <strong class="text-dark" id="deleteSpecialtyName">"Dịch vụ test"</strong>?</p>
+                    </div>
+                </div>
+                <p class="text-danger small mt-3 mb-0">Hành động này không thể hoàn tác và sẽ xóa vĩnh viễn thực thể chuyên khoa khỏi hệ thống phòng khám.</p>
+                <div class="mt-4.5 d-flex gap-2.5 justify-content-end">
+                    <button type="button" class="btn btn-outline-secondary px-4 py-2.5 fw-semibold rounded-3" data-bs-dismiss="modal">Hủy</button>
+                    <form id="deleteSpecialtyForm" method="post" asp-action="Delete" class="m-0">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" id="deleteSpecialtyId" name="id" value="0" />
+                        <button type="submit" class="btn btn-danger px-4 py-2.5 fw-semibold rounded-3 shadow-sm">
+                            Đồng ý xóa
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: View Details Modal -->
+<div class="modal fade" id="viewDetailsModal" tabindex="-1" aria-labelledby="viewDetailsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <div class="modal-header border-bottom py-3.5 px-4">
+                <h5 class="modal-title fw-bold text-dark" id="viewDetailsModalLabel">Chi tiết chuyên khoa</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="mb-3.5">
+                    <span class="text-secondary small fw-bold text-uppercase tracking-wider">Tên chuyên khoa</span>
+                    <h5 class="text-dark fw-bold mt-1" id="detailName">-</h5>
+                </div>
+                <div class="mb-3.5">
+                    <span class="text-secondary small fw-bold text-uppercase tracking-wider">Mã chuyên khoa</span>
+                    <div><span class="badge bg-light text-dark border px-2.5 py-1.5 fw-semibold mt-1" id="detailCode">-</span></div>
+                </div>
+                <div class="mb-3.5">
+                    <span class="text-secondary small fw-bold text-uppercase tracking-wider">Mô tả chi tiết</span>
+                    <p class="text-secondary mt-1 mb-0 fs-6" id="detailDescription">-</p>
+                </div>
+                <div class="row g-3">
+                    <div class="col-6">
+                        <span class="text-secondary small fw-bold text-uppercase tracking-wider">Cập nhật lần cuối</span>
+                        <div class="text-dark mt-1 small" id="detailUpdatedAt">-</div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer border-top py-3 px-4">
+                <button type="button" class="btn btn-secondary px-4 py-2 fw-semibold rounded-3" data-bs-dismiss="modal">Đóng</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    /* Premium layout CSS rules */
+    .stat-card {
+        transition: transform 0.25s, box-shadow 0.25s;
+    }
+    .stat-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 10px 20px rgba(0, 0, 0, 0.04) !important;
+    }
+    
+    .stat-icon-wrapper {
+        width: 48px;
+        height: 48px;
+        border-radius: 12px;
+        display: grid;
+        place-items: center;
+    }
+    
+    .search-input-group {
+        border-radius: 99px;
+        overflow: hidden;
+    }
+    .search-input-group .form-control {
+        border: none;
+        padding-left: 0;
+    }
+    .search-input-group .form-control:focus {
+        box-shadow: none;
+    }
+    
+    .table-custom th {
+        border-bottom: 1px solid #eef0f7;
+        font-weight: 600;
+        font-size: 0.8rem;
+    }
+    .table-custom tr {
+        transition: background-color 0.15s;
+    }
+    .table-custom tr:hover {
+        background-color: #fcfdfe !important;
+    }
+    .text-truncate-custom {
+        max-width: 250px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    
+    .btn-icon {
+        width: 34px;
+        height: 34px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0;
+    }
+    .btn-icon:hover {
+        background-color: #eef2f6 !important;
+    }
+    
+    .icon-avatar {
+        width: 36px;
+        height: 36px;
+        display: grid;
+        place-items: center;
+        font-size: 1.1rem;
+    }
+    
+    /* Offcanvas Customizations */
+    .offcanvas-custom {
+        width: 520px !important;
+    }
+    .offcanvas-title {
+        font-size: 1.15rem;
+    }
+    
+    .text-truncate-compare {
+        max-width: 140px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        display: inline-block;
+    }
+    
+    /* Modals Custom styling */
+    .modal-custom {
+        max-width: 480px;
+    }
+    .modal-warning-icon {
+        width: 50px;
+        height: 50px;
+    }
+    
+    .timeline-dot {
+        border: 4px solid #fff;
+        box-shadow: 0 0 0 1px #eef0f7;
+    }
+</style>
+
+@section Scripts {
+    <script>
+        var originalName = "";
+        var originalCode = "";
+        
+        var offcanvasInstance;
+        var constraintModalInstance;
+        var deleteConfirmModalInstance;
+        var viewDetailsModalInstance;
+
+        $(document).ready(function () {
+            offcanvasInstance = new bootstrap.Offcanvas(document.getElementById('specialtyEditOffcanvas'));
+            constraintModalInstance = new bootstrap.Modal(document.getElementById('constraintModal'));
+            deleteConfirmModalInstance = new bootstrap.Modal(document.getElementById('deleteConfirmModal'));
+            viewDetailsModalInstance = new bootstrap.Modal(document.getElementById('viewDetailsModal'));
+
+            // Live Change Comparison Logic
+            $('#inputName, #inputCode').on('input', function() {
+                updateCompareBox();
+            });
+        });
+
+        function updateCompareBox() {
+            var currentId = parseInt($('#specialtyId').val());
+            if (currentId === 0) {
+                $('#compareBox').addClass('d-none');
+                return;
+            }
+
+            var currentName = $('#inputName').val().trim();
+            var currentCode = $('#inputCode').val().trim().toUpperCase();
+
+            var nameChanged = currentName !== originalName && currentName !== "";
+            var codeChanged = currentCode !== originalCode && currentCode !== "";
+
+            if (nameChanged || codeChanged) {
+                $('#compareBox').removeClass('d-none');
+                
+                // Name row
+                if (nameChanged) {
+                    $('#compareNameRow').removeClass('d-none');
+                    $('#origName').text(originalName).attr('title', originalName);
+                    $('#newName').text(currentName).attr('title', currentName);
+                } else {
+                    $('#compareNameRow').addClass('d-none');
+                }
+
+                // Code row
+                if (codeChanged) {
+                    $('#compareCodeRow').removeClass('d-none');
+                    $('#origCode').text(originalCode);
+                    $('#newCode').text(currentCode);
+                } else {
+                    $('#compareCodeRow').addClass('d-none');
+                }
+            } else {
+                $('#compareBox').addClass('d-none');
+            }
+        }
+
+        function openCreatePanel() {
+            $('#offcanvasTitle').text('Thêm chuyên khoa mới');
+            $('#specialtyId').val(0);
+            $('#inputName').val('');
+            $('#inputCode').val('');
+            $('#inputDescription').val('');
+            
+            originalName = "";
+            originalCode = "";
+            $('#compareBox').addClass('d-none');
+            
+            offcanvasInstance.show();
+        }
+
+        function openEditPanel(id) {
+            $('#offcanvasTitle').text('Chỉnh sửa chuyên khoa');
+            
+            $.get('/Specialty/DetailsJson/' + id, function (data) {
+                $('#specialtyId').val(data.id);
+                $('#inputName').val(data.name);
+                $('#inputCode').val(data.code);
+                $('#inputDescription').val(data.description);
+
+                originalName = data.name;
+                originalCode = data.code;
+                
+                $('#compareBox').addClass('d-none');
+                offcanvasInstance.show();
+            }).fail(function() {
+                alert('Có lỗi xảy ra khi lấy thông tin chuyên khoa.');
+            });
+        }
+
+        function viewDetails(id) {
+            $.get('/Specialty/DetailsJson/' + id, function (data) {
+                $('#detailName').text(data.name);
+                $('#detailCode').text(data.code);
+                $('#detailDescription').text(data.description || 'Không có mô tả.');
+                $('#detailUpdatedAt').text(data.updatedAt);
+                
+                viewDetailsModalInstance.show();
+            }).fail(function() {
+                alert('Có lỗi xảy ra khi lấy thông tin chuyên khoa.');
+            });
+        }
+
+        function confirmDelete(id) {
+            $.get('/Specialty/GetDeleteConstraints/' + id, function (data) {
+                if (data.hasConstraints) {
+                    // Show blocker modal
+                    $('#constraintSpecialtyName').text('"' + data.specialtyName + '"');
+                    $('#countDoctors').text(String(data.doctorCount).padStart(2, '0'));
+                    $('#countServices').text(String(data.serviceCount).padStart(2, '0'));
+                    $('#manageLinksBtn').attr('href', '/Specialty/Doctors/' + id);
+                    
+                    constraintModalInstance.show();
+                } else {
+                    // Show confirm modal
+                    $('#deleteSpecialtyName').text('"' + data.specialtyName + '"');
+                    $('#deleteSpecialtyId').val(id);
+                    
+                    deleteConfirmModalInstance.show();
+                }
+            }).fail(function() {
+                alert('Có lỗi xảy ra khi kiểm tra ràng buộc.');
+            });
+        }
+    </script>
+}

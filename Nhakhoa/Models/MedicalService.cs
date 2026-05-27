@@ -24,6 +24,9 @@ namespace Nhakhoa.Models
         [MaxLength(100)]
         public string Department { get; set; }
 
+        public int? SpecialtyId { get; set; }
+        public Specialty Specialty { get; set; }
+
         public bool IsActive { get; set; } = true;
 
         public DateTime UpdatedAt { get; set; } = DateTime.Now;

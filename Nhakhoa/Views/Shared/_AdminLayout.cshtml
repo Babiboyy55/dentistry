@@ -106,6 +106,8 @@
                 <a href="#"><i class="bi bi-calendar-check"></i> Lịch hẹn</a>
                 <a href="#"><i class="bi bi-journal-medical"></i> Hồ sơ bệnh án</a>
                 <a asp-controller="MedicalService" asp-action="Index" class="@(controller == "MedicalService" ? "active" : "")"><i class="bi bi-activity"></i> Dịch vụ y tế</a>
+                <a asp-controller="Specialty" asp-action="Index" class="@(controller == "Specialty" ? "active" : "")"><i class="bi bi-heart-pulse"></i> Chuyên khoa</a>
+                <a asp-controller="Clinic" asp-action="Index" class="@(controller == "Clinic" ? "active" : "")"><i class="bi bi-building"></i> Phòng khám</a>
                 <a href="#"><i class="bi bi-receipt"></i> Thanh toán</a>
                 <a asp-controller="Staff" asp-action="Index" class="@(controller == "Staff" ? "active" : "")"><i class="bi bi-people"></i> Nhân sự</a>
                 @if (User.IsInRole("Admin"))

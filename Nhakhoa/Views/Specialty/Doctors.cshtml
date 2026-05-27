@@ -1,0 +1,413 @@
+@model Nhakhoa.Models.Specialty
+@{
+    ViewData["Title"] = "Quản lý bác sĩ thuộc chuyên khoa";
+    Layout = "~/Views/Shared/_AdminLayout.cshtml";
+}
+
+<div class="container-fluid px-0">
+    <!-- Header Section -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h2 fw-bold text-dark mb-1">Quản lý bác sĩ thuộc chuyên khoa</h1>
+            <p class="text-secondary mb-0">Thiết lập và duy trì mối liên kết giữa bác sĩ và chuyên khoa</p>
+        </div>
+        <a href="/Specialty" class="btn btn-outline-secondary px-4 py-2 fw-semibold rounded-3">
+            <i class="bi bi-arrow-left"></i> Quay lại danh sách
+        </a>
+    </div>
+
+    <!-- Error/Success Alert Banners -->
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <div class="alert alert-danger border-0 rounded-4 p-3 mb-4 d-flex align-items-center gap-3">
+            <div class="alert-icon bg-danger text-white rounded-circle d-grid place-items-center flex-shrink-0">
+                <i class="bi bi-exclamation-triangle fs-5"></i>
+            </div>
+            <div>
+                <span class="fw-semibold text-danger-emphasis">Ràng buộc hệ thống:</span>
+                <span class="text-secondary-emphasis small mt-0.5 d-block">@TempData["ErrorMessage"]</span>
+            </div>
+        </div>
+    }
+
+    <!-- Specialty Selector Widget -->
+    <div class="card border-0 shadow-sm rounded-4 p-4 bg-white mb-4">
+        <span class="text-secondary small fw-bold text-uppercase tracking-wider">Chọn chuyên khoa cần gán</span>
+        <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mt-2">
+            <div class="d-flex align-items-center gap-3 flex-grow-1" style="max-width: 500px;">
+                <select class="form-select form-select-lg border-light-subtle fs-6 rounded-3 py-2.5" onchange="location = this.value;">
+                    <option value="/Specialty/Doctors/@Model.Id" selected>Khoa @Model.Name - @Model.Code (@ViewBag.AssignedDoctors.Count bác sĩ)</option>
+                    @* Load other specialties to make it look like a fully functioning clinical app *@
+                    <option value="/Specialty">--- Xem các chuyên khoa khác ---</option>
+                </select>
+            </div>
+            <div>
+                <span class="badge bg-primary-subtle text-primary px-3 py-2.5 rounded-pill fw-semibold d-inline-flex align-items-center gap-2">
+                    <i class="bi bi-person-check-fill"></i> @ViewBag.AssignedDoctors.Count Bác sĩ hiện tại
+                </span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Dual list selector container -->
+    <form id="doctorAssignmentForm" method="post" asp-action="SaveDoctorAssignments">
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="specialtyId" value="@Model.Id" />
+
+        <div class="row g-4 mb-4">
+            <!-- Left Column: Available Doctors -->
+            <div class="col-12 col-lg-5">
+                <div class="card border-0 shadow-sm rounded-4 bg-white h-100 overflow-hidden d-flex flex-column">
+                    <div class="card-header bg-light-subtle border-bottom p-4 d-flex justify-content-between align-items-center">
+                        <div>
+                            <h5 class="fw-bold text-dark mb-0">Bác sĩ có thể gán</h5>
+                            <p class="text-secondary small mb-0 mt-0.5">Danh sách bác sĩ trong hệ thống</p>
+                        </div>
+                        <span class="badge bg-secondary text-white px-2.5 py-1.5 rounded fw-bold small">
+                            @ViewBag.AvailableDoctors.Count Tổng số
+                        </span>
+                    </div>
+
+                    <div class="card-body p-4 overflow-y-auto" style="max-height: 480px; min-height: 380px;" id="availableDoctorsContainer">
+                        @if (!((List<Nhakhoa.Models.StaffProfile>)ViewBag.AvailableDoctors).Any())
+                        {
+                            <div class="text-center py-5 text-secondary text-muted">
+                                <i class="bi bi-emoji-smile fs-2 d-block mb-2"></i>
+                                Tất cả bác sĩ trong hệ thống đã được gán.
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="d-flex flex-column gap-3">
+                                @foreach (var doctor in (List<Nhakhoa.Models.StaffProfile>)ViewBag.AvailableDoctors)
+                                {
+                                    var isActive = doctor.User.IsActive;
+                                    <div class="card border border-light-subtle rounded-3 p-3 doctor-card cursor-pointer @(isActive ? "active-doctor" : "inactive-doctor-card")" data-doctor-id="@doctor.Id" onclick="selectDoctorCard(this, @(isActive ? "true" : "false"))">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <div class="d-flex align-items-center gap-3">
+                                                <div class="doctor-avatar rounded-circle bg-light d-grid place-items-center fw-bold text-secondary text-uppercase" style="width: 48px; height: 48px; border: 2px solid #fff; box-shadow: 0 2px 8px rgba(0,0,0,0.06);">
+                                                    @doctor.User.FullName.Substring(0, 2)
+                                                </div>
+                                                <div>
+                                                    <h6 class="fw-bold text-dark mb-0.5">BS. @doctor.User.FullName</h6>
+                                                    <span class="text-secondary small d-block">@doctor.PositionTitle • ID: @doctor.StaffCode</span>
+                                                </div>
+                                            </div>
+
+                                            <div>
+                                                @if (isActive)
+                                                {
+                                                    <div class="d-flex align-items-center gap-2">
+                                                        <span class="badge bg-success-subtle text-success rounded-pill fw-semibold tracking-wide" style="font-size:0.75rem;">ACTIVE</span>
+                                                        <input type="checkbox" class="doctor-select-chk form-check-input d-none" value="@doctor.Id" />
+                                                    </div>
+                                                }
+                                                else
+                                                {
+                                                    <div class="text-end">
+                                                        <span class="badge bg-danger-subtle text-danger rounded-pill fw-semibold tracking-wide d-block mb-1" style="font-size:0.7rem;">INACTIVE</span>
+                                                        <span class="text-danger small" style="font-size: 0.72rem;"><i class="bi bi-lock-fill"></i> Chưa kích hoạt</span>
+                                                    </div>
+                                                }
+                                            </div>
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+
+            <!-- Center Transfer Arrows Column -->
+            <div class="col-12 col-lg-2 d-flex flex-lg-column justify-content-center align-items-center gap-3.5 py-3">
+                <button type="button" class="btn btn-primary shadow-sm rounded-circle d-grid place-items-center transfer-btn" style="width: 46px; height: 46px;" onclick="transferRight()" title="Gán vào chuyên khoa">
+                    <i class="bi bi-chevron-right fs-5 d-none d-lg-block"></i>
+                    <i class="bi bi-chevron-down fs-5 d-block d-lg-none"></i>
+                </button>
+                <button type="button" class="btn btn-light border shadow-xs rounded-circle d-grid place-items-center transfer-btn" style="width: 46px; height: 46px;" onclick="transferLeft()" title="Bỏ gán khỏi chuyên khoa">
+                    <i class="bi bi-chevron-left fs-5 d-none d-lg-block"></i>
+                    <i class="bi bi-chevron-up fs-5 d-block d-lg-none"></i>
+                </button>
+            </div>
+
+            <!-- Right Column: Assigned Doctors -->
+            <div class="col-12 col-lg-5">
+                <div class="card border-0 shadow-sm rounded-4 bg-white h-100 overflow-hidden d-flex flex-column">
+                    <div class="card-header bg-light-subtle border-bottom p-4 d-flex justify-content-between align-items-center">
+                        <div>
+                            <h5 class="fw-bold text-dark mb-0">Bác sĩ thuộc chuyên khoa</h5>
+                            <p class="text-secondary small mb-0 mt-0.5">Khoa @Model.Name (@Model.Code)</p>
+                        </div>
+                        <span class="badge bg-primary text-white px-2.5 py-1.5 rounded fw-bold small" id="assignedCountBadge">
+                            @ViewBag.AssignedDoctors.Count Nhân sự
+                        </span>
+                    </div>
+
+                    <div class="card-body p-4 overflow-y-auto" style="max-height: 480px; min-height: 380px;" id="assignedDoctorsContainer">
+                        <div class="d-flex flex-column gap-3" id="assignedWrapper">
+                            @if (!((List<Nhakhoa.Models.StaffProfile>)ViewBag.AssignedDoctors).Any())
+                            {
+                                <div class="text-center py-5 text-secondary text-muted" id="assignedEmptyPlaceholder">
+                                    <i class="bi bi-person-x fs-2 d-block mb-2 text-muted"></i>
+                                    Chưa có bác sĩ nào được gán vào chuyên khoa này.
+                                </div>
+                            }
+                            else
+                            {
+                                @foreach (var doctor in (List<Nhakhoa.Models.StaffProfile>)ViewBag.AssignedDoctors)
+                                {
+                                    <div class="card border border-light-subtle rounded-3 p-3 doctor-card assigned-doctor-card cursor-pointer" data-doctor-id="@doctor.Id" onclick="selectAssignedDoctorCard(this)">
+                                        <!-- Hidden input to submit with the form -->
+                                        <input type="hidden" name="assignedDoctorIds" value="@doctor.Id" class="assigned-input-id" />
+                                        
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <div class="d-flex align-items-center gap-3">
+                                                <div class="doctor-avatar rounded-circle bg-light d-grid place-items-center fw-bold text-primary text-uppercase" style="width: 48px; height: 48px; border: 2px solid #fff; box-shadow: 0 2px 8px rgba(0,0,0,0.06);">
+                                                    @doctor.User.FullName.Substring(0, 2)
+                                                </div>
+                                                <div>
+                                                    <h6 class="fw-bold text-dark mb-0.5">BS. @doctor.User.FullName</h6>
+                                                    <span class="text-secondary small d-block">@doctor.PositionTitle • ID: @doctor.StaffCode</span>
+                                                </div>
+                                            </div>
+
+                                            <div class="d-flex align-items-center gap-2">
+                                                <span class="badge bg-primary-subtle text-primary rounded-pill fw-semibold small px-2">CHUYÊN GIA</span>
+                                                <button type="button" class="btn btn-sm btn-icon btn-outline-danger rounded-circle" onclick="removeDoctorDirectly(this); event.stopPropagation();" title="Bỏ gán lập tức">
+                                                    <i class="bi bi-x"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                }
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer Buttons -->
+        <div class="card border-0 shadow-sm rounded-4 p-3 bg-white mb-5">
+            <div class="d-flex justify-content-end gap-3">
+                <a href="/Specialty" class="btn btn-outline-secondary px-4 py-2.5 fw-semibold rounded-3">Hủy bỏ</a>
+                <button type="submit" class="btn btn-primary px-4 py-2.5 fw-semibold rounded-3 d-flex align-items-center gap-2 shadow-sm">
+                    <i class="bi bi-save"></i> Lưu thay đổi
+                </button>
+            </div>
+        </div>
+    </form>
+
+    <!-- Change Audit Log Section -->
+    <div class="card border-0 shadow-sm rounded-4 p-4 bg-white">
+        <h5 class="fw-bold text-dark mb-4 d-flex align-items-center gap-2">
+            <i class="bi bi-clock-history text-primary"></i> Lịch sử thay đổi (Audit Log)
+        </h5>
+
+        <div class="timeline-wrapper">
+            @if (ViewBag.AuditLogs == null || !((List<Nhakhoa.Models.ActivityLog>)ViewBag.AuditLogs).Any())
+            {
+                <p class="text-secondary small py-2 mb-0">Chưa có lịch sử gán bác sĩ nào cho chuyên khoa này.</p>
+            }
+            else
+            {
+                <div class="position-relative ps-4 border-start border-light-subtle d-flex flex-column gap-4 py-2">
+                    @foreach (var log in (List<Nhakhoa.Models.ActivityLog>)ViewBag.AuditLogs)
+                    {
+                        var iconClass = "bi-plus-circle text-primary bg-primary-subtle";
+                        if (log.Action.Contains("bỏ") || log.Action.Contains("Bỏ"))
+                            iconClass = "bi-dash-circle text-danger bg-danger-subtle";
+
+                        <div class="timeline-item position-relative">
+                            <div class="timeline-dot position-absolute @iconClass rounded-circle d-grid place-items-center" style="left: -33px; top: 0px; width: 26px; height: 26px; font-size: 0.85rem; border: 4px solid #fff; box-shadow: 0 0 0 1px #eef0f7;">
+                                <i class="bi @iconClass.Split(' ')[0]"></i>
+                            </div>
+                            <div>
+                                <div class="small fw-semibold text-dark">
+                                    @log.Details
+                                </div>
+                                <div class="text-secondary small mt-0.5" style="font-size: 0.75rem;">
+                                    Người thực hiện: <span class="fw-medium text-dark">@log.Username</span> • Hệ thống Dashboard • @log.Timestamp.ToString("dd/MM/yyyy HH:mm")
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<style>
+    .doctor-card {
+        transition: all 0.2s ease;
+        border: 1px solid #eef0f7 !important;
+    }
+    .doctor-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(0,0,0,0.04);
+        border-color: #1b75d0 !important;
+    }
+    
+    .doctor-card.selected-to-transfer {
+        border-color: #1b75d0 !important;
+        background-color: #f4f9ff !important;
+        box-shadow: 0 0 0 3px rgba(27, 117, 208, 0.15);
+    }
+    
+    .inactive-doctor-card {
+        opacity: 0.65;
+        background-color: #fafbfc;
+        cursor: not-allowed !important;
+    }
+    .inactive-doctor-card:hover {
+        transform: none;
+        box-shadow: none;
+        border-color: #eef0f7 !important;
+    }
+    
+    .transfer-btn {
+        transition: all 0.2s;
+    }
+    .transfer-btn:hover {
+        transform: scale(1.08);
+    }
+    
+    .timeline-dot {
+        border: 4px solid #fff;
+        box-shadow: 0 0 0 1px #eef0f7;
+    }
+</style>
+
+@section Scripts {
+    <script>
+        function selectDoctorCard(card, isActive) {
+            if (!isActive) {
+                alert("Bác sĩ hiện không hoạt động, không thể gán vào chuyên khoa.");
+                return;
+            }
+            $(card).toggleClass('selected-to-transfer');
+            var chk = $(card).find('.doctor-select-chk');
+            chk.prop('checked', !chk.prop('checked'));
+        }
+
+        function selectAssignedDoctorCard(card) {
+            $(card).toggleClass('selected-to-transfer');
+        }
+
+        function transferRight() {
+            var selectedCards = $('#availableDoctorsContainer .doctor-card.selected-to-transfer');
+            if (selectedCards.length === 0) {
+                return;
+            }
+
+            // Remove empty placeholder if present
+            $('#assignedEmptyPlaceholder').remove();
+
+            selectedCards.each(function() {
+                var card = $(this);
+                var docId = card.attr('data-doctor-id');
+                var docName = card.find('h6').text().replace("BS. ", "");
+                var docDetails = card.find('span.text-secondary').text();
+
+                // Append card to assigned column
+                var newCardHtml = `
+                    <div class="card border border-light-subtle rounded-3 p-3 doctor-card assigned-doctor-card cursor-pointer" data-doctor-id="${docId}" onclick="selectAssignedDoctorCard(this)">
+                        <input type="hidden" name="assignedDoctorIds" value="${docId}" class="assigned-input-id" />
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div class="d-flex align-items-center gap-3">
+                                <div class="doctor-avatar rounded-circle bg-light d-grid place-items-center fw-bold text-primary text-uppercase" style="width: 48px; height: 48px; border: 2px solid #fff; box-shadow: 0 2px 8px rgba(0,0,0,0.06);">
+                                    ${docName.substring(0, 2)}
+                                </div>
+                                <div>
+                                    <h6 class="fw-bold text-dark mb-0.5">BS. ${docName}</h6>
+                                    <span class="text-secondary small d-block">${docDetails}</span>
+                                </div>
+                            </div>
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="badge bg-primary-subtle text-primary rounded-pill fw-semibold small px-2">CHUYÊN GIA</span>
+                                <button type="button" class="btn btn-sm btn-icon btn-outline-danger rounded-circle" onclick="removeDoctorDirectly(this); event.stopPropagation();" title="Bỏ gán lập tức">
+                                    <i class="bi bi-x"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+                $('#assignedWrapper').append(newCardHtml);
+                card.remove();
+            });
+
+            updateCounts();
+        }
+
+        function transferLeft() {
+            var selectedCards = $('#assignedDoctorsContainer .doctor-card.selected-to-transfer');
+            if (selectedCards.length === 0) {
+                return;
+            }
+
+            selectedCards.each(function() {
+                var card = $(this);
+                var docId = card.attr('data-doctor-id');
+                var docName = card.find('h6').text().replace("BS. ", "");
+                var docDetails = card.find('span.text-secondary').text();
+
+                // Re-append to available column
+                var newCardHtml = `
+                    <div class="card border border-light-subtle rounded-3 p-3 doctor-card cursor-pointer active-doctor" data-doctor-id="${docId}" onclick="selectDoctorCard(this, true)">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div class="d-flex align-items-center gap-3">
+                                <div class="doctor-avatar rounded-circle bg-light d-grid place-items-center fw-bold text-secondary text-uppercase" style="width: 48px; height: 48px; border: 2px solid #fff; box-shadow: 0 2px 8px rgba(0,0,0,0.06);">
+                                    ${docName.substring(0, 2)}
+                                </div>
+                                <div>
+                                    <h6 class="fw-bold text-dark mb-0.5">BS. ${docName}</h6>
+                                    <span class="text-secondary small d-block">${docDetails}</span>
+                                </div>
+                            </div>
+                            <div>
+                                <div class="d-flex align-items-center gap-2">
+                                    <span class="badge bg-success-subtle text-success rounded-pill fw-semibold tracking-wide" style="font-size:0.75rem;">ACTIVE</span>
+                                    <input type="checkbox" class="doctor-select-chk form-check-input d-none" value="${docId}" />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+                if ($('#availableDoctorsContainer .d-flex').length === 0) {
+                    $('#availableDoctorsContainer').html('<div class="d-flex flex-column gap-3"></div>');
+                }
+                $('#availableDoctorsContainer .d-flex').append(newCardHtml);
+                card.remove();
+            });
+
+            updateCounts();
+        }
+
+        function removeDoctorDirectly(btn) {
+            var card = $(btn).closest('.doctor-card');
+            card.addClass('selected-to-transfer');
+            transferLeft();
+        }
+
+        function updateCounts() {
+            var assignedCount = $('#assignedWrapper .assigned-doctor-card').length;
+            $('#assignedCountBadge').text(assignedCount + " Nhân sự");
+
+            if (assignedCount === 0) {
+                if ($('#assignedEmptyPlaceholder').length === 0) {
+                    var placeholderHtml = `
+                        <div class="text-center py-5 text-secondary text-muted" id="assignedEmptyPlaceholder">
+                            <i class="bi bi-person-x fs-2 d-block mb-2 text-muted"></i>
+                            Chưa có bác sĩ nào được gán vào chuyên khoa này.
+                        </div>
+                    `;
+                    $('#assignedWrapper').html(placeholderHtml);
+                }
+            }
+        }
+    </script>
+}
