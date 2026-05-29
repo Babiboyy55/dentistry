@@ -37,6 +37,9 @@ namespace Nhakhoa.Models
         [Column(TypeName = "decimal(18,2)")]
         public decimal MonthlyBonus { get; set; }
 
+        [Column(TypeName = "decimal(18,2)")]
+        public decimal OtherDeductions { get; set; }
+
         [MaxLength(100)]
         public string? PendingRankTitle { get; set; }
 

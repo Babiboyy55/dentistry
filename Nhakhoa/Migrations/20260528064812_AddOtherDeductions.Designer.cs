@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Nhakhoa.Data;
 
@@ -11,9 +12,11 @@ using Nhakhoa.Data;
 namespace Nhakhoa.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260528064812_AddOtherDeductions")]
+    partial class AddOtherDeductions
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -48,83 +51,6 @@ namespace Nhakhoa.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("ActivityLogs");
-                });
-
-            modelBuilder.Entity("Nhakhoa.Models.Appointment", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<DateTime>("AppointmentDate")
-                        .HasColumnType("datetime2");
-
-                    b.Property<DateTime?>("CheckedInAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int?>("ClinicId")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime?>("CompletedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("CreatedBy")
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<bool>("IsWalkIn")
-                        .HasColumnType("bit");
-
-                    b.Property<string>("Notes")
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
-
-                    b.Property<int>("PatientId")
-                        .HasColumnType("int");
-
-                    b.Property<int?>("QueueNumber")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Session")
-                        .IsRequired()
-                        .HasMaxLength(10)
-                        .HasColumnType("nvarchar(10)");
-
-                    b.Property<int?>("SpecialtyId")
-                        .HasColumnType("int");
-
-                    b.Property<int>("StaffProfileId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasMaxLength(30)
-                        .HasColumnType("nvarchar(30)");
-
-                    b.Property<string>("TimeSlot")
-                        .IsRequired()
-                        .HasMaxLength(10)
-                        .HasColumnType("nvarchar(10)");
-
-                    b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ClinicId");
-
-                    b.HasIndex("PatientId");
-
-                    b.HasIndex("SpecialtyId");
-
-                    b.HasIndex("StaffProfileId");
-
-                    b.ToTable("Appointments");
                 });
 
             modelBuilder.Entity("Nhakhoa.Models.Clinic", b =>
@@ -220,92 +146,6 @@ namespace Nhakhoa.Migrations
                         {
                             StaffProfileId = 203,
                             SpecialtyId = 2
-                        });
-                });
-
-            modelBuilder.Entity("Nhakhoa.Models.HolidayDate", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("CreatedBy")
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<DateTime>("Date")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("HolidayType")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
-
-                    b.Property<string>("Notes")
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
-
-                    b.Property<bool>("RepeatYearly")
-                        .HasColumnType("bit");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("HolidayDates");
-
-                    b.HasData(
-                        new
-                        {
-                            Id = 1,
-                            CreatedAt = new DateTime(2026, 5, 28, 15, 5, 8, 359, DateTimeKind.Local).AddTicks(8550),
-                            CreatedBy = "Hệ thống",
-                            Date = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
-                            HolidayType = "Cố định",
-                            Name = "Tết Dương Lịch",
-                            Notes = "Nghỉ Tết Dương Lịch hàng năm",
-                            RepeatYearly = true
-                        },
-                        new
-                        {
-                            Id = 2,
-                            CreatedAt = new DateTime(2026, 5, 28, 15, 5, 8, 359, DateTimeKind.Local).AddTicks(9470),
-                            CreatedBy = "Hệ thống",
-                            Date = new DateTime(2026, 4, 30, 0, 0, 0, 0, DateTimeKind.Unspecified),
-                            HolidayType = "Cố định",
-                            Name = "Ngày Giải phóng Miền Nam",
-                            Notes = "Kỷ niệm Ngày Giải phóng Miền Nam 30/4",
-                            RepeatYearly = true
-                        },
-                        new
-                        {
-                            Id = 3,
-                            CreatedAt = new DateTime(2026, 5, 28, 15, 5, 8, 359, DateTimeKind.Local).AddTicks(9473),
-                            CreatedBy = "Hệ thống",
-                            Date = new DateTime(2026, 5, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
-                            HolidayType = "Cố định",
-                            Name = "Ngày Quốc tế Lao động",
-                            Notes = "Ngày Quốc tế Lao động 1/5",
-                            RepeatYearly = true
-                        },
-                        new
-                        {
-                            Id = 4,
-                            CreatedAt = new DateTime(2026, 5, 28, 15, 5, 8, 359, DateTimeKind.Local).AddTicks(9474),
-                            CreatedBy = "Hệ thống",
-                            Date = new DateTime(2026, 9, 2, 0, 0, 0, 0, DateTimeKind.Unspecified),
-                            HolidayType = "Cố định",
-                            Name = "Ngày Quốc Khánh",
-                            Notes = "Ngày Quốc Khánh Việt Nam 2/9",
-                            RepeatYearly = true
                         });
                 });
 
@@ -406,59 +246,6 @@ namespace Nhakhoa.Migrations
                             SpecialtyId = 4,
                             UpdatedAt = new DateTime(2023, 10, 15, 0, 0, 0, 0, DateTimeKind.Unspecified)
                         });
-                });
-
-            modelBuilder.Entity("Nhakhoa.Models.Patient", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("Address")
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
-
-                    b.Property<string>("AllergyHistory")
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<DateTime?>("DateOfBirth")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("Email")
-                        .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
-
-                    b.Property<string>("FullName")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
-
-                    b.Property<string>("Gender")
-                        .HasMaxLength(10)
-                        .HasColumnType("nvarchar(10)");
-
-                    b.Property<string>("PatientCode")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
-
-                    b.Property<string>("PhoneNumber")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
-
-                    b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("Patients");
                 });
 
             modelBuilder.Entity("Nhakhoa.Models.RolePermission", b =>
@@ -843,23 +630,11 @@ namespace Nhakhoa.Migrations
                     b.Property<int>("ClinicId")
                         .HasColumnType("int");
 
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
 
-                    b.Property<string>("RegisteredBy")
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
                     b.Property<DateTime>("ShiftDate")
                         .HasColumnType("datetime2");
-
-                    b.Property<string>("ShiftType")
-                        .IsRequired()
-                        .HasMaxLength(10)
-                        .HasColumnType("nvarchar(10)");
 
                     b.Property<int>("StaffProfileId")
                         .HasColumnType("int");
@@ -877,65 +652,9 @@ namespace Nhakhoa.Migrations
                         {
                             Id = 1,
                             ClinicId = 1,
-                            CreatedAt = new DateTime(2026, 5, 28, 15, 5, 8, 359, DateTimeKind.Local).AddTicks(7461),
                             IsActive = true,
                             ShiftDate = new DateTime(2026, 12, 10, 0, 0, 0, 0, DateTimeKind.Unspecified),
-                            ShiftType = "Sáng",
                             StaffProfileId = 204
-                        });
-                });
-
-            modelBuilder.Entity("Nhakhoa.Models.ShiftSetting", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<double>("DurationHours")
-                        .HasColumnType("float");
-
-                    b.Property<string>("EndTime")
-                        .IsRequired()
-                        .HasMaxLength(10)
-                        .HasColumnType("nvarchar(10)");
-
-                    b.Property<int>("MaxShiftsPerWeek")
-                        .HasColumnType("int");
-
-                    b.Property<string>("ShiftName")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
-                    b.Property<string>("StartTime")
-                        .IsRequired()
-                        .HasMaxLength(10)
-                        .HasColumnType("nvarchar(10)");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("ShiftSettings");
-
-                    b.HasData(
-                        new
-                        {
-                            Id = 1,
-                            DurationHours = 5.0,
-                            EndTime = "12:00",
-                            MaxShiftsPerWeek = 6,
-                            ShiftName = "Sáng",
-                            StartTime = "07:00"
-                        },
-                        new
-                        {
-                            Id = 2,
-                            DurationHours = 4.0,
-                            EndTime = "17:00",
-                            MaxShiftsPerWeek = 6,
-                            ShiftName = "Chiều",
-                            StartTime = "13:00"
                         });
                 });
 
@@ -1288,68 +1007,6 @@ namespace Nhakhoa.Migrations
                         .IsUnique();
 
                     b.ToTable("StaffSalaryInfos");
-
-                    b.HasData(
-                        new
-                        {
-                            Id = 1,
-                            BaseSalary = 12000000m,
-                            DegreeMultiplier = 1.00m,
-                            DegreeTitle = "Bác sĩ thường",
-                            IsRankChangePending = false,
-                            MonthlyBonus = 1200000m,
-                            OtherDeductions = 100000m,
-                            RankMultiplier = 1.00m,
-                            RankTitle = "Bác sĩ",
-                            SeniorityAllowance = 1500000m,
-                            SpecializationAllowance = 2500000m,
-                            UserId = 201
-                        },
-                        new
-                        {
-                            Id = 2,
-                            BaseSalary = 15000000m,
-                            DegreeMultiplier = 1.30m,
-                            DegreeTitle = "Bác sĩ chuyên khoa I",
-                            IsRankChangePending = false,
-                            MonthlyBonus = 2500000m,
-                            OtherDeductions = 0m,
-                            RankMultiplier = 1.00m,
-                            RankTitle = "Bác sĩ",
-                            SeniorityAllowance = 2000000m,
-                            SpecializationAllowance = 3500000m,
-                            UserId = 202
-                        },
-                        new
-                        {
-                            Id = 3,
-                            BaseSalary = 18000000m,
-                            DegreeMultiplier = 1.00m,
-                            DegreeTitle = "Bác sĩ thường",
-                            IsRankChangePending = false,
-                            MonthlyBonus = 3000000m,
-                            OtherDeductions = 200000m,
-                            RankMultiplier = 1.20m,
-                            RankTitle = "Bác sĩ chính",
-                            SeniorityAllowance = 3500000m,
-                            SpecializationAllowance = 4000000m,
-                            UserId = 203
-                        },
-                        new
-                        {
-                            Id = 4,
-                            BaseSalary = 25000000m,
-                            DegreeMultiplier = 1.40m,
-                            DegreeTitle = "Bác sĩ chuyên khoa II",
-                            IsRankChangePending = false,
-                            MonthlyBonus = 4500000m,
-                            OtherDeductions = 0m,
-                            RankMultiplier = 1.30m,
-                            RankTitle = "Bác sĩ cao cấp",
-                            SeniorityAllowance = 5500000m,
-                            SpecializationAllowance = 5000000m,
-                            UserId = 204
-                        });
                 });
 
             modelBuilder.Entity("Nhakhoa.Models.User", b =>
@@ -1480,39 +1137,6 @@ namespace Nhakhoa.Migrations
                         });
                 });
 
-            modelBuilder.Entity("Nhakhoa.Models.Appointment", b =>
-                {
-                    b.HasOne("Nhakhoa.Models.Clinic", "Clinic")
-                        .WithMany()
-                        .HasForeignKey("ClinicId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
-                    b.HasOne("Nhakhoa.Models.Patient", "Patient")
-                        .WithMany("Appointments")
-                        .HasForeignKey("PatientId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("Nhakhoa.Models.Specialty", "Specialty")
-                        .WithMany()
-                        .HasForeignKey("SpecialtyId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
-                    b.HasOne("Nhakhoa.Models.StaffProfile", "StaffProfile")
-                        .WithMany()
-                        .HasForeignKey("StaffProfileId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("Clinic");
-
-                    b.Navigation("Patient");
-
-                    b.Navigation("Specialty");
-
-                    b.Navigation("StaffProfile");
-                });
-
             modelBuilder.Entity("Nhakhoa.Models.Clinic", b =>
                 {
                     b.HasOne("Nhakhoa.Models.Specialty", "DefaultSpecialty")
@@ -1607,11 +1231,6 @@ namespace Nhakhoa.Migrations
             modelBuilder.Entity("Nhakhoa.Models.Clinic", b =>
                 {
                     b.Navigation("Shifts");
-                });
-
-            modelBuilder.Entity("Nhakhoa.Models.Patient", b =>
-                {
-                    b.Navigation("Appointments");
                 });
 
             modelBuilder.Entity("Nhakhoa.Models.Specialty", b =>

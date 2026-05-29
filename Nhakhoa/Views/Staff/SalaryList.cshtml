@@ -1,0 +1,757 @@
+@model IReadOnlyList<Nhakhoa.ViewModels.StaffProfileViewModel>
+@{
+    Layout = "_AdminLayout";
+    ViewData["Title"] = "Bảng lương nhân sự";
+
+    string FormatMoney(decimal amount) =>
+        amount == 0 ? "0 ₫" : amount.ToString("N0") + " ₫";
+
+    // Standard Vietnamese payroll deduction rates (based on base salary)
+    decimal insuranceRate = 0.105m; // 8% BHXH + 1.5% BHYT + 1% BHTN
+    decimal unionRate = 0.01m; // 1% Công đoàn phí
+    decimal personalTaxDeduction = 11000000m; // 11,000,000 ₫ personal deduction
+
+    // Helper functions for C# server-side render
+    decimal GetInsurance(decimal baseSal) => baseSal * insuranceRate;
+    decimal GetUnionFee(decimal baseSal) => baseSal * unionRate;
+
+    decimal GetPIT(decimal gross, decimal baseSal)
+    {
+        decimal insurance = GetInsurance(baseSal) + GetUnionFee(baseSal);
+        decimal taxable = gross - insurance - personalTaxDeduction;
+        if (taxable <= 0) return 0;
+
+        if (taxable <= 5000000m) return taxable * 0.05m;
+        if (taxable <= 10000000m) return taxable * 0.10m - 250000m;
+        if (taxable <= 18000000m) return taxable * 0.15m - 750000m;
+        if (taxable <= 32000000m) return taxable * 0.20m - 1650000m;
+        if (taxable <= 52000000m) return taxable * 0.25m - 3250000m;
+        if (taxable <= 80000000m) return taxable * 0.30m - 5850000m;
+        return taxable * 0.35m - 9850000m;
+    }
+
+    // Calculations for KPIs
+    int staffCount = Model.Count;
+    decimal totalPayroll = 0m;
+    decimal totalAllowances = 0m;
+    decimal totalBonuses = 0m;
+    decimal totalDeductions = 0m;
+
+    foreach (var staff in Model)
+    {
+        var salary = staff.Salary;
+        var gross = (salary.BaseSalary * salary.DegreeMultiplier * salary.RankMultiplier)
+                    + salary.SpecializationAllowance
+                    + salary.SeniorityAllowance
+                    + salary.MonthlyBonus;
+
+        var ins = GetInsurance(salary.BaseSalary);
+        var union = GetUnionFee(salary.BaseSalary);
+        var pit = GetPIT(gross, salary.BaseSalary);
+        var ded = ins + union + pit + salary.OtherDeductions;
+
+        totalAllowances += salary.SpecializationAllowance + salary.SeniorityAllowance;
+        totalBonuses += salary.MonthlyBonus;
+        totalDeductions += ded;
+        totalPayroll += (gross - ded);
+    }
+
+    decimal avgNetSalary = staffCount > 0 ? totalPayroll / staffCount : 0m;
+}
+
+<style>
+    .kpi-card {
+        border: none;
+        border-radius: 16px;
+        transition: transform 0.25s ease, box-shadow 0.25s ease;
+    }
+    .kpi-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 10px 20px rgba(0, 0, 0, 0.05);
+    }
+    .payroll-table th {
+        font-weight: 600;
+        text-transform: uppercase;
+        font-size: 0.75rem;
+        letter-spacing: 0.5px;
+        color: #5b6b7a;
+    }
+    .text-gross { color: #2e7d32; font-weight: 600; }
+    .text-deduction { color: #c62828; font-weight: 600; }
+    .text-net { color: #1b75d0; font-weight: 700; }
+    
+    /* Payslip print styles */
+    @@media print {
+        body * {
+            visibility: hidden;
+        }
+        #printArea, #printArea * {
+            visibility: visible;
+        }
+        #printArea {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+        }
+        .no-print {
+            display: none !important;
+        }
+    }
+</style>
+
+<!-- Page Header -->
+<div class="d-flex align-items-center justify-content-between gap-3 mb-4">
+    <div>
+        <h2 class="fw-bold mb-1" style="color: #0b1f35;">Bảng lương toàn hệ thống</h2>
+        <p class="text-muted mb-0">Quản lý lương cơ bản, phụ cấp, thưởng KPI và các khoản giảm trừ của nhân sự</p>
+    </div>
+    <div>
+        <button class="btn btn-outline-secondary px-3 py-2 fw-semibold rounded-pill" onclick="window.print()">
+            <i class="bi bi-printer me-1"></i> In báo cáo
+        </button>
+    </div>
+</div>
+
+<!-- KPI Cards -->
+<div class="row g-4 mb-4">
+    <div class="col-md-3">
+        <div class="card kpi-card shadow-sm p-4 bg-white">
+            <div class="d-flex align-items-center justify-content-between mb-2">
+                <span class="text-muted small fw-medium">Tổng thực lĩnh hệ thống</span>
+                <div class="rounded-3 p-2 bg-primary-subtle text-primary">
+                    <i class="bi bi-cash-coin fs-5"></i>
+                </div>
+            </div>
+            <h3 class="fw-bold text-dark mb-1">@FormatMoney(totalPayroll)</h3>
+            <span class="text-muted small">Chi trả cho @staffCount nhân sự</span>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card kpi-card shadow-sm p-4 bg-white">
+            <div class="d-flex align-items-center justify-content-between mb-2">
+                <span class="text-muted small fw-medium">Thực lĩnh trung bình</span>
+                <div class="rounded-3 p-2 bg-success-subtle text-success">
+                    <i class="bi bi-graph-up-arrow fs-5"></i>
+                </div>
+            </div>
+            <h3 class="fw-bold text-dark mb-1">@FormatMoney(avgNetSalary)</h3>
+            <span class="text-muted small">Mức thu nhập bình quân</span>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card kpi-card shadow-sm p-4 bg-white">
+            <div class="d-flex align-items-center justify-content-between mb-2">
+                <span class="text-muted small fw-medium">Tổng thưởng KPI tháng</span>
+                <div class="rounded-3 p-2 bg-warning-subtle text-warning">
+                    <i class="bi bi-trophy fs-5"></i>
+                </div>
+            </div>
+            <h3 class="fw-bold text-dark mb-1">@FormatMoney(totalBonuses)</h3>
+            <span class="text-muted small">Khích lệ hiệu quả công việc</span>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card kpi-card shadow-sm p-4 bg-white">
+            <div class="d-flex align-items-center justify-content-between mb-2">
+                <span class="text-muted small fw-medium">Tổng thuế & bảo hiểm</span>
+                <div class="rounded-3 p-2 bg-danger-subtle text-danger">
+                    <i class="bi bi-shield-slash fs-5"></i>
+                </div>
+            </div>
+            <h3 class="fw-bold text-dark mb-1">@FormatMoney(totalDeductions)</h3>
+            <span class="text-muted small">Khấu trừ nộp ngân sách/bảo hiểm</span>
+        </div>
+    </div>
+</div>
+
+<!-- Main Table Card -->
+<div class="card border-0 shadow-sm rounded-4 bg-white" style="padding: 32px;">
+    <!-- Filters -->
+    <div class="d-flex flex-wrap gap-3 mb-4">
+        <div class="flex-grow-1">
+            <div class="input-group">
+                <span class="input-group-text bg-white border-end-0"><i class="bi bi-search text-muted"></i></span>
+                <input type="text" id="searchInput" class="form-control border-start-0" placeholder="Tìm kiếm theo tên nhân viên..." />
+            </div>
+        </div>
+        <div style="min-width: 200px;">
+            <select id="roleFilter" class="form-select">
+                <option value="">Tất cả vai trò</option>
+                <option value="Admin">Admin</option>
+                <option value="Doctor">Bác sĩ</option>
+                <option value="Receptionist">Lễ tân</option>
+            </select>
+        </div>
+    </div>
+
+    <!-- Table -->
+    <div class="table-responsive">
+        <table class="table align-middle payroll-table">
+            <thead class="bg-light">
+                <tr>
+                    <th style="width: 80px;">Mã NV</th>
+                    <th>Họ và tên</th>
+                    <th>Vai trò</th>
+                    <th>Lương cơ bản</th>
+                    <th>Hệ số</th>
+                    <th>Phụ cấp</th>
+                    <th>Thưởng KPI</th>
+                    <th>Giảm trừ</th>
+                    <th>Thực lĩnh</th>
+                    <th class="text-end">Hành động</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var staff in Model)
+                {
+                    var salary = staff.Salary;
+                    var grossMultiplier = salary.DegreeMultiplier * salary.RankMultiplier;
+                    var baseWithMult = salary.BaseSalary * grossMultiplier;
+                    var allowance = salary.SpecializationAllowance + salary.SeniorityAllowance;
+
+                    var ins = GetInsurance(salary.BaseSalary);
+                    var union = GetUnionFee(salary.BaseSalary);
+                    var grossForTax = baseWithMult + allowance + salary.MonthlyBonus;
+                    var pit = GetPIT(grossForTax, salary.BaseSalary);
+                    var deduction = ins + union + pit + salary.OtherDeductions;
+                    var net = grossForTax - deduction;
+
+                    var roleBadge = staff.Role switch
+                    {
+                        "Admin" => "bg-primary-subtle text-primary",
+                        "Doctor" => "bg-info-subtle text-info",
+                        "Receptionist" => "bg-warning-subtle text-warning",
+                        _ => "bg-secondary-subtle text-secondary"
+                    };
+
+                    var roleLabel = staff.Role switch
+                    {
+                        "Admin" => "Admin",
+                        "Doctor" => "Bác sĩ",
+                        "Receptionist" => "Lễ tân",
+                        _ => staff.Role
+                    };
+
+                    <tr class="payroll-row" data-name="@staff.FullName.ToLower()" data-role="@staff.Role">
+                        <td class="text-muted small">@($"NV{staff.Id:0000}")</td>
+                        <td>
+                            <div class="fw-semibold text-dark">@staff.FullName</div>
+                            <div class="text-muted small">@staff.PositionTitle - @staff.Department</div>
+                        </td>
+                        <td><span class="badge @roleBadge">@roleLabel</span></td>
+                        <td>@FormatMoney(salary.BaseSalary)</td>
+                        <td>
+                            <span class="small" title="Học vị: @(salary.DegreeTitle ?? "—") (x@salary.DegreeMultiplier) | Học hàm: @(salary.RankTitle ?? "—") (x@salary.RankMultiplier)">
+                                x@(grossMultiplier.ToString("0.00"))
+                            </span>
+                        </td>
+                        <td>@FormatMoney(allowance)</td>
+                        <td class="text-success row-bonus">@FormatMoney(salary.MonthlyBonus)</td>
+                        <td class="text-danger row-deduction">@FormatMoney(deduction)</td>
+                        <td class="fw-bold text-primary row-net">@FormatMoney(net)</td>
+                        <td class="text-end">
+                            <button class="btn btn-primary btn-sm px-3 rounded-pill" 
+                                    onclick="openPayslipModal({
+                                        id: @staff.Id,
+                                        fullName: '@staff.FullName',
+                                        role: '@roleLabel',
+                                        code: '@($"NV{staff.Id:0000}")',
+                                        dept: '@(staff.Department ?? "Chưa cập nhật")',
+                                        pos: '@(staff.PositionTitle ?? "Chưa cập nhật")',
+                                        baseSalary: @salary.BaseSalary,
+                                        degreeMult: @salary.DegreeMultiplier,
+                                        degreeTitle: '@(salary.DegreeTitle ?? "Bình thường")',
+                                        rankMult: @salary.RankMultiplier,
+                                        rankTitle: '@(salary.RankTitle ?? "Không")',
+                                        specAllowance: @salary.SpecializationAllowance,
+                                        senAllowance: @salary.SeniorityAllowance,
+                                        monthlyBonus: @salary.MonthlyBonus,
+                                        otherDeductions: @salary.OtherDeductions
+                                    })">
+                                <i class="bi bi-file-text me-1"></i> Phiếu lương
+                            </button>
+                            <a class="btn btn-outline-secondary btn-sm rounded-circle ms-1" href="/Staff/Edit/@staff.Id" title="Chỉnh sửa chi tiết">
+                                <i class="bi bi-pencil"></i>
+                            </a>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Detailed Payslip Modal -->
+<div class="modal fade" id="payslipModal" tabindex="-1" aria-labelledby="payslipModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold text-dark" id="payslipModalLabel">
+                    <i class="bi bi-file-earmark-ruled text-primary me-2"></i>Phiếu lương chi tiết nhân viên
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            
+            <div class="modal-body p-4">
+                <!-- Tabs -->
+                <ul class="nav nav-pills mb-4 gap-2" id="payslipTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active rounded-pill px-4 fw-medium" id="view-tab" data-bs-toggle="tab" data-bs-target="#tab-view" type="button" role="tab" aria-controls="tab-view" aria-selected="true">
+                            <i class="bi bi-receipt-cutoff me-1"></i> Xem Phiếu Lương
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link rounded-pill px-4 fw-medium" id="edit-tab" data-bs-toggle="tab" data-bs-target="#tab-edit" type="button" role="tab" aria-controls="tab-edit" aria-selected="false">
+                            <i class="bi bi-sliders me-1"></i> Điều Chỉnh Nhanh
+                        </button>
+                    </li>
+                </ul>
+
+                <div class="tab-content" id="payslipTabsContent">
+                    <!-- TAB 1: VIEW PAYSLIP -->
+                    <div class="tab-pane fade show active" id="tab-view" role="tabpanel" aria-labelledby="view-tab">
+                        <div id="printArea" class="bg-light p-4 rounded-4 border border-light">
+                            <!-- Slip Header -->
+                            <div class="d-flex justify-content-between align-items-start border-bottom pb-3 mb-4">
+                                <div>
+                                    <h5 class="fw-bold text-primary mb-1">NHA KHOA ST. MARY'S CLINIC</h5>
+                                    <span class="text-muted small">Tầng 1 - Khu A, Hai Bà Trưng, Hà Nội</span>
+                                </div>
+                                <div class="text-end">
+                                    <h6 class="fw-bold text-dark mb-1">PHIẾU THANH TOÁN LƯƠNG</h6>
+                                    <span class="badge bg-secondary-subtle text-secondary py-1 px-3 fs-7 rounded-pill">Kỳ lương: Tháng @DateTime.Today.ToString("MM/yyyy")</span>
+                                </div>
+                            </div>
+
+                            <!-- Staff Information -->
+                            <div class="row g-3 mb-4 text-dark fs-7">
+                                <div class="col-md-6">
+                                    <div><strong class="text-muted">Nhân viên:</strong> <span id="psFullName" class="fw-semibold">BS. Nguyễn Văn Đạt</span></div>
+                                    <div><strong class="text-muted">Mã nhân viên:</strong> <span id="psCode" class="fw-semibold">DOC-102</span></div>
+                                    <div><strong class="text-muted">Vai trò:</strong> <span id="psRole">Bác sĩ</span></div>
+                                </div>
+                                <div class="col-md-6 text-md-end">
+                                    <div><strong class="text-muted">Bộ phận:</strong> <span id="psDept">Nội tổng quát</span></div>
+                                    <div><strong class="text-muted">Chức vụ:</strong> <span id="psPos">Y học cổ truyền</span></div>
+                                    <div><strong class="text-muted">Ngày lập phiếu:</strong> <span>@DateTime.Today.ToString("dd/MM/yyyy")</span></div>
+                                </div>
+                            </div>
+
+                            <!-- Earnings and Deductions Side-by-Side -->
+                            <div class="row g-4 mb-4">
+                                <!-- Earnings Column -->
+                                <div class="col-md-6">
+                                    <div class="card border-0 bg-white h-100 shadow-none">
+                                        <div class="card-header bg-transparent border-bottom-0 pb-2 ps-0">
+                                            <h6 class="fw-bold text-success mb-0 d-flex align-items-center gap-1">
+                                                <i class="bi bi-plus-circle-fill"></i> Các khoản Thu nhập (1)
+                                            </h6>
+                                        </div>
+                                        <div class="card-body p-0 fs-7">
+                                            <div class="d-flex justify-content-between py-2 border-bottom text-secondary">
+                                                <span>Lương cơ bản (HĐ)</span>
+                                                <span id="psBaseSalary" class="text-dark fw-medium">5,000,000 ₫</span>
+                                            </div>
+                                            <div class="d-flex justify-content-between py-2 border-bottom text-secondary">
+                                                <span>Học vị (<span id="psDegreeTitle">Thạc sĩ</span>)</span>
+                                                <span id="psDegreeMult" class="text-dark">x1.20</span>
+                                            </div>
+                                            <div class="d-flex justify-content-between py-2 border-bottom text-secondary">
+                                                <span>Học hàm (<span id="psRankTitle">GS</span>)</span>
+                                                <span id="psRankMult" class="text-dark">x1.10</span>
+                                            </div>
+                                            <div class="d-flex justify-content-between py-2 border-bottom text-secondary bg-light-subtle fw-semibold text-dark">
+                                                <span>Lương sau hệ số</span>
+                                                <span id="psSalaryWithMult">6,600,000 ₫</span>
+                                            </div>
+                                            <div class="d-flex justify-content-between py-2 border-bottom text-secondary">
+                                                <span>Phụ cấp chuyên môn</span>
+                                                <span id="psSpecAllowance" class="text-success">+1,000,000 ₫</span>
+                                            </div>
+                                            <div class="d-flex justify-content-between py-2 border-bottom text-secondary">
+                                                <span>Phụ cấp thâm niên</span>
+                                                <span id="psSenAllowance" class="text-success">+500,000 ₫</span>
+                                            </div>
+                                            <div class="d-flex justify-content-between py-2 border-bottom text-secondary">
+                                                <span>Thưởng hiệu suất/KPI</span>
+                                                <span id="psMonthlyBonus" class="text-success fw-medium">+2,000,000 ₫</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Deductions Column -->
+                                <div class="col-md-6">
+                                    <div class="card border-0 bg-white h-100 shadow-none">
+                                        <div class="card-header bg-transparent border-bottom-0 pb-2 ps-0">
+                                            <h6 class="fw-bold text-danger mb-0 d-flex align-items-center gap-1">
+                                                <i class="bi bi-dash-circle-fill"></i> Các khoản Khấu trừ (2)
+                                            </h6>
+                                        </div>
+                                        <div class="card-body p-0 fs-7">
+                                            <div class="d-flex justify-content-between py-2 border-bottom text-secondary">
+                                                <span>Bảo hiểm xã hội (BHXH - 8%)</span>
+                                                <span id="psBHXH" class="text-dark">400,000 ₫</span>
+                                            </div>
+                                            <div class="d-flex justify-content-between py-2 border-bottom text-secondary">
+                                                <span>Bảo hiểm y tế (BHYT - 1.5%)</span>
+                                                <span id="psBHYT" class="text-dark">75,000 ₫</span>
+                                            </div>
+                                            <div class="d-flex justify-content-between py-2 border-bottom text-secondary">
+                                                <span>BH thất nghiệp (BHTN - 1%)</span>
+                                                <span id="psBHTN" class="text-dark">50,000 ₫</span>
+                                            </div>
+                                            <div class="d-flex justify-content-between py-2 border-bottom text-secondary">
+                                                <span>Phí công đoàn (1%)</span>
+                                                <span id="psUnionFee" class="text-dark">50,000 ₫</span>
+                                            </div>
+                                            <div class="d-flex justify-content-between py-2 border-bottom text-secondary">
+                                                <span>Thuế TNCN (Tạm tính)</span>
+                                                <span id="psPIT" class="text-danger">0 ₫</span>
+                                            </div>
+                                            <div class="d-flex justify-content-between py-2 border-bottom text-secondary">
+                                                <span>Khấu trừ khác (Phạt/Trễ)</span>
+                                                <span id="psOtherDeductions" class="text-danger">0 ₫</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Net Summary Box -->
+                            <div class="p-3 bg-white border rounded-3">
+                                <div class="row g-2 align-items-center">
+                                    <div class="col-4 border-end text-center">
+                                        <span class="text-muted small d-block">Tổng Thu nhập (1)</span>
+                                        <span id="psTotalGross" class="fw-bold text-success fs-6">10,100,000 ₫</span>
+                                    </div>
+                                    <div class="col-4 border-end text-center">
+                                        <span class="text-muted small d-block">Tổng Giảm trừ (2)</span>
+                                        <span id="psTotalDeduction" class="fw-bold text-danger fs-6">575,000 ₫</span>
+                                    </div>
+                                    <div class="col-4 text-center">
+                                        <span class="text-muted small d-block fw-semibold">THỰC LĨNH CHUYỂN KHOẢN</span>
+                                        <span id="psNetSalary" class="fw-bold text-primary fs-4">9,525,000 ₫</span>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Notice Note -->
+                            <div class="mt-3 text-muted" style="font-size:0.68rem; line-height: 1.4;">
+                                <em>* Thuế TNCN tính theo biểu thuế lũy tiến từng phần, sau khi giảm trừ gia cảnh người nộp thuế 11.000.000 ₫/tháng và các khoản bảo hiểm bắt buộc. Trường hợp có thắc mắc vui lòng liên hệ phòng nhân sự trước ngày 05 tháng kế tiếp.</em>
+                            </div>
+                        </div>
+
+                        <!-- Action buttons for Tab 1 -->
+                        <div class="d-flex justify-content-end gap-2 mt-4 no-print">
+                            <button type="button" class="btn btn-outline-secondary px-4 py-2 fw-semibold rounded-pill" onclick="printPayslip()">
+                                <i class="bi bi-printer me-1"></i> In Phiếu Lương
+                            </button>
+                            <button type="button" class="btn btn-secondary px-4 py-2 fw-semibold rounded-pill" data-bs-dismiss="modal">Đóng</button>
+                        </div>
+                    </div>
+
+                    <!-- TAB 2: QUICK EDIT / ADJUST ADJUSTMENTS -->
+                    <div class="tab-pane fade" id="tab-edit" role="tabpanel" aria-labelledby="edit-tab">
+                        <form id="quickAdjustForm">
+                            <input type="hidden" id="editStaffId" />
+                            <div class="alert alert-info border-0 rounded-3 py-2 px-3 small mb-3">
+                                <i class="bi bi-info-circle me-1"></i> Bạn có thể điều chỉnh nhanh khoản thưởng KPI và giảm trừ phạt để tính lại phiếu lương ngay lập tức.
+                            </div>
+
+                            <div class="row g-3 mb-4">
+                                <div class="col-md-6">
+                                    <label class="form-label small fw-semibold text-dark">Thưởng hiệu suất/KPI tháng (₫)</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text"><i class="bi bi-gift text-success"></i></span>
+                                        <input type="number" id="editMonthlyBonus" class="form-control" placeholder="0" min="0" step="50000" />
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label small fw-semibold text-dark">Khấu trừ khác / Đi muộn / Kỷ luật (₫)</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text"><i class="bi bi-exclamation-octagon text-danger"></i></span>
+                                        <input type="number" id="editOtherDeductions" class="form-control" placeholder="0" min="0" step="10000" />
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="p-3 bg-light rounded-3 mb-4">
+                                <h6 class="fw-bold text-dark mb-2">Xem Trước Thực Lĩnh Mới</h6>
+                                <div class="d-flex justify-content-between align-items-center py-2 border-bottom small text-secondary">
+                                    <span>Tổng thu nhập dự kiến</span>
+                                    <span id="previewGross" class="text-dark fw-semibold">0 ₫</span>
+                                </div>
+                                <div class="d-flex justify-content-between align-items-center py-2 border-bottom small text-secondary">
+                                    <span>Tổng giảm trừ dự kiến</span>
+                                    <span id="previewDeduction" class="text-dark fw-semibold">0 ₫</span>
+                                </div>
+                                <div class="d-flex justify-content-between align-items-center pt-2 fs-5 fw-bold text-primary">
+                                    <span>THỰC LĨNH MỚI</span>
+                                    <span id="previewNet">0 ₫</span>
+                                </div>
+                            </div>
+
+                            <div class="d-flex justify-content-end gap-2">
+                                <button type="button" class="btn btn-outline-secondary px-4 py-2 fw-semibold rounded-pill" onclick="resetQuickEdit()">Hủy</button>
+                                <button type="button" class="btn btn-primary px-4 py-2 fw-semibold rounded-pill" style="background:#1b75d0; border-color:#1b75d0;" onclick="saveQuickAdjustments()">
+                                    <i class="bi bi-save me-1"></i> Lưu & Cập Nhật
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        let currentStaff = null;
+        const payslipModal = new bootstrap.Modal(document.getElementById('payslipModal'));
+
+        // Format number to currency
+        function formatVND(amount) {
+            return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount).replace('₫', '₫');
+        }
+
+        // Live calculation logic (Vietnamese Payroll Standard)
+        function calculateSalary(base, degreeMult, rankMult, specAllow, senAllow, bonus, otherDed) {
+            const grossMultiplier = degreeMult * rankMult;
+            const baseWithMult = base * grossMultiplier;
+            const gross = baseWithMult + specAllow + senAllow + bonus;
+
+            // Insurances & Union
+            const bhxh = base * 0.08;
+            const bhyt = base * 0.015;
+            const bhtn = base * 0.01;
+            const union = base * 0.01;
+            const mandatoryIns = bhxh + bhyt + bhtn + union;
+
+            // Personal Income Tax (PIT)
+            const personalDeduction = 11000000;
+            const taxable = gross - mandatoryIns - personalDeduction;
+            let pit = 0;
+
+            if (taxable > 0) {
+                if (taxable <= 5000000) {
+                    pit = taxable * 0.05;
+                } else if (taxable <= 10000000) {
+                    pit = taxable * 0.10 - 250000;
+                } else if (taxable <= 18000000) {
+                    pit = taxable * 0.15 - 750000;
+                } else if (taxable <= 32000000) {
+                    pit = taxable * 0.20 - 1650000;
+                } else if (taxable <= 52000000) {
+                    pit = taxable * 0.25 - 3250000;
+                } else if (taxable <= 80000000) {
+                    pit = taxable * 0.30 - 5850000;
+                } else {
+                    pit = taxable * 0.35 - 9850000;
+                }
+            }
+
+            const totalDeduction = mandatoryIns + pit + otherDed;
+            const net = gross - totalDeduction;
+
+            return {
+                gross,
+                bhxh,
+                bhyt,
+                bhtn,
+                union,
+                pit,
+                totalDeduction,
+                net
+            };
+        }
+
+        // Open Modal and populate data
+        function openPayslipModal(staffData) {
+            currentStaff = staffData;
+
+            // Tab 1: Render values
+            document.getElementById('psFullName').innerText = staffData.fullName;
+            document.getElementById('psCode').innerText = staffData.code;
+            document.getElementById('psRole').innerText = staffData.role;
+            document.getElementById('psDept').innerText = staffData.dept;
+            document.getElementById('psPos').innerText = staffData.pos;
+
+            document.getElementById('psBaseSalary').innerText = formatVND(staffData.baseSalary);
+            document.getElementById('psDegreeTitle').innerText = staffData.degreeTitle;
+            document.getElementById('psDegreeMult').innerText = 'x' + staffData.degreeMult.toFixed(2);
+            document.getElementById('psRankTitle').innerText = staffData.rankTitle;
+            document.getElementById('psRankMult').innerText = 'x' + staffData.rankMult.toFixed(2);
+
+            const multSal = staffData.baseSalary * staffData.degreeMult * staffData.rankMult;
+            document.getElementById('psSalaryWithMult').innerText = formatVND(multSal);
+            
+            document.getElementById('psSpecAllowance').innerText = '+' + formatVND(staffData.specAllowance);
+            document.getElementById('psSenAllowance').innerText = '+' + formatVND(staffData.senAllowance);
+            document.getElementById('psMonthlyBonus').innerText = '+' + formatVND(staffData.monthlyBonus);
+
+            // Compute insurance & tax
+            const calc = calculateSalary(
+                staffData.baseSalary, 
+                staffData.degreeMult, 
+                staffData.rankMult, 
+                staffData.specAllowance, 
+                staffData.senAllowance, 
+                staffData.monthlyBonus, 
+                staffData.otherDeductions
+            );
+
+            document.getElementById('psBHXH').innerText = formatVND(calc.bhxh);
+            document.getElementById('psBHYT').innerText = formatVND(calc.bhyt);
+            document.getElementById('psBHTN').innerText = formatVND(calc.bhtn);
+            document.getElementById('psUnionFee').innerText = formatVND(calc.union);
+            document.getElementById('psPIT').innerText = formatVND(calc.pit);
+            document.getElementById('psOtherDeductions').innerText = formatVND(staffData.otherDeductions);
+
+            document.getElementById('psTotalGross').innerText = formatVND(calc.gross);
+            document.getElementById('psTotalDeduction').innerText = formatVND(calc.totalDeduction);
+            document.getElementById('psNetSalary').innerText = formatVND(calc.net);
+
+            // Tab 2: Inputs
+            document.getElementById('editStaffId').value = staffData.id;
+            document.getElementById('editMonthlyBonus').value = staffData.monthlyBonus;
+            document.getElementById('editOtherDeductions').value = staffData.otherDeductions;
+
+            updatePreviewCalc();
+
+            // Open first tab by default
+            const firstTab = new bootstrap.Tab(document.getElementById('view-tab'));
+            firstTab.show();
+
+            payslipModal.show();
+        }
+
+        // Live update preview in Tab 2
+        function updatePreviewCalc() {
+            if (!currentStaff) return;
+            
+            const bonus = parseFloat(document.getElementById('editMonthlyBonus').value) || 0;
+            const otherDed = parseFloat(document.getElementById('editOtherDeductions').value) || 0;
+
+            const calc = calculateSalary(
+                currentStaff.baseSalary,
+                currentStaff.degreeMult,
+                currentStaff.rankMult,
+                currentStaff.specAllowance,
+                currentStaff.senAllowance,
+                bonus,
+                otherDed
+            );
+
+            document.getElementById('previewGross').innerText = formatVND(calc.gross);
+            document.getElementById('previewDeduction').innerText = formatVND(calc.totalDeduction);
+            document.getElementById('previewNet').innerText = formatVND(calc.net);
+        }
+
+        // Add event listeners for edit inputs
+        document.getElementById('editMonthlyBonus').addEventListener('input', updatePreviewCalc);
+        document.getElementById('editOtherDeductions').addEventListener('input', updatePreviewCalc);
+
+        // Reset quick edit tab values
+        function resetQuickEdit() {
+            if (!currentStaff) return;
+            document.getElementById('editMonthlyBonus').value = currentStaff.monthlyBonus;
+            document.getElementById('editOtherDeductions').value = currentStaff.otherDeductions;
+            updatePreviewCalc();
+            const firstTab = new bootstrap.Tab(document.getElementById('view-tab'));
+            firstTab.show();
+        }
+
+        // AJAX Post quick adjustments
+        function saveQuickAdjustments() {
+            if (!currentStaff) return;
+
+            const staffId = document.getElementById('editStaffId').value;
+            const bonus = parseFloat(document.getElementById('editMonthlyBonus').value) || 0;
+            const otherDed = parseFloat(document.getElementById('editOtherDeductions').value) || 0;
+
+            $.ajax({
+                url: '/Staff/UpdateSalaryAdjustments',
+                type: 'POST',
+                data: {
+                    id: staffId,
+                    monthlyBonus: bonus,
+                    otherDeductions: otherDed
+                },
+                success: function(response) {
+                    if (response.success) {
+                        // Update current staff object in memory
+                        currentStaff.monthlyBonus = bonus;
+                        currentStaff.otherDeductions = otherDed;
+
+                        // Recompute full calculations for the UI rows
+                        const calc = calculateSalary(
+                            currentStaff.baseSalary,
+                            currentStaff.degreeMult,
+                            currentStaff.rankMult,
+                            currentStaff.specAllowance,
+                            currentStaff.senAllowance,
+                            bonus,
+                            otherDed
+                        );
+
+                        // Find table row and update contents dynamically without reloading
+                        const row = $(`.payroll-row[data-name]`).filter(function() {
+                            return $(this).find('td:first-child').text().trim() === currentStaff.code;
+                        });
+
+                        if (row.length > 0) {
+                            row.find('.row-bonus').text(formatVND(bonus));
+                            row.find('.row-deduction').text(formatVND(calc.totalDeduction));
+                            row.find('.row-net').text(formatVND(calc.net));
+                        }
+
+                        // Close modal and show alert
+                        payslipModal.hide();
+                        alert('Cập nhật thông tin thưởng/khấu trừ lương thành công!');
+                        
+                        // Optional: reload page to refresh summary metrics if needed
+                        location.reload();
+                    } else {
+                        alert('Lỗi: ' + response.message);
+                    }
+                },
+                error: function() {
+                    alert('Đã xảy ra lỗi khi gửi yêu cầu. Vui lòng thử lại.');
+                }
+            });
+        }
+
+        // Print Payslip Area
+        function printPayslip() {
+            window.print();
+        }
+
+        // Filter Logic
+        $(document).ready(function() {
+            function applyFilters() {
+                const searchVal = $('#searchInput').val().toLowerCase().trim();
+                const roleVal = $('#roleFilter').val();
+
+                $('.payroll-row').each(function() {
+                    const rowName = $(this).data('name');
+                    const rowRole = $(this).data('role');
+
+                    const matchesSearch = rowName.includes(searchVal);
+                    const matchesRole = roleVal === "" || rowRole === roleVal;
+
+                    if (matchesSearch && matchesRole) {
+                        $(this).show();
+                    } else {
+                        $(this).hide();
+                    }
+                });
+            }
+
+            $('#searchInput').on('keyup', applyFilters);
+            $('#roleFilter').on('change', applyFilters);
+        });
+    </script>
+}

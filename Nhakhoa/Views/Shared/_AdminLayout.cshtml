@@ -22,12 +22,22 @@
             padding: 24px 0;
             display: flex;
             flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
         }
 
         .admin-sidebar .brand { padding: 0 24px 32px; font-weight: 700; color: #1b75d0; font-size: 1.2rem; display: flex; align-items: center; gap: 10px; }
         .admin-sidebar .brand .icon { background: #1b75d0; color: #fff; width: 32px; height: 32px; border-radius: 8px; display: grid; place-items: center; }
 
-        .sidebar-menu { display: flex; flex-direction: column; gap: 4px; padding: 0 12px; }
+        .sidebar-menu {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            padding: 0 12px 12px;
+            flex: 1;
+            min-height: 0;
+            overflow-y: auto;
+        }
         .sidebar-menu a {
             display: flex; align-items: center; gap: 12px; padding: 12px 16px; 
             text-decoration: none; color: #5b6b7a; border-radius: 12px; font-weight: 500; transition: all 0.2s;
@@ -53,6 +63,31 @@
         .topbar-datetime { color: #5b6b7a; font-weight: 500; font-size: 0.95rem; }
         
         .bottom-actions { margin-top: auto; padding: 24px; display: flex; flex-direction: column; gap: 8px; border-top: 1px solid #eef0f7; }
+        .bottom-actions-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-weight: 600;
+            color: #5b6b7a;
+            padding: 0 8px;
+            cursor: pointer;
+            user-select: none;
+        }
+        .bottom-actions-toggle {
+            border: none;
+            background: #f4f7fe;
+            color: #5b6b7a;
+            width: 28px;
+            height: 28px;
+            border-radius: 999px;
+            display: grid;
+            place-items: center;
+            transition: transform 0.2s ease, background 0.2s ease;
+        }
+        .bottom-actions-toggle:hover { background: #e9f1ff; color: #1b75d0; }
+        .bottom-actions-content { display: none; flex-direction: column; gap: 8px; margin-top: 8px; }
+        .bottom-actions.open .bottom-actions-content { display: flex; }
+        .bottom-actions.open .bottom-actions-toggle { transform: rotate(180deg); }
         .bottom-actions a, .bottom-actions button { 
              display: flex; align-items: center; gap: 12px; text-decoration: none; color: #5b6b7a; 
              background: none; border: none; width: 100%; text-align: left; padding: 8px; border-radius: 8px;
@@ -103,8 +138,18 @@
             }
             <nav class="sidebar-menu">
                 <a asp-controller="Home" asp-action="Index" class="@(controller == "Home" && action == "Index" ? "active" : "")"><i class="bi bi-grid-1x2"></i> Tổng quan</a>
-                <a href="#"><i class="bi bi-calendar-check"></i> Lịch hẹn</a>
-                <a href="#"><i class="bi bi-journal-medical"></i> Hồ sơ bệnh án</a>
+
+                <a asp-controller="Appointment" asp-action="Index" class="@(controller == "Appointment" && action != "Queue" ? "active" : "")"><i class="bi bi-calendar-check"></i> Lịch hẹn</a>
+                <a asp-controller="Appointment" asp-action="Queue" class="@(controller == "Appointment" && action == "Queue" ? "active" : "")" style="padding-left:32px; font-size:0.88rem;"><i class="bi bi-clock-history"></i> Hàng chờ hôm nay</a>
+
+                <a asp-controller="Patient" asp-action="Index" class="@(controller == "Patient" ? "active" : "")"><i class="bi bi-journal-medical"></i> Hồ sơ bệnh nhân</a>
+
+                <a asp-controller="Schedule" asp-action="Index" class="@(controller == "Schedule" && action == "Index" ? "active" : "")"><i class="bi bi-calendar3"></i> Lịch làm việc</a>
+                @if (User.IsInRole("Admin"))
+                {
+                    <a asp-controller="Schedule" asp-action="Holidays" class="@(controller == "Schedule" && action == "Holidays" ? "active" : "")" style="padding-left:32px; font-size:0.88rem;"><i class="bi bi-calendar-x"></i> Ngày nghỉ lễ</a>
+                }
+
                 <a asp-controller="MedicalService" asp-action="Index" class="@(controller == "MedicalService" ? "active" : "")"><i class="bi bi-activity"></i> Dịch vụ y tế</a>
                 <a asp-controller="Specialty" asp-action="Index" class="@(controller == "Specialty" ? "active" : "")"><i class="bi bi-heart-pulse"></i> Chuyên khoa</a>
                 <a asp-controller="Clinic" asp-action="Index" class="@(controller == "Clinic" ? "active" : "")"><i class="bi bi-building"></i> Phòng khám</a>
@@ -112,7 +157,7 @@
                 <a asp-controller="Staff" asp-action="Index" class="@(controller == "Staff" ? "active" : "")"><i class="bi bi-people"></i> Nhân sự</a>
                 @if (User.IsInRole("Admin"))
                 {
-                    <a href="/Staff" class="@(action == "Salary" ? "active" : "")" style="padding-left:32px; font-size:0.88rem;">
+                    <a asp-controller="Staff" asp-action="SalaryList" class="@(action == "SalaryList" || action == "Salary" ? "active" : "")" style="padding-left:32px; font-size:0.88rem;">
                         <i class="bi bi-cash-stack"></i> Bảng lương
                     </a>
                     <a asp-controller="RolePermission" asp-action="Index" class="@(controller == "RolePermission" ? "active" : "")">
@@ -121,14 +166,22 @@
                 }
             </nav>
             
-            <div class="bottom-actions">
-                <a href="#"><i class="bi bi-question-circle"></i> Trung tâm hỗ trợ</a>
-                <a asp-controller="Auth" asp-action="ChangePassword" class="@(controller == "Auth" && action == "ChangePassword" ? "active" : "")">
-                    <i class="bi bi-key"></i> Đổi mật khẩu
-                </a>
-                <form asp-controller="Auth" asp-action="Logout" method="post" class="m-0 p-0">
-                    <button type="submit"><i class="bi bi-box-arrow-right"></i> Đăng xuất</button>
-                </form>
+            <div class="bottom-actions" id="bottomActions">
+                <div class="bottom-actions-header" id="bottomActionsToggle">
+                    <span>Tài khoản</span>
+                    <button class="bottom-actions-toggle" type="button" aria-label="Mo danh sach tai khoan">
+                        <i class="bi bi-chevron-down"></i>
+                    </button>
+                </div>
+                <div class="bottom-actions-content">
+                    <a href="#"><i class="bi bi-question-circle"></i> Trung tam ho tro</a>
+                    <a asp-controller="Auth" asp-action="ChangePassword" class="@(controller == "Auth" && action == "ChangePassword" ? "active" : "")">
+                        <i class="bi bi-key"></i> Đổi mật khẩu
+                    </a>
+                    <form asp-controller="Auth" asp-action="Logout" method="post" class="m-0 p-0">
+                        <button type="submit"><i class="bi bi-box-arrow-right"></i> Đăng xuất</button>
+                    </form>
+                </div>
             </div>
         </aside>
 
@@ -205,6 +258,16 @@
 
             updateDateTime();
             setInterval(updateDateTime, 1000);
+        })();
+
+        (function () {
+            var container = document.getElementById("bottomActions");
+            var toggle = document.getElementById("bottomActionsToggle");
+            if (!container || !toggle) return;
+
+            toggle.addEventListener("click", function () {
+                container.classList.toggle("open");
+            });
         })();
     </script>
     @await RenderSectionAsync("Scripts", required: false)

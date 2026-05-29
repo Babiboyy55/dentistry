@@ -44,6 +44,7 @@ namespace Nhakhoa.ViewModels
         public decimal SpecializationAllowance { get; set; }
         public decimal SeniorityAllowance { get; set; }
         public decimal MonthlyBonus { get; set; }
+        public decimal OtherDeductions { get; set; }
         public string? PendingRankTitle { get; set; }
         public bool IsRankChangePending { get; set; }
 

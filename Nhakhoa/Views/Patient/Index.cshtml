@@ -1,0 +1,135 @@
+@model List<Nhakhoa.Models.Patient>
+@{
+    Layout = "_AdminLayout";
+    ViewData["Title"] = "Quản lý bệnh nhân";
+    int page = ViewBag.Page ?? 1;
+    int totalPages = ViewBag.TotalPages ?? 1;
+    int total = ViewBag.Total ?? 0;
+}
+
+<div class="d-flex align-items-center justify-content-between gap-3 mb-4">
+    <div>
+        <h4 class="fw-bold mb-0" style="color:#0b1f35"><i class="bi bi-people-fill text-primary me-2"></i>Quản lý bệnh nhân</h4>
+        <div class="text-muted small mt-1">Tra cứu, tạo và quản lý hồ sơ bệnh nhân — Tổng: @total bệnh nhân</div>
+    </div>
+    <div class="d-flex gap-2">
+        <a href="/Patient/Create" class="btn btn-primary btn-sm rounded-pill px-3 fw-semibold d-flex align-items-center gap-1" style="background:#1b75d0; border-color:#1b75d0;">
+            <i class="bi bi-person-plus-fill"></i> Thêm bệnh nhân mới
+        </a>
+    </div>
+</div>
+
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success border-0 rounded-4 py-2 px-3 mb-3"><i class="bi bi-check-circle me-2"></i>@TempData["Success"]</div>
+}
+@if (TempData["Warning"] != null)
+{
+    <div class="alert alert-warning border-0 rounded-4 py-2 px-3 mb-3"><i class="bi bi-exclamation-circle me-2"></i>@TempData["Warning"]</div>
+}
+
+<!-- Search -->
+<form method="get" class="d-flex gap-2 mb-4">
+    <div class="input-group" style="max-width:450px;">
+        <span class="input-group-text bg-white border-end-0 rounded-start-pill">
+            <i class="bi bi-search text-muted"></i>
+        </span>
+        <input type="text" name="search" value="@ViewBag.Search" class="form-control border-start-0 rounded-end-pill"
+               placeholder="Tìm theo tên, SĐT hoặc mã bệnh nhân..." />
+    </div>
+    <button type="submit" class="btn btn-outline-primary rounded-pill px-4">Tìm kiếm</button>
+    @if (!string.IsNullOrEmpty(ViewBag.Search))
+    {
+        <a href="/Patient" class="btn btn-outline-secondary rounded-pill px-3">Xóa</a>
+    }
+</form>
+
+<div class="card border-0 shadow-sm rounded-4">
+    <div class="card-body p-0">
+        @if (!Model.Any())
+        {
+            <div class="text-center py-5 text-muted">
+                <i class="bi bi-person-x display-4 opacity-25 d-block mb-3"></i>
+                Không tìm thấy bệnh nhân nào.
+                <div class="mt-2">
+                    <a href="/Patient/Create@(ViewBag.Search != null ? "?phone=" + ViewBag.Search : "")" class="btn btn-primary btn-sm rounded-pill px-3">Tạo hồ sơ mới</a>
+                </div>
+            </div>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table align-middle mb-0" style="font-size:0.9rem;">
+                    <thead style="background:#f8faff; border-bottom:2px solid #e8edf5;">
+                        <tr>
+                            <th class="px-4 py-3 text-muted fw-semibold">Mã BN</th>
+                            <th class="py-3 text-muted fw-semibold">Họ và tên</th>
+                            <th class="py-3 text-muted fw-semibold">Số điện thoại</th>
+                            <th class="py-3 text-muted fw-semibold">Ngày sinh / Giới tính</th>
+                            <th class="py-3 text-muted fw-semibold">Tiền sử dị ứng</th>
+                            <th class="py-3 text-muted fw-semibold">Ngày tạo</th>
+                            <th class="py-3 text-muted fw-semibold pe-4 text-center">Hành động</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var p in Model)
+                        {
+                            <tr class="border-bottom">
+                                <td class="px-4">
+                                    <span class="badge bg-primary-subtle text-primary fw-semibold rounded-pill px-3">@p.PatientCode</span>
+                                </td>
+                                <td>
+                                    <div class="fw-semibold text-dark">@p.FullName</div>
+                                    @if (!string.IsNullOrEmpty(p.Email))
+                                    {
+                                        <div class="text-muted small">@p.Email</div>
+                                    }
+                                </td>
+                                <td><span class="fw-semibold">@p.PhoneNumber</span></td>
+                                <td>
+                                    <div>@(p.DateOfBirth.HasValue ? p.DateOfBirth.Value.ToString("dd/MM/yyyy") : "—")</div>
+                                    @if (!string.IsNullOrEmpty(p.Gender))
+                                    {
+                                        <div class="text-muted small">@p.Gender</div>
+                                    }
+                                </td>
+                                <td>
+                                    @if (!string.IsNullOrEmpty(p.AllergyHistory))
+                                    {
+                                        <span class="badge bg-danger-subtle text-danger rounded-pill px-2 small">@p.AllergyHistory</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted small">Không có</span>
+                                    }
+                                </td>
+                                <td class="text-muted small">@p.CreatedAt.ToString("dd/MM/yyyy")</td>
+                                <td class="text-center pe-4">
+                                    <div class="d-flex gap-2 justify-content-center">
+                                        <a href="/Patient/Details/@p.Id" class="btn btn-outline-primary btn-sm rounded-pill px-3">
+                                            <i class="bi bi-eye"></i> Hồ sơ
+                                        </a>
+                                        <a href="/Appointment/Create?patientId=@p.Id" class="btn btn-success btn-sm rounded-pill px-3">
+                                            <i class="bi bi-calendar-plus"></i> Đặt lịch
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+            @if (totalPages > 1)
+            {
+                <div class="d-flex justify-content-center py-3 gap-2">
+                    @for (int i = 1; i <= totalPages; i++)
+                    {
+                        <a href="?search=@ViewBag.Search&page=@i"
+                           class="btn btn-sm @(i == page ? "btn-primary" : "btn-outline-secondary") rounded-pill px-3">@i</a>
+                    }
+                </div>
+            }
+        }
+    </div>
+</div>

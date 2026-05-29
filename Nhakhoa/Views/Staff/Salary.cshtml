@@ -26,10 +26,39 @@
         return "";
     }
 
-    var totalSalary = (Model.Salary.BaseSalary * Model.Salary.DegreeMultiplier * Model.Salary.RankMultiplier)
-                     + Model.Salary.SpecializationAllowance
-                     + Model.Salary.SeniorityAllowance
-                     + Model.Salary.MonthlyBonus;
+    // Standard Vietnamese payroll deduction rates (based on base salary)
+    decimal personalTaxDeduction = 11000000m; // 11,000,000 ₫ personal deduction
+
+    decimal baseSalary = Model.Salary.BaseSalary;
+    decimal grossMultiplier = Model.Salary.DegreeMultiplier * Model.Salary.RankMultiplier;
+    decimal baseWithMult = baseSalary * grossMultiplier;
+    
+    decimal grossSalary = baseWithMult 
+                        + Model.Salary.SpecializationAllowance 
+                        + Model.Salary.SeniorityAllowance 
+                        + Model.Salary.MonthlyBonus;
+
+    decimal bhxh = baseSalary * 0.08m;
+    decimal bhyt = baseSalary * 0.015m;
+    decimal bhtn = baseSalary * 0.01m;
+    decimal unionFee = baseSalary * 0.01m;
+    decimal mandatoryIns = bhxh + bhyt + bhtn + unionFee;
+
+    decimal taxableIncome = grossSalary - mandatoryIns - personalTaxDeduction;
+    decimal pit = 0;
+    if (taxableIncome > 0)
+    {
+        if (taxableIncome <= 5000000m) pit = taxableIncome * 0.05m;
+        else if (taxableIncome <= 10000000m) pit = taxableIncome * 0.10m - 250000m;
+        else if (taxableIncome <= 18000000m) pit = taxableIncome * 0.15m - 750000m;
+        else if (taxableIncome <= 32000000m) pit = taxableIncome * 0.20m - 1650000m;
+        else if (taxableIncome <= 52000000m) pit = taxableIncome * 0.25m - 3250000m;
+        else if (taxableIncome <= 80000000m) pit = taxableIncome * 0.30m - 5850000m;
+        else pit = taxableIncome * 0.35m - 9850000m;
+    }
+
+    decimal totalDeductions = mandatoryIns + pit + Model.Salary.OtherDeductions;
+    decimal netSalary = grossSalary - totalDeductions;
 }
 
 <!-- Page Header -->
@@ -44,7 +73,7 @@
         <a href="/Staff/Details/@Model.Id" class="btn btn-outline-secondary btn-sm px-3 rounded-pill d-inline-flex align-items-center gap-1">
             <i class="bi bi-person-vcard"></i> Hồ sơ
         </a>
-        <a href="/Staff" class="btn btn-outline-secondary btn-sm px-3 rounded-pill d-inline-flex align-items-center gap-1">
+        <a href="/Staff/SalaryList" class="btn btn-outline-secondary btn-sm px-3 rounded-pill d-inline-flex align-items-center gap-1">
             <i class="bi bi-arrow-left"></i> Quay lại
         </a>
         <a href="/Staff/Edit/@Model.Id" class="btn btn-primary btn-sm px-3 rounded-pill d-inline-flex align-items-center gap-1" style="background:#1b75d0; border-color:#1b75d0;">
@@ -75,9 +104,9 @@
             </div>
         </div>
         <div class="text-end">
-            <div class="text-white-50 small mb-1">Tổng lương tháng</div>
-            <div class="fw-bold text-white" style="font-size: 2rem; letter-spacing: -0.5px;">@FormatMoney(totalSalary)</div>
-            <div class="text-white-50 small">Đã bao gồm phụ cấp & thưởng</div>
+            <div class="text-white-50 small mb-1">Thực lĩnh nhận về</div>
+            <div class="fw-bold text-white" style="font-size: 2rem; letter-spacing: -0.5px;">@FormatMoney(netSalary)</div>
+            <div class="text-white-50 small">Đã khấu trừ bảo hiểm & thuế TNCN</div>
         </div>
     </div>
 </div>
@@ -87,79 +116,108 @@
     <div class="col-lg-7">
         <div class="card border-0 shadow-sm rounded-4 h-100" style="padding: 28px;">
             <h5 class="fw-bold mb-4 text-dark d-flex align-items-center gap-2">
-                <i class="bi bi-calculator-fill text-primary"></i> Chi tiết tính toán lương
+                <i class="bi bi-calculator-fill text-primary"></i> Chi tiết tính toán lương & giảm trừ
             </h5>
 
-            <!-- Base Salary -->
-            <div class="d-flex justify-content-between align-items-center py-3 border-bottom">
-                <div>
-                    <div class="fw-semibold text-dark">Lương cơ bản</div>
-                    <div class="text-muted small">Mức lương theo hợp đồng</div>
+            <!-- Section 1: Earnings -->
+            <div class="fw-bold text-success border-bottom pb-1 mb-2 small uppercase">Các khoản thu nhập (+)</div>
+
+            <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
+                <div class="ps-2">
+                    <div class="fw-semibold text-dark small">Lương cơ bản</div>
                 </div>
-                <span class="fw-bold text-dark fs-5">@FormatMoney(Model.Salary.BaseSalary)</span>
+                <span class="fw-bold text-dark">@FormatMoney(Model.Salary.BaseSalary)</span>
             </div>
 
-            <!-- Degree Multiplier -->
-            <div class="d-flex justify-content-between align-items-center py-3 border-bottom">
-                <div>
-                    <div class="fw-semibold text-dark">Hệ số học vị</div>
-                    <div class="text-muted small">@Fallback(Model.Salary.DegreeTitle)</div>
+            <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
+                <div class="ps-2">
+                    <div class="fw-semibold text-dark small">Hệ số học vị</div>
+                    <div class="text-muted" style="font-size:0.75rem;">@Fallback(Model.Salary.DegreeTitle)</div>
                 </div>
-                <span class="badge bg-primary-subtle text-primary px-3 py-2 fs-6 fw-bold rounded-pill">
+                <span class="badge bg-primary-subtle text-primary px-3 py-1 fw-bold rounded-pill">
                     × @Model.Salary.DegreeMultiplier.ToString("0.00")
                 </span>
             </div>
 
-            <!-- Rank Multiplier -->
-            <div class="d-flex justify-content-between align-items-center py-3 border-bottom">
-                <div>
-                    <div class="fw-semibold text-dark">Hệ số học hàm</div>
-                    <div class="text-muted small">@Fallback(Model.Salary.RankTitle)</div>
+            <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
+                <div class="ps-2">
+                    <div class="fw-semibold text-dark small">Hệ số học hàm</div>
+                    <div class="text-muted" style="font-size:0.75rem;">@Fallback(Model.Salary.RankTitle)</div>
                 </div>
-                <span class="badge bg-success-subtle text-success px-3 py-2 fs-6 fw-bold rounded-pill">
+                <span class="badge bg-success-subtle text-success px-3 py-1 fw-bold rounded-pill">
                     × @Model.Salary.RankMultiplier.ToString("0.00")
                 </span>
             </div>
 
-            <!-- Salary after multipliers -->
-            <div class="d-flex justify-content-between align-items-center py-3 border-bottom bg-light rounded-3 px-3 my-2">
-                <div>
-                    <div class="fw-semibold text-dark">Lương sau hệ số</div>
-                    <div class="text-muted small">= Lương cơ bản × Hệ số HV × Hệ số HH</div>
-                </div>
-                <span class="fw-bold text-primary fs-5">@FormatMoney(Model.Salary.BaseSalary * Model.Salary.DegreeMultiplier * Model.Salary.RankMultiplier)</span>
-            </div>
-
-            <!-- Allowances -->
-            <div class="d-flex justify-content-between align-items-center py-3 border-bottom">
-                <div>
-                    <div class="fw-semibold text-dark">Phụ cấp chuyên môn</div>
-                    <div class="text-muted small">Phụ cấp theo chuyên ngành</div>
+            <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
+                <div class="ps-2">
+                    <div class="fw-semibold text-dark small">Phụ cấp chuyên môn</div>
                 </div>
                 <span class="fw-semibold text-success">+@FormatMoney(Model.Salary.SpecializationAllowance)</span>
             </div>
-            <div class="d-flex justify-content-between align-items-center py-3 border-bottom">
-                <div>
-                    <div class="fw-semibold text-dark">Phụ cấp thâm niên</div>
-                    <div class="text-muted small">Theo số năm công tác</div>
+            <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
+                <div class="ps-2">
+                    <div class="fw-semibold text-dark small">Phụ cấp thâm niên</div>
                 </div>
                 <span class="fw-semibold text-success">+@FormatMoney(Model.Salary.SeniorityAllowance)</span>
             </div>
-            <div class="d-flex justify-content-between align-items-center py-3 border-bottom">
-                <div>
-                    <div class="fw-semibold text-dark">Thưởng KPI tháng</div>
-                    <div class="text-muted small">Thưởng hiệu suất làm việc</div>
+            <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
+                <div class="ps-2">
+                    <div class="fw-semibold text-dark small">Thưởng KPI tháng</div>
                 </div>
-                <span class="fw-semibold text-warning">+@FormatMoney(Model.Salary.MonthlyBonus)</span>
+                <span class="fw-semibold text-success">+@FormatMoney(Model.Salary.MonthlyBonus)</span>
             </div>
 
-            <!-- Total -->
+            <div class="d-flex justify-content-between align-items-center py-2 border-bottom bg-light rounded-3 px-3 my-2 fw-bold">
+                <span>Tổng thu nhập chịu thuế (Gross)</span>
+                <span class="text-success">@FormatMoney(grossSalary)</span>
+            </div>
+
+            <!-- Section 2: Deductions -->
+            <div class="fw-bold text-danger border-bottom pb-1 mt-4 mb-2 small uppercase">Các khoản giảm trừ / khấu trừ (-)</div>
+
+            <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
+                <div class="ps-2">
+                    <div class="fw-semibold text-dark small">Bảo hiểm bắt buộc (BHXH 8%, BHYT 1.5%, BHTN 1%)</div>
+                    <div class="text-muted" style="font-size:0.75rem;">Tính trên lương cơ bản</div>
+                </div>
+                <span class="fw-semibold text-danger">-@FormatMoney(mandatoryIns)</span>
+            </div>
+
+            <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
+                <div class="ps-2">
+                    <div class="fw-semibold text-dark small">Phí công đoàn (1%)</div>
+                </div>
+                <span class="fw-semibold text-danger">-@FormatMoney(unionFee)</span>
+            </div>
+
+            <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
+                <div class="ps-2">
+                    <div class="fw-semibold text-dark small">Thuế TNCN (Tạm tính)</div>
+                    <div class="text-muted" style="font-size:0.75rem;">Biểu lũy tiến từng phần, giảm trừ gia cảnh 11 triệu đồng</div>
+                </div>
+                <span class="fw-semibold text-danger">-@FormatMoney(pit)</span>
+            </div>
+
+            <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
+                <div class="ps-2">
+                    <div class="fw-semibold text-dark small">Khấu trừ khác (Phạt đi muộn/Kỷ luật)</div>
+                </div>
+                <span class="fw-semibold text-danger">-@FormatMoney(Model.Salary.OtherDeductions)</span>
+            </div>
+
+            <div class="d-flex justify-content-between align-items-center py-2 border-bottom bg-light rounded-3 px-3 my-2 fw-bold">
+                <span>Tổng cộng giảm trừ</span>
+                <span class="text-danger">@FormatMoney(totalDeductions)</span>
+            </div>
+
+            <!-- Net Total -->
             <div class="d-flex justify-content-between align-items-center pt-4 mt-2">
                 <div>
-                    <div class="fw-bold text-dark fs-6">TỔNG LƯƠNG DỰ KIẾN / THÁNG</div>
-                    <div class="text-muted" style="font-size: 0.7rem;">= (LCB × HS HV × HS HH) + Phụ cấp + Thưởng</div>
+                    <div class="fw-bold text-dark fs-6">THỰC LĨNH CHUYỂN KHOẢN (NET)</div>
+                    <div class="text-muted" style="font-size: 0.7rem;">= Gross - Khấu trừ bảo hiểm, thuế, kỷ luật</div>
                 </div>
-                <span class="fw-bold text-primary" style="font-size: 1.8rem;">@FormatMoney(totalSalary)</span>
+                <span class="fw-bold text-primary" style="font-size: 1.8rem;">@FormatMoney(netSalary)</span>
             </div>
         </div>
     </div>
@@ -169,16 +227,14 @@
         <!-- Formula Card -->
         <div class="card border-0 shadow-sm rounded-4 mb-4" style="padding: 24px; background: #f8fbff;">
             <h6 class="fw-bold text-primary mb-3 d-flex align-items-center gap-2">
-                <i class="bi bi-info-circle-fill"></i> Công thức tính lương
+                <i class="bi bi-info-circle-fill"></i> Công thức thực lĩnh mới
             </h6>
             <div class="bg-white rounded-3 p-3 border" style="font-family: monospace; font-size: 0.82rem; line-height: 1.8; color: #1a2332;">
-                <div><span class="text-primary fw-bold">Lương cơ bản</span> = @FormatMoney(Model.Salary.BaseSalary)</div>
-                <div><span class="text-primary fw-bold">× Hệ số HV</span> = @Model.Salary.DegreeMultiplier.ToString("0.00")</div>
-                <div><span class="text-success fw-bold">× Hệ số HH</span> = @Model.Salary.RankMultiplier.ToString("0.00")</div>
-                <div class="border-top mt-2 pt-2"><span class="text-warning fw-bold">+ Phụ cấp CM</span> = @FormatMoney(Model.Salary.SpecializationAllowance)</div>
-                <div><span class="text-warning fw-bold">+ Phụ cấp TN</span> = @FormatMoney(Model.Salary.SeniorityAllowance)</div>
-                <div><span class="text-warning fw-bold">+ Thưởng KPI</span> = @FormatMoney(Model.Salary.MonthlyBonus)</div>
-                <div class="border-top mt-2 pt-2 fw-bold text-danger">= @FormatMoney(totalSalary)</div>
+                <div><span class="text-success fw-bold">Gross Salary</span> = @FormatMoney(grossSalary)</div>
+                <div><span class="text-danger fw-bold">- Bảo hiểm (10.5%)</span> = @FormatMoney(mandatoryIns)</div>
+                <div><span class="text-danger fw-bold">- Thuế TNCN</span> = @FormatMoney(pit)</div>
+                <div><span class="text-danger fw-bold">- Khấu trừ khác</span> = @FormatMoney(Model.Salary.OtherDeductions)</div>
+                <div class="border-top mt-2 pt-2 fw-bold text-primary">= Thực lĩnh: @FormatMoney(netSalary)</div>
             </div>
         </div>
 
@@ -186,28 +242,28 @@
         <div class="row g-3">
             <div class="col-6">
                 <div class="card border-0 shadow-sm rounded-4 text-center p-3">
-                    <div class="text-muted small mb-1">Hệ số học vị</div>
-                    <div class="fw-bold text-primary fs-4">@Model.Salary.DegreeMultiplier.ToString("0.00")</div>
-                    <div class="text-muted" style="font-size: 0.72rem;">@Fallback(Model.Salary.DegreeTitle)</div>
+                    <div class="text-muted small mb-1">Hệ số học hàm/vị</div>
+                    <div class="fw-bold text-primary fs-4">@grossMultiplier.ToString("0.00")</div>
+                    <div class="text-muted" style="font-size: 0.72rem;">Tổng hợp hệ số</div>
                 </div>
             </div>
             <div class="col-6">
                 <div class="card border-0 shadow-sm rounded-4 text-center p-3">
-                    <div class="text-muted small mb-1">Hệ số học hàm</div>
-                    <div class="fw-bold text-success fs-4">@Model.Salary.RankMultiplier.ToString("0.00")</div>
-                    <div class="text-muted" style="font-size: 0.72rem;">@Fallback(Model.Salary.RankTitle)</div>
+                    <div class="text-muted small mb-1">Thuế TNCN</div>
+                    <div class="fw-bold text-danger fs-4">@FormatMoney(pit)</div>
+                    <div class="text-muted" style="font-size: 0.72rem;">Tạm nộp nhà nước</div>
                 </div>
             </div>
             <div class="col-6">
                 <div class="card border-0 shadow-sm rounded-4 text-center p-3">
-                    <div class="text-muted small mb-1">Tổng phụ cấp</div>
-                    <div class="fw-bold text-warning fs-5">@FormatMoney(Model.Salary.SpecializationAllowance + Model.Salary.SeniorityAllowance)</div>
+                    <div class="text-muted small mb-1">Tổng phụ cấp & thưởng</div>
+                    <div class="fw-bold text-warning fs-5">@FormatMoney(Model.Salary.SpecializationAllowance + Model.Salary.SeniorityAllowance + Model.Salary.MonthlyBonus)</div>
                 </div>
             </div>
             <div class="col-6">
                 <div class="card border-0 shadow-sm rounded-4 text-center p-3">
-                    <div class="text-muted small mb-1">Thưởng KPI</div>
-                    <div class="fw-bold text-info fs-5">@FormatMoney(Model.Salary.MonthlyBonus)</div>
+                    <div class="text-muted small mb-1">Giảm trừ khác</div>
+                    <div class="fw-bold text-danger fs-5">@FormatMoney(Model.Salary.OtherDeductions)</div>
                 </div>
             </div>
         </div>

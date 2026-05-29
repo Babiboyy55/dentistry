@@ -22,6 +22,10 @@ namespace Nhakhoa.Data
         public DbSet<Clinic> Clinics { get; set; }
         public DbSet<DoctorSpecialty> DoctorSpecialties { get; set; }
         public DbSet<Shift> Shifts { get; set; }
+        public DbSet<Patient> Patients { get; set; }
+        public DbSet<HolidayDate> HolidayDates { get; set; }
+        public DbSet<Appointment> Appointments { get; set; }
+        public DbSet<ShiftSetting> ShiftSettings { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -91,6 +95,34 @@ namespace Nhakhoa.Data
                 .HasForeignKey(ms => ms.SpecialtyId)
                 .OnDelete(DeleteBehavior.SetNull);
 
+            // Appointment - Patient
+            modelBuilder.Entity<Appointment>()
+                .HasOne(a => a.Patient)
+                .WithMany(p => p.Appointments)
+                .HasForeignKey(a => a.PatientId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // Appointment - StaffProfile (no cascade to avoid multiple cascade paths)
+            modelBuilder.Entity<Appointment>()
+                .HasOne(a => a.StaffProfile)
+                .WithMany()
+                .HasForeignKey(a => a.StaffProfileId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // Appointment - Clinic
+            modelBuilder.Entity<Appointment>()
+                .HasOne(a => a.Clinic)
+                .WithMany()
+                .HasForeignKey(a => a.ClinicId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            // Appointment - Specialty
+            modelBuilder.Entity<Appointment>()
+                .HasOne(a => a.Specialty)
+                .WithMany()
+                .HasForeignKey(a => a.SpecialtyId)
+                .OnDelete(DeleteBehavior.SetNull);
+
             // Seed Users (Admin & 4 Doctors)
             modelBuilder.Entity<User>().HasData(
                 new User { Id = 1, Username = "admin", PasswordHash = "admin", Role = "Admin", IsActive = true, FullName = "Admin System", Email = "admin@clinic.com", PhoneNumber = "0123456789", SecurityStamp = "default-admin-security-stamp" },
@@ -136,6 +168,70 @@ namespace Nhakhoa.Data
                 }
             );
 
+            // Seed StaffSalaryInfos
+            modelBuilder.Entity<StaffSalaryInfo>().HasData(
+                new StaffSalaryInfo
+                {
+                    Id = 1,
+                    UserId = 201,
+                    BaseSalary = 12000000m,
+                    DegreeMultiplier = 1.00m,
+                    DegreeTitle = "Bác sĩ thường",
+                    RankMultiplier = 1.00m,
+                    RankTitle = "Bác sĩ",
+                    SpecializationAllowance = 2500000m,
+                    SeniorityAllowance = 1500000m,
+                    MonthlyBonus = 1200000m,
+                    OtherDeductions = 100000m,
+                    IsRankChangePending = false
+                },
+                new StaffSalaryInfo
+                {
+                    Id = 2,
+                    UserId = 202,
+                    BaseSalary = 15000000m,
+                    DegreeMultiplier = 1.30m,
+                    DegreeTitle = "Bác sĩ chuyên khoa I",
+                    RankMultiplier = 1.00m,
+                    RankTitle = "Bác sĩ",
+                    SpecializationAllowance = 3500000m,
+                    SeniorityAllowance = 2000000m,
+                    MonthlyBonus = 2500000m,
+                    OtherDeductions = 0m,
+                    IsRankChangePending = false
+                },
+                new StaffSalaryInfo
+                {
+                    Id = 3,
+                    UserId = 203,
+                    BaseSalary = 18000000m,
+                    DegreeMultiplier = 1.00m,
+                    DegreeTitle = "Bác sĩ thường",
+                    RankMultiplier = 1.20m,
+                    RankTitle = "Bác sĩ chính",
+                    SpecializationAllowance = 4000000m,
+                    SeniorityAllowance = 3500000m,
+                    MonthlyBonus = 3000000m,
+                    OtherDeductions = 200000m,
+                    IsRankChangePending = false
+                },
+                new StaffSalaryInfo
+                {
+                    Id = 4,
+                    UserId = 204,
+                    BaseSalary = 25000000m,
+                    DegreeMultiplier = 1.40m,
+                    DegreeTitle = "Bác sĩ chuyên khoa II",
+                    RankMultiplier = 1.30m,
+                    RankTitle = "Bác sĩ cao cấp",
+                    SpecializationAllowance = 5000000m,
+                    SeniorityAllowance = 5500000m,
+                    MonthlyBonus = 4500000m,
+                    OtherDeductions = 0m,
+                    IsRankChangePending = false
+                }
+            );
+
             // Seed Specialties
             modelBuilder.Entity<Specialty>().HasData(
                 new Specialty { Id = 1, Name = "Tim mạch", Code = "CARD-001", Description = "Chuyên chẩn đoán và điều trị các bệnh lý tim mạch và mạch máu.", UpdatedAt = new DateTime(2023, 10, 10) },
@@ -170,6 +266,21 @@ namespace Nhakhoa.Data
             modelBuilder.Entity<Shift>().HasData(
                 new Shift { Id = 1, ClinicId = 1, StaffProfileId = 204, ShiftDate = new DateTime(2026, 12, 10), IsActive = true }
             );
+
+            // Seed Vietnamese Public Holidays
+            modelBuilder.Entity<HolidayDate>().HasData(
+                new HolidayDate { Id = 1, Name = "Tết Dương Lịch", Date = new DateTime(2026, 1, 1), HolidayType = "Cố định", RepeatYearly = true, Notes = "Nghỉ Tết Dương Lịch hàng năm", CreatedBy = "Hệ thống" },
+                new HolidayDate { Id = 2, Name = "Ngày Giải phóng Miền Nam", Date = new DateTime(2026, 4, 30), HolidayType = "Cố định", RepeatYearly = true, Notes = "Kỷ niệm Ngày Giải phóng Miền Nam 30/4", CreatedBy = "Hệ thống" },
+                new HolidayDate { Id = 3, Name = "Ngày Quốc tế Lao động", Date = new DateTime(2026, 5, 1), HolidayType = "Cố định", RepeatYearly = true, Notes = "Ngày Quốc tế Lao động 1/5", CreatedBy = "Hệ thống" },
+                new HolidayDate { Id = 4, Name = "Ngày Quốc Khánh", Date = new DateTime(2026, 9, 2), HolidayType = "Cố định", RepeatYearly = true, Notes = "Ngày Quốc Khánh Việt Nam 2/9", CreatedBy = "Hệ thống" }
+            );
+
+            // Seed ShiftSettings
+            modelBuilder.Entity<ShiftSetting>().HasData(
+                new ShiftSetting { Id = 1, ShiftName = "Sáng", StartTime = "07:00", EndTime = "12:00", DurationHours = 5.0, MaxShiftsPerWeek = 6 },
+                new ShiftSetting { Id = 2, ShiftName = "Chiều", StartTime = "13:00", EndTime = "17:00", DurationHours = 4.0, MaxShiftsPerWeek = 6 }
+            );
+
 
             // Seed RBAC permission matrix (UC1.5)
             var modules = new[]

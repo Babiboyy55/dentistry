@@ -115,6 +115,7 @@ namespace Nhakhoa.Controllers
                 SpecializationAllowance = user.StaffSalaryInfo?.SpecializationAllowance ?? 0m,
                 SeniorityAllowance = user.StaffSalaryInfo?.SeniorityAllowance ?? 0m,
                 MonthlyBonus = user.StaffSalaryInfo?.MonthlyBonus ?? 0m,
+                OtherDeductions = user.StaffSalaryInfo?.OtherDeductions ?? 0m,
                 PendingRankTitle = user.StaffSalaryInfo?.PendingRankTitle,
                 IsRankChangePending = user.StaffSalaryInfo?.IsRankChangePending ?? false,
 
@@ -213,6 +214,7 @@ namespace Nhakhoa.Controllers
                     SpecializationAllowance = salary?.SpecializationAllowance ?? 0m,
                     SeniorityAllowance = salary?.SeniorityAllowance ?? 0m,
                     MonthlyBonus = salary?.MonthlyBonus ?? 0m,
+                    OtherDeductions = salary?.OtherDeductions ?? 0m,
                     PendingRankTitle = salary?.PendingRankTitle,
                     IsRankChangePending = salary?.IsRankChangePending ?? false
                 },
@@ -282,6 +284,7 @@ namespace Nhakhoa.Controllers
                     SpecializationAllowance = salary?.SpecializationAllowance ?? 0m,
                     SeniorityAllowance = salary?.SeniorityAllowance ?? 0m,
                     MonthlyBonus = salary?.MonthlyBonus ?? 0m,
+                    OtherDeductions = salary?.OtherDeductions ?? 0m,
                     PendingRankTitle = salary?.PendingRankTitle,
                     IsRankChangePending = salary?.IsRankChangePending ?? false
                 },
@@ -289,6 +292,83 @@ namespace Nhakhoa.Controllers
             };
 
             return View(model);
+        }
+
+        // GET: Staff/SalaryList
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> SalaryList()
+        {
+            var users = await _context.Users
+                .Include(u => u.StaffProfile)
+                .Include(u => u.StaffSalaryInfo)
+                .OrderBy(u => u.FullName)
+                .ToListAsync();
+
+            var model = users.Select(user => {
+                var profile = user.StaffProfile;
+                var salary = user.StaffSalaryInfo;
+                return new StaffProfileViewModel
+                {
+                    Id = user.Id,
+                    FullName = user.FullName,
+                    Role = user.Role,
+                    Email = user.Email,
+                    PhoneNumber = user.PhoneNumber,
+                    IsActive = user.IsActive,
+                    StaffCode = profile?.StaffCode ?? "",
+                    PositionTitle = profile?.PositionTitle ?? "",
+                    Department = profile?.Department ?? "",
+                    JoinDate = profile?.JoinDate,
+                    Salary = new StaffSalaryInfoViewModel
+                    {
+                        BaseSalary = salary?.BaseSalary ?? 0m,
+                        DegreeMultiplier = salary?.DegreeMultiplier ?? 1m,
+                        DegreeTitle = salary?.DegreeTitle,
+                        RankMultiplier = salary?.RankMultiplier ?? 1m,
+                        RankTitle = salary?.RankTitle,
+                        SpecializationAllowance = salary?.SpecializationAllowance ?? 0m,
+                        SeniorityAllowance = salary?.SeniorityAllowance ?? 0m,
+                        MonthlyBonus = salary?.MonthlyBonus ?? 0m,
+                        OtherDeductions = salary?.OtherDeductions ?? 0m,
+                        PendingRankTitle = salary?.PendingRankTitle,
+                        IsRankChangePending = salary?.IsRankChangePending ?? false
+                    }
+                };
+            }).ToList();
+
+            return View(model);
+        }
+
+        // POST: Staff/UpdateSalaryAdjustments
+        [HttpPost]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> UpdateSalaryAdjustments(int id, decimal monthlyBonus, decimal otherDeductions)
+        {
+            var salary = await _context.StaffSalaryInfos.FirstOrDefaultAsync(s => s.UserId == id);
+            if (salary == null)
+            {
+                return Json(new { success = false, message = "Không tìm thấy thông tin lương." });
+            }
+
+            var oldBonus = salary.MonthlyBonus;
+            var oldDeductions = salary.OtherDeductions;
+
+            salary.MonthlyBonus = monthlyBonus;
+            salary.OtherDeductions = otherDeductions;
+            await _context.SaveChangesAsync();
+
+            // Log activity
+            var username = User.Identity?.Name ?? "System";
+            var log = new ActivityLog
+            {
+                Username = username,
+                Action = "Cập nhật nhanh lương",
+                Details = $"Cập nhật nhanh lương cho nhân sự ID {id}: Thưởng KPI ({oldBonus:N0} -> {monthlyBonus:N0}đ), Khấu trừ ({oldDeductions:N0} -> {otherDeductions:N0}đ)"
+            };
+            _context.ActivityLogs.Add(log);
+            await _context.SaveChangesAsync();
+
+            return Json(new { success = true, message = "Cập nhật thưởng và khấu trừ thành công!" });
         }
 
         // POST: Staff/Create
@@ -564,6 +644,7 @@ namespace Nhakhoa.Controllers
             user.StaffSalaryInfo.SpecializationAllowance = model.SpecializationAllowance ?? 0m;
             user.StaffSalaryInfo.SeniorityAllowance = model.SeniorityAllowance ?? 0m;
             user.StaffSalaryInfo.MonthlyBonus = model.MonthlyBonus ?? 0m;
+            user.StaffSalaryInfo.OtherDeductions = model.OtherDeductions ?? 0m;
 
             // --- Process Qualifications ---
             if (model.Qualifications != null)

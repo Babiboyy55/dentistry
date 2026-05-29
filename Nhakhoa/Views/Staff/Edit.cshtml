@@ -240,6 +240,11 @@
                         <input type="hidden" asp-for="MonthlyBonus" />
                         <input id="MonthlyBonus_Display" type="text" class="form-control currency-input" data-target="MonthlyBonus" />
                     </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold text-dark small mb-1">Khấu trừ khác / Đi muộn (đ)</label>
+                        <input type="hidden" asp-for="OtherDeductions" />
+                        <input id="OtherDeductions_Display" type="text" class="form-control currency-input" data-target="OtherDeductions" />
+                    </div>
                 </div>
             </div>
 
@@ -402,7 +407,8 @@
                 { id: 'IsActive', label: 'Trạng thái' },
                 { id: 'Cccd', label: 'CCCD' },
                 { id: 'JobRank', label: 'Hạng chức danh' },
-                { id: 'CchnExpiryDate', label: 'Ngày hết hạn CCHN' }
+                { id: 'CchnExpiryDate', label: 'Ngày hết hạn CCHN' },
+                { id: 'OtherDeductions', label: 'Khấu trừ khác' }
             ];
 
             function checkChanges() {

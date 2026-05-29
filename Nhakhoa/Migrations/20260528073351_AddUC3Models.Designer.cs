@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Nhakhoa.Data;
 
@@ -11,9 +12,11 @@ using Nhakhoa.Data;
 namespace Nhakhoa.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260528073351_AddUC3Models")]
+    partial class AddUC3Models
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -261,52 +264,6 @@ namespace Nhakhoa.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("HolidayDates");
-
-                    b.HasData(
-                        new
-                        {
-                            Id = 1,
-                            CreatedAt = new DateTime(2026, 5, 28, 15, 5, 8, 359, DateTimeKind.Local).AddTicks(8550),
-                            CreatedBy = "Hệ thống",
-                            Date = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
-                            HolidayType = "Cố định",
-                            Name = "Tết Dương Lịch",
-                            Notes = "Nghỉ Tết Dương Lịch hàng năm",
-                            RepeatYearly = true
-                        },
-                        new
-                        {
-                            Id = 2,
-                            CreatedAt = new DateTime(2026, 5, 28, 15, 5, 8, 359, DateTimeKind.Local).AddTicks(9470),
-                            CreatedBy = "Hệ thống",
-                            Date = new DateTime(2026, 4, 30, 0, 0, 0, 0, DateTimeKind.Unspecified),
-                            HolidayType = "Cố định",
-                            Name = "Ngày Giải phóng Miền Nam",
-                            Notes = "Kỷ niệm Ngày Giải phóng Miền Nam 30/4",
-                            RepeatYearly = true
-                        },
-                        new
-                        {
-                            Id = 3,
-                            CreatedAt = new DateTime(2026, 5, 28, 15, 5, 8, 359, DateTimeKind.Local).AddTicks(9473),
-                            CreatedBy = "Hệ thống",
-                            Date = new DateTime(2026, 5, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
-                            HolidayType = "Cố định",
-                            Name = "Ngày Quốc tế Lao động",
-                            Notes = "Ngày Quốc tế Lao động 1/5",
-                            RepeatYearly = true
-                        },
-                        new
-                        {
-                            Id = 4,
-                            CreatedAt = new DateTime(2026, 5, 28, 15, 5, 8, 359, DateTimeKind.Local).AddTicks(9474),
-                            CreatedBy = "Hệ thống",
-                            Date = new DateTime(2026, 9, 2, 0, 0, 0, 0, DateTimeKind.Unspecified),
-                            HolidayType = "Cố định",
-                            Name = "Ngày Quốc Khánh",
-                            Notes = "Ngày Quốc Khánh Việt Nam 2/9",
-                            RepeatYearly = true
-                        });
                 });
 
             modelBuilder.Entity("Nhakhoa.Models.MedicalService", b =>
@@ -877,65 +834,11 @@ namespace Nhakhoa.Migrations
                         {
                             Id = 1,
                             ClinicId = 1,
-                            CreatedAt = new DateTime(2026, 5, 28, 15, 5, 8, 359, DateTimeKind.Local).AddTicks(7461),
+                            CreatedAt = new DateTime(2026, 5, 28, 14, 33, 50, 634, DateTimeKind.Local).AddTicks(6466),
                             IsActive = true,
                             ShiftDate = new DateTime(2026, 12, 10, 0, 0, 0, 0, DateTimeKind.Unspecified),
                             ShiftType = "Sáng",
                             StaffProfileId = 204
-                        });
-                });
-
-            modelBuilder.Entity("Nhakhoa.Models.ShiftSetting", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<double>("DurationHours")
-                        .HasColumnType("float");
-
-                    b.Property<string>("EndTime")
-                        .IsRequired()
-                        .HasMaxLength(10)
-                        .HasColumnType("nvarchar(10)");
-
-                    b.Property<int>("MaxShiftsPerWeek")
-                        .HasColumnType("int");
-
-                    b.Property<string>("ShiftName")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
-                    b.Property<string>("StartTime")
-                        .IsRequired()
-                        .HasMaxLength(10)
-                        .HasColumnType("nvarchar(10)");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("ShiftSettings");
-
-                    b.HasData(
-                        new
-                        {
-                            Id = 1,
-                            DurationHours = 5.0,
-                            EndTime = "12:00",
-                            MaxShiftsPerWeek = 6,
-                            ShiftName = "Sáng",
-                            StartTime = "07:00"
-                        },
-                        new
-                        {
-                            Id = 2,
-                            DurationHours = 4.0,
-                            EndTime = "17:00",
-                            MaxShiftsPerWeek = 6,
-                            ShiftName = "Chiều",
-                            StartTime = "13:00"
                         });
                 });
 

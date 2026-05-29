@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Nhakhoa.Data;
 
@@ -11,9 +12,11 @@ using Nhakhoa.Data;
 namespace Nhakhoa.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260528075831_SeedVietnameseHolidays")]
+    partial class SeedVietnameseHolidays
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -266,7 +269,7 @@ namespace Nhakhoa.Migrations
                         new
                         {
                             Id = 1,
-                            CreatedAt = new DateTime(2026, 5, 28, 15, 5, 8, 359, DateTimeKind.Local).AddTicks(8550),
+                            CreatedAt = new DateTime(2026, 5, 28, 14, 58, 30, 555, DateTimeKind.Local).AddTicks(7228),
                             CreatedBy = "Hệ thống",
                             Date = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
                             HolidayType = "Cố định",
@@ -277,7 +280,7 @@ namespace Nhakhoa.Migrations
                         new
                         {
                             Id = 2,
-                            CreatedAt = new DateTime(2026, 5, 28, 15, 5, 8, 359, DateTimeKind.Local).AddTicks(9470),
+                            CreatedAt = new DateTime(2026, 5, 28, 14, 58, 30, 555, DateTimeKind.Local).AddTicks(8134),
                             CreatedBy = "Hệ thống",
                             Date = new DateTime(2026, 4, 30, 0, 0, 0, 0, DateTimeKind.Unspecified),
                             HolidayType = "Cố định",
@@ -288,7 +291,7 @@ namespace Nhakhoa.Migrations
                         new
                         {
                             Id = 3,
-                            CreatedAt = new DateTime(2026, 5, 28, 15, 5, 8, 359, DateTimeKind.Local).AddTicks(9473),
+                            CreatedAt = new DateTime(2026, 5, 28, 14, 58, 30, 555, DateTimeKind.Local).AddTicks(8136),
                             CreatedBy = "Hệ thống",
                             Date = new DateTime(2026, 5, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
                             HolidayType = "Cố định",
@@ -299,7 +302,7 @@ namespace Nhakhoa.Migrations
                         new
                         {
                             Id = 4,
-                            CreatedAt = new DateTime(2026, 5, 28, 15, 5, 8, 359, DateTimeKind.Local).AddTicks(9474),
+                            CreatedAt = new DateTime(2026, 5, 28, 14, 58, 30, 555, DateTimeKind.Local).AddTicks(8138),
                             CreatedBy = "Hệ thống",
                             Date = new DateTime(2026, 9, 2, 0, 0, 0, 0, DateTimeKind.Unspecified),
                             HolidayType = "Cố định",
@@ -877,65 +880,11 @@ namespace Nhakhoa.Migrations
                         {
                             Id = 1,
                             ClinicId = 1,
-                            CreatedAt = new DateTime(2026, 5, 28, 15, 5, 8, 359, DateTimeKind.Local).AddTicks(7461),
+                            CreatedAt = new DateTime(2026, 5, 28, 14, 58, 30, 555, DateTimeKind.Local).AddTicks(6096),
                             IsActive = true,
                             ShiftDate = new DateTime(2026, 12, 10, 0, 0, 0, 0, DateTimeKind.Unspecified),
                             ShiftType = "Sáng",
                             StaffProfileId = 204
-                        });
-                });
-
-            modelBuilder.Entity("Nhakhoa.Models.ShiftSetting", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<double>("DurationHours")
-                        .HasColumnType("float");
-
-                    b.Property<string>("EndTime")
-                        .IsRequired()
-                        .HasMaxLength(10)
-                        .HasColumnType("nvarchar(10)");
-
-                    b.Property<int>("MaxShiftsPerWeek")
-                        .HasColumnType("int");
-
-                    b.Property<string>("ShiftName")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
-                    b.Property<string>("StartTime")
-                        .IsRequired()
-                        .HasMaxLength(10)
-                        .HasColumnType("nvarchar(10)");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("ShiftSettings");
-
-                    b.HasData(
-                        new
-                        {
-                            Id = 1,
-                            DurationHours = 5.0,
-                            EndTime = "12:00",
-                            MaxShiftsPerWeek = 6,
-                            ShiftName = "Sáng",
-                            StartTime = "07:00"
-                        },
-                        new
-                        {
-                            Id = 2,
-                            DurationHours = 4.0,
-                            EndTime = "17:00",
-                            MaxShiftsPerWeek = 6,
-                            ShiftName = "Chiều",
-                            StartTime = "13:00"
                         });
                 });
 
