@@ -59,5 +59,8 @@ namespace Nhakhoa.Models
 
         // Số thứ tự trong hàng chờ
         public int? QueueNumber { get; set; }
+
+        [ConcurrencyCheck]
+        public Guid ConcurrencyStamp { get; set; } = Guid.NewGuid();
     }
 }

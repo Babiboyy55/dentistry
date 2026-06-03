@@ -1,8 +1,10 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.SignalR;
 using Nhakhoa.Data;
 using Nhakhoa.Models;
+using Nhakhoa.Hubs;
 using System;
 using System.Linq;
 using System.Threading.Tasks;
@@ -13,15 +15,23 @@ namespace Nhakhoa.Controllers
     public class AppointmentController : Controller
     {
         private readonly ApplicationDbContext _db;
+        private readonly IHubContext<QueueHub> _hubContext;
 
-        public AppointmentController(ApplicationDbContext db)
+        public AppointmentController(ApplicationDbContext db, IHubContext<QueueHub> hubContext)
         {
             _db = db;
+            _hubContext = hubContext;
         }
 
         // GET: /Appointment
         public async Task<IActionResult> Index(string? search, string? status, DateTime? date, int page = 1)
         {
+            var statsDate = date ?? DateTime.Today;
+            ViewBag.StatConfirmed = await _db.Appointments.CountAsync(a => a.AppointmentDate.Date == statsDate.Date && a.Status == "Đã xác nhận");
+            ViewBag.StatInSession = await _db.Appointments.CountAsync(a => a.AppointmentDate.Date == statsDate.Date && a.Status == "Đang khám");
+            ViewBag.StatCancelled = await _db.Appointments.CountAsync(a => a.AppointmentDate.Date == statsDate.Date && a.Status == "Đã hủy");
+            ViewBag.StatCompleted = await _db.Appointments.CountAsync(a => a.AppointmentDate.Date == statsDate.Date && a.Status == "Đã khám xong");
+
             int pageSize = 20;
             var query = _db.Appointments
                 .Include(a => a.Patient)
@@ -73,6 +83,16 @@ namespace Nhakhoa.Controllers
             return View();
         }
 
+        private bool SimulateNotificationSend(Appointment model)
+        {
+            // If notes contains "Lỗi thông báo", trigger simulated failure
+            if (!string.IsNullOrEmpty(model.Notes) && model.Notes.Contains("Lỗi thông báo"))
+            {
+                return false;
+            }
+            return true;
+        }
+
         // POST: /Appointment/Create
         [HttpPost, ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(Appointment model)
@@ -121,10 +141,54 @@ namespace Nhakhoa.Controllers
             model.CreatedAt = DateTime.Now;
             model.UpdatedAt = DateTime.Now;
             model.CreatedBy = User.Identity?.Name;
+            model.ConcurrencyStamp = Guid.NewGuid();
 
-            _db.Appointments.Add(model);
-            await _db.SaveChangesAsync();
-            TempData["Success"] = "Đã đặt lịch hẹn thành công!";
+            try
+            {
+                _db.Appointments.Add(model);
+                await _db.SaveChangesAsync();
+
+                // Audit Log
+                var log = new ActivityLog
+                {
+                    Username = User.Identity?.Name ?? "Unknown",
+                    Action = "Đặt lịch hẹn",
+                    Details = $"Đặt lịch hẹn mới (ID: {model.Id}) cho bệnh nhân ID {model.PatientId} với bác sĩ ID {model.StaffProfileId} vào {model.AppointmentDate:dd/MM/yyyy} {model.TimeSlot}",
+                    Timestamp = DateTime.Now
+                };
+                _db.ActivityLogs.Add(log);
+                await _db.SaveChangesAsync();
+            }
+            catch (Exception)
+            {
+                ModelState.AddModelError("TimeSlot", "Khung giờ này đã được đặt bởi một người dùng khác ngay trước đó. Vui lòng chọn khung giờ khác.");
+                await LoadViewBagDropdowns();
+                ViewBag.SelectedPatient = await _db.Patients.FindAsync(model.PatientId);
+                return View(model);
+            }
+
+            // Simulate notifications
+            bool notificationSuccess = SimulateNotificationSend(model);
+            if (!notificationSuccess)
+            {
+                var errorLog = new ActivityLog
+                {
+                    Username = "System",
+                    Action = "Lỗi gửi thông báo",
+                    Details = $"Không gửi được thông báo SMS/Email tự động cho bệnh nhân ID {model.PatientId} cho lịch hẹn ID {model.Id}",
+                    Timestamp = DateTime.Now
+                };
+                _db.ActivityLogs.Add(errorLog);
+                await _db.SaveChangesAsync();
+
+                var patient = await _db.Patients.FindAsync(model.PatientId);
+                TempData["Warning"] = $"Đặt lịch thành công! Tuy nhiên, hệ thống không gửi được thông báo tự động (SMS/Email). Vui lòng liên hệ trực tiếp bệnh nhân qua SĐT: {patient?.PhoneNumber}.";
+            }
+            else
+            {
+                TempData["Success"] = "Đã đặt lịch hẹn thành công!";
+            }
+
             return RedirectToAction(nameof(Index));
         }
 
@@ -135,7 +199,7 @@ namespace Nhakhoa.Controllers
             if (appt == null) return NotFound();
             if (appt.Status == "Đang khám" || appt.Status == "Đã khám xong")
             {
-                TempData["Error"] = "Không thể chỉnh sửa lịch hẹn đang hoặc đã hoàn thành khám.";
+                TempData["Error"] = "Từ chối dời lịch; bệnh nhân đang trong ca khám hoặc đã khám xong; yêu cầu bác sĩ đóng ca trước.";
                 return RedirectToAction(nameof(Index));
             }
             await LoadViewBagDropdowns();
@@ -150,7 +214,7 @@ namespace Nhakhoa.Controllers
             if (appt == null) return NotFound();
             if (appt.Status == "Đang khám" || appt.Status == "Đã khám xong")
             {
-                TempData["Error"] = "Không thể chỉnh sửa lịch hẹn đang hoặc đã hoàn thành khám.";
+                TempData["Error"] = "Từ chối dời lịch; bệnh nhân đang trong ca khám hoặc đã khám xong; yêu cầu bác sĩ đóng ca trước.";
                 return RedirectToAction(nameof(Index));
             }
 
@@ -192,9 +256,52 @@ namespace Nhakhoa.Controllers
             appt.Session = model.Session;
             appt.Notes = model.Notes;
             appt.UpdatedAt = DateTime.Now;
+            appt.ConcurrencyStamp = Guid.NewGuid();
 
-            await _db.SaveChangesAsync();
-            TempData["Success"] = "Đã cập nhật lịch hẹn!";
+            try
+            {
+                await _db.SaveChangesAsync();
+
+                // Audit Log
+                var log = new ActivityLog
+                {
+                    Username = User.Identity?.Name ?? "Unknown",
+                    Action = "Dời lịch hẹn",
+                    Details = $"Dời lịch hẹn (ID: {id}) sang ngày {model.AppointmentDate:dd/MM/yyyy} {model.TimeSlot} với bác sĩ ID {model.StaffProfileId}",
+                    Timestamp = DateTime.Now
+                };
+                _db.ActivityLogs.Add(log);
+                await _db.SaveChangesAsync();
+            }
+            catch (Exception)
+            {
+                ModelState.AddModelError("TimeSlot", "Khung giờ này đã được đặt bởi một người dùng khác ngay trước đó. Vui lòng chọn khung giờ khác.");
+                await LoadViewBagDropdowns();
+                return View(model);
+            }
+
+            // Simulate notifications
+            bool notificationSuccess = SimulateNotificationSend(model);
+            if (!notificationSuccess)
+            {
+                var errorLog = new ActivityLog
+                {
+                    Username = "System",
+                    Action = "Lỗi gửi thông báo",
+                    Details = $"Không gửi được thông báo dời lịch tự động cho bệnh nhân ID {appt.PatientId} cho lịch hẹn ID {id}",
+                    Timestamp = DateTime.Now
+                };
+                _db.ActivityLogs.Add(errorLog);
+                await _db.SaveChangesAsync();
+
+                var patient = await _db.Patients.FindAsync(appt.PatientId);
+                TempData["Warning"] = $"Dời lịch thành công! Tuy nhiên, hệ thống không gửi được thông báo tự động (SMS/Email). Vui lòng liên hệ trực tiếp bệnh nhân qua SĐT: {patient?.PhoneNumber}.";
+            }
+            else
+            {
+                TempData["Success"] = "Đã dời lịch hẹn thành công!";
+            }
+
             return RedirectToAction(nameof(Index));
         }
 
@@ -207,13 +314,26 @@ namespace Nhakhoa.Controllers
 
             if (appt.Status == "Đang khám" || appt.Status == "Đã khám xong")
             {
-                TempData["Error"] = "Không thể hủy lịch hẹn đang hoặc đã hoàn thành khám.";
+                TempData["Error"] = "Từ chối hủy lịch; bệnh nhân đang trong ca khám hoặc đã khám xong; yêu cầu bác sĩ đóng ca trước.";
                 return RedirectToAction(nameof(Index));
             }
 
             appt.Status = "Đã hủy";
             appt.UpdatedAt = DateTime.Now;
+            appt.ConcurrencyStamp = Guid.NewGuid();
             await _db.SaveChangesAsync();
+
+            // Audit Log
+            var log = new ActivityLog
+            {
+                Username = User.Identity?.Name ?? "Unknown",
+                Action = "Hủy lịch hẹn",
+                Details = $"Hủy lịch hẹn (ID: {id}) của bệnh nhân ID {appt.PatientId}",
+                Timestamp = DateTime.Now
+            };
+            _db.ActivityLogs.Add(log);
+            await _db.SaveChangesAsync();
+
             TempData["Success"] = "Đã hủy lịch hẹn.";
             return RedirectToAction(nameof(Index));
         }
@@ -222,9 +342,20 @@ namespace Nhakhoa.Controllers
         [HttpPost]
         public async Task<IActionResult> UpdateStatus(int id, string status)
         {
-            var appt = await _db.Appointments.FindAsync(id);
+            var appt = await _db.Appointments
+                .Include(a => a.Patient)
+                .Include(a => a.StaffProfile).ThenInclude(sp => sp!.User)
+                .Include(a => a.Clinic)
+                .FirstOrDefaultAsync(a => a.Id == id);
             if (appt == null) return NotFound();
 
+            // EX-3.3.2: Concurrent calling check
+            if (status == "Đang khám" && appt.Status == "Đang khám")
+            {
+                return BadRequest(new { error = "Bệnh nhân này đã được gọi vào khám bởi một lễ tân khác." });
+            }
+
+            string oldStatus = appt.Status;
             appt.Status = status;
             appt.UpdatedAt = DateTime.Now;
 
@@ -232,6 +363,28 @@ namespace Nhakhoa.Controllers
             if (status == "Đã khám xong") appt.CompletedAt = DateTime.Now;
 
             await _db.SaveChangesAsync();
+
+            // Activity Log
+            var log = new ActivityLog
+            {
+                Username = User.Identity?.Name ?? "System",
+                Action = "Cập nhật hàng chờ",
+                Details = $"Cập nhật trạng thái lịch hẹn ID {id} từ '{oldStatus}' thành '{status}'. Bệnh nhân: {appt.Patient?.FullName}.",
+                Timestamp = DateTime.Now
+            };
+            _db.ActivityLogs.Add(log);
+            await _db.SaveChangesAsync();
+
+            // Broadcast updates
+            await _hubContext.Clients.All.SendAsync("QueueUpdated");
+
+            if (status == "Đang khám")
+            {
+                var docName = appt.StaffProfile?.User?.FullName ?? "Nha sĩ";
+                var clinicName = appt.Clinic?.Name ?? "Phòng khám";
+                await _hubContext.Clients.All.SendAsync("PatientCalled", appt.Id, appt.Patient?.FullName, docName, clinicName);
+            }
+
             return Ok(new { success = true, status });
         }
 
@@ -246,6 +399,7 @@ namespace Nhakhoa.Controllers
                 .Where(a => a.AppointmentDate.Date == targetDate && a.Status != "Đã hủy")
                 .OrderBy(a => a.IsWalkIn)
                 .ThenBy(a => a.TimeSlot)
+                .ThenBy(a => a.QueueNumber)
                 .ToListAsync();
 
             ViewBag.TargetDate = targetDate;
@@ -261,7 +415,7 @@ namespace Nhakhoa.Controllers
         [HttpPost]
         public async Task<IActionResult> WalkIn(int patientId, int staffProfileId, int? clinicId, string session)
         {
-            // Validate doctor is on shift
+            // EX-3.3.5: Check active doctor shift
             var hasShift = await _db.Shifts.AnyAsync(s =>
                 s.StaffProfileId == staffProfileId &&
                 s.ShiftDate.Date == DateTime.Today &&
@@ -269,7 +423,7 @@ namespace Nhakhoa.Controllers
                 s.IsActive);
 
             if (!hasShift)
-                return BadRequest(new { error = "Bác sĩ không có ca trực hôm nay trong buổi đã chọn." });
+                return BadRequest(new { error = "Không có bác sĩ trực ca này. Vui lòng gợi ý bệnh nhân đặt lịch hẹn ngày khác." });
 
             var patient = await _db.Patients.FindAsync(patientId);
             if (patient == null)
@@ -293,11 +447,27 @@ namespace Nhakhoa.Controllers
                 QueueNumber = queueCount + 1,
                 CreatedAt = DateTime.Now,
                 UpdatedAt = DateTime.Now,
-                CreatedBy = User.Identity?.Name
+                CreatedBy = User.Identity?.Name,
+                ConcurrencyStamp = Guid.NewGuid()
             };
 
             _db.Appointments.Add(walkIn);
             await _db.SaveChangesAsync();
+
+            // Activity Log
+            var log = new ActivityLog
+            {
+                Username = User.Identity?.Name ?? "System",
+                Action = "Tiếp nhận Walk-in",
+                Details = $"Tiếp nhận bệnh nhân vãng lai: {patient.FullName} vào ca {session} của bác sĩ ID {staffProfileId}. Số thứ tự: #{walkIn.QueueNumber}.",
+                Timestamp = DateTime.Now
+            };
+            _db.ActivityLogs.Add(log);
+            await _db.SaveChangesAsync();
+
+            // Broadcast updates
+            await _hubContext.Clients.All.SendAsync("QueueUpdated");
+
             return Ok(new { success = true, queueNumber = walkIn.QueueNumber });
         }
 

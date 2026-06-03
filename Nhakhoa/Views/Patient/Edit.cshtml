@@ -1,0 +1,86 @@
+@model Nhakhoa.Models.Patient
+@{
+    Layout = "_AdminLayout";
+    ViewData["Title"] = "Chỉnh sửa thông tin bệnh nhân";
+}
+
+<div class="mb-4">
+    <a href="/Patient/Details/@Model.Id" class="text-decoration-none text-muted small d-inline-flex align-items-center gap-1">
+        <i class="bi bi-arrow-left"></i> Quay lại chi tiết hồ sơ
+    </a>
+    <h4 class="fw-bold mt-2" style="color:#0b1f35">Chỉnh sửa hồ sơ bệnh nhân</h4>
+    <div class="text-muted small">Cập nhật thông tin hành chính của bệnh nhân @Model.FullName (@Model.PatientCode)</div>
+</div>
+
+<div class="card border-0 shadow-sm rounded-4" style="max-width: 800px;">
+    <div class="card-body p-4">
+        <form asp-controller="Patient" asp-action="Edit" method="post">
+            @Html.AntiForgeryToken()
+            <input type="hidden" asp-for="Id" />
+            <input type="hidden" asp-for="PatientCode" />
+
+            @if (!ViewData.ModelState.IsValid)
+            {
+                <div class="alert alert-danger border-0 rounded-4 py-2 px-3 mb-4">
+                    <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                    Vui lòng sửa các lỗi bên dưới.
+                </div>
+            }
+
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label fw-semibold text-secondary small">Họ và tên <span class="text-danger">*</span></label>
+                    <input type="text" asp-for="FullName" class="form-control rounded-3" required />
+                    <span asp-validation-for="FullName" class="text-danger small"></span>
+                </div>
+
+                <div class="col-md-6">
+                    <label class="form-label fw-semibold text-secondary small">Số điện thoại <span class="text-danger">*</span></label>
+                    <input type="tel" asp-for="PhoneNumber" class="form-control rounded-3" required />
+                    <span asp-validation-for="PhoneNumber" class="text-danger small"></span>
+                </div>
+
+                <div class="col-md-6">
+                    <label class="form-label fw-semibold text-secondary small">Ngày sinh</label>
+                    <input type="date" asp-for="DateOfBirth" class="form-control rounded-3" />
+                    <span asp-validation-for="DateOfBirth" class="text-danger small"></span>
+                </div>
+
+                <div class="col-md-6">
+                    <label class="form-label fw-semibold text-secondary small">Giới tính</label>
+                    <select asp-for="Gender" class="form-select rounded-3">
+                        <option value="Nam">Nam</option>
+                        <option value="Nữ">Nữ</option>
+                        <option value="Khác">Khác</option>
+                    </select>
+                    <span asp-validation-for="Gender" class="text-danger small"></span>
+                </div>
+
+                <div class="col-md-12">
+                    <label class="form-label fw-semibold text-secondary small">Địa chỉ Email</label>
+                    <input type="email" asp-for="Email" class="form-control rounded-3" />
+                    <span asp-validation-for="Email" class="text-danger small"></span>
+                </div>
+
+                <div class="col-md-12">
+                    <label class="form-label fw-semibold text-secondary small">Địa chỉ thường trú</label>
+                    <input type="text" asp-for="Address" class="form-control rounded-3" />
+                    <span asp-validation-for="Address" class="text-danger small"></span>
+                </div>
+
+                <div class="col-md-12">
+                    <label class="form-label fw-semibold text-danger small"><i class="bi bi-exclamation-triangle"></i> Tiền sử dị ứng (nếu có)</label>
+                    <textarea asp-for="AllergyHistory" rows="3" class="form-control rounded-3"></textarea>
+                    <span asp-validation-for="AllergyHistory" class="text-danger small"></span>
+                </div>
+            </div>
+
+            <div class="d-flex justify-content-end gap-2 mt-4 pt-3 border-top">
+                <a href="/Patient/Details/@Model.Id" class="btn btn-outline-secondary rounded-pill px-4">Hủy</a>
+                <button type="submit" class="btn btn-primary rounded-pill px-4" style="background:#1b75d0; border-color:#1b75d0;">
+                    Lưu thay đổi
+                </button>
+            </div>
+        </form>
+    </div>
+</div>

@@ -1,0 +1,179 @@
+@model Nhakhoa.Models.Patient
+@{
+    Layout = "_AdminLayout";
+    ViewData["Title"] = "Hồ sơ bệnh nhân - " + Model.FullName;
+}
+
+<div class="d-flex align-items-center justify-content-between mb-4">
+    <div>
+        <a href="/Patient" class="text-decoration-none text-muted small d-inline-flex align-items-center gap-1">
+            <i class="bi bi-arrow-left"></i> Quay lại danh sách
+        </a>
+        <h4 class="fw-bold mt-2 mb-0" style="color:#0b1f35">Chi tiết hồ sơ hành chính</h4>
+    </div>
+    <div class="d-flex gap-2">
+        <a href="/Patient/Edit/@Model.Id" class="btn btn-outline-primary rounded-pill px-3">
+            <i class="bi bi-pencil-square"></i> Chỉnh sửa hồ sơ
+        </a>
+        <a href="/Appointment/Create?patientId=@Model.Id" class="btn btn-primary rounded-pill px-3" style="background:#1b75d0; border-color:#1b75d0;">
+            <i class="bi bi-calendar-plus"></i> Đặt lịch hẹn mới
+        </a>
+    </div>
+</div>
+
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success border-0 rounded-4 py-2 px-3 mb-3"><i class="bi bi-check-circle me-2"></i>@TempData["Success"]</div>
+}
+@if (TempData["Warning"] != null)
+{
+    <div class="alert alert-warning border-0 rounded-4 py-2 px-3 mb-3"><i class="bi bi-exclamation-circle me-2"></i>@TempData["Warning"]</div>
+}
+
+<div class="row g-4">
+    <!-- Thống kê chung -->
+    <div class="col-lg-4">
+        <div class="card border-0 shadow-sm rounded-4 mb-4">
+            <div class="card-body p-4">
+                <div class="text-center pb-3 border-bottom mb-3">
+                    <div class="bg-primary-subtle text-primary rounded-circle d-grid place-items-center mx-auto mb-3" style="width: 70px; height: 70px;">
+                        <span class="fs-3 fw-bold">@(Model.FullName.Substring(0, 1).ToUpper())</span>
+                    </div>
+                    <h5 class="fw-bold text-dark mb-1">@Model.FullName</h5>
+                    <span class="badge bg-primary-subtle text-primary rounded-pill px-3">@Model.PatientCode</span>
+                </div>
+
+                <div class="mb-3">
+                    <div class="text-muted small">Số điện thoại</div>
+                    <div class="fw-semibold text-dark">@Model.PhoneNumber</div>
+                </div>
+
+                <div class="mb-3">
+                    <div class="text-muted small">Ngày sinh / Giới tính</div>
+                    <div class="fw-semibold text-dark">
+                        @(Model.DateOfBirth.HasValue ? Model.DateOfBirth.Value.ToString("dd/MM/yyyy") : "—") / @(Model.Gender ?? "—")
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <div class="text-muted small">Địa chỉ Email</div>
+                    <div class="fw-semibold text-dark text-truncate">@(Model.Email ?? "—")</div>
+                </div>
+
+                <div class="mb-3">
+                    <div class="text-muted small">Địa chỉ liên hệ</div>
+                    <div class="fw-semibold text-dark">@(Model.Address ?? "—")</div>
+                </div>
+
+                <div class="mb-4">
+                    <div class="text-muted small mb-1">Tiền sử dị ứng</div>
+                    @if (!string.IsNullOrEmpty(Model.AllergyHistory))
+                    {
+                        <div class="alert alert-danger border-0 rounded-3 p-2 mb-0 d-flex align-items-center gap-2 small">
+                            <i class="bi bi-exclamation-triangle-fill"></i>
+                            <strong>@Model.AllergyHistory</strong>
+                        </div>
+                    }
+                    else
+                    {
+                        <span class="text-muted small">Không ghi nhận dị ứng đặc biệt</span>
+                    }
+                </div>
+
+                <div class="pt-3 border-top d-grid gap-2">
+                    <a href="/Patient/ClinicalRecord/@Model.Id" class="btn btn-outline-danger btn-sm rounded-pill fw-semibold">
+                        <i class="bi bi-file-earmark-medical"></i> Xem thông tin lâm sàng (EMR)
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Lịch sử lịch hẹn -->
+    <div class="col-lg-8">
+        <div class="card border-0 shadow-sm rounded-4">
+            <div class="card-header bg-white border-0 pt-4 px-4 pb-0">
+                <h5 class="fw-bold text-dark mb-0"><i class="bi bi-calendar-event text-primary me-2"></i>Lịch sử & Lịch hẹn sắp tới</h5>
+            </div>
+            <div class="card-body p-4">
+                @if (!Model.Appointments.Any())
+                {
+                    <div class="text-center py-5 text-muted">
+                        <i class="bi bi-calendar-x display-4 opacity-25 d-block mb-3"></i>
+                        Bệnh nhân chưa có lịch hẹn nào.
+                        <div class="mt-2">
+                            <a href="/Appointment/Create?patientId=@Model.Id" class="btn btn-primary btn-sm rounded-pill px-3">Đặt lịch đầu tiên</a>
+                        </div>
+                    </div>
+                }
+                else
+                {
+                    <div class="table-responsive">
+                        <table class="table align-middle">
+                            <thead class="table-light small">
+                                <tr>
+                                    <th class="py-2">Ngày hẹn</th>
+                                    <th class="py-2">Bác sĩ</th>
+                                    <th class="py-2">Khung giờ / Ca</th>
+                                    <th class="py-2">Trạng thái</th>
+                                    <th class="py-2 text-end">Chi tiết</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var a in Model.Appointments.OrderByDescending(x => x.AppointmentDate).ThenByDescending(x => x.TimeSlot))
+                                {
+                                    <tr>
+                                        <td>
+                                            <span class="fw-semibold text-dark">@a.AppointmentDate.ToString("dd/MM/yyyy")</span>
+                                        </td>
+                                        <td>
+                                            <div>@a.StaffProfile?.User?.FullName</div>
+                                            <small class="text-muted text-xs">@a.StaffProfile?.PositionTitle</small>
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-light text-dark">@a.TimeSlot</span>
+                                            <span class="badge bg-secondary-subtle text-secondary">@a.Session</span>
+                                        </td>
+                                        <td>
+                                            @switch (a.Status)
+                                            {
+                                                case "Đã xác nhận":
+                                                    <span class="badge bg-success-subtle text-success rounded-pill px-2">Đã xác nhận</span>
+                                                    break;
+                                                case "Đang chờ":
+                                                    <span class="badge bg-warning-subtle text-warning rounded-pill px-2">Đang chờ</span>
+                                                    break;
+                                                case "Đang khám":
+                                                    <span class="badge bg-primary-subtle text-primary rounded-pill px-2">Đang khám</span>
+                                                    break;
+                                                case "Đã khám xong":
+                                                    <span class="badge bg-secondary-subtle text-secondary rounded-pill px-2">Đã khám xong</span>
+                                                    break;
+                                                case "Đã hủy":
+                                                    <span class="badge bg-danger-subtle text-danger rounded-pill px-2">Đã hủy</span>
+                                                    break;
+                                                default:
+                                                    <span class="badge bg-light text-dark rounded-pill px-2">@a.Status</span>
+                                                    break;
+                                            }
+                                        </td>
+                                        <td class="text-end">
+                                            @if (a.Status == "Đã xác nhận" || a.Status == "Đang chờ")
+                                            {
+                                                <a href="/Appointment/Edit/@a.Id" class="btn btn-link text-primary p-0 btn-sm text-decoration-none fw-semibold">Dời lịch</a>
+                                            }
+                                            else
+                                            {
+                                                <span class="text-muted small">—</span>
+                                            }
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>

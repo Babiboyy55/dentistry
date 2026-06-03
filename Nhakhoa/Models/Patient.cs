@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Nhakhoa.Models
 {
@@ -37,6 +38,15 @@ namespace Nhakhoa.Models
 
         public DateTime UpdatedAt { get; set; } = DateTime.Now;
 
+        public int ToothChartVersion { get; set; } = 1;
+
+        public int? PrimaryDoctorId { get; set; }
+        [ForeignKey("PrimaryDoctorId")]
+        public StaffProfile? PrimaryDoctor { get; set; }
+
         public ICollection<Appointment> Appointments { get; set; } = new List<Appointment>();
+
+        public ICollection<PatientToothRecord> ToothRecords { get; set; } = new List<PatientToothRecord>();
     }
 }
+

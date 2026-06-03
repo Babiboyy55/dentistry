@@ -18,14 +18,13 @@
 
 <div class="d-flex align-items-center justify-content-between gap-3 mb-4">
     <div>
-        <h4 class="fw-bold mb-0" style="color:#0b1f35"><i class="bi bi-calendar-check text-primary me-2"></i>Lịch hẹn</h4>
-        <div class="text-muted small mt-1">Quản lý toàn bộ lịch hẹn khám — @total lịch hẹn</div>
+        <h4 class="fw-bold mb-0" style="color:#0b1f35">
+            <i class="bi bi-calendar-check text-primary me-2"></i>Quản lý lịch hẹn khám
+        </h4>
+        <div class="text-muted small mt-1">Hệ thống lên lịch hẹn và phân phối ca trực của phòng khám.</div>
     </div>
     <div class="d-flex gap-2">
-        <a href="/Appointment/Queue" class="btn btn-outline-warning btn-sm rounded-pill px-3 fw-semibold d-flex align-items-center gap-1">
-            <i class="bi bi-clock-history"></i> Hàng chờ hôm nay
-        </a>
-        <a href="/Appointment/Create" class="btn btn-primary btn-sm rounded-pill px-3 fw-semibold d-flex align-items-center gap-1" style="background:#1b75d0; border-color:#1b75d0;">
+        <a href="/Appointment/Create" class="btn btn-primary rounded-pill px-4 fw-semibold d-flex align-items-center gap-2" style="background:#1b75d0; border-color:#1b75d0;">
             <i class="bi bi-calendar-plus-fill"></i> Đặt lịch mới
         </a>
     </div>
@@ -35,36 +34,112 @@
 {
     <div class="alert alert-success border-0 rounded-4 py-2 px-3 mb-3"><i class="bi bi-check-circle me-2"></i>@TempData["Success"]</div>
 }
+@if (TempData["Warning"] != null)
+{
+    <div class="alert alert-warning border-0 rounded-4 py-2 px-3 mb-3"><i class="bi bi-exclamation-circle me-2"></i>@TempData["Warning"]</div>
+}
 @if (TempData["Error"] != null)
 {
     <div class="alert alert-danger border-0 rounded-4 py-2 px-3 mb-3"><i class="bi bi-x-circle me-2"></i>@TempData["Error"]</div>
 }
 
-<!-- Filters -->
-<form method="get" class="d-flex flex-wrap gap-2 mb-4 align-items-center">
-    <div class="input-group" style="max-width:300px;">
-        <span class="input-group-text bg-white border-end-0 rounded-start-pill"><i class="bi bi-search text-muted"></i></span>
-        <input type="text" name="search" value="@ViewBag.Search" class="form-control border-start-0 rounded-end-pill" placeholder="Tên, SĐT hoặc mã BN..." />
+<!-- Statistics Cards -->
+<div class="row g-3 mb-4">
+    <div class="col-6 col-lg-3">
+        <div class="card border-0 shadow-sm rounded-4 h-100 bg-white">
+            <div class="card-body p-3 d-flex align-items-center gap-3">
+                <div class="bg-primary-subtle text-primary rounded-4 d-grid place-items-center" style="width: 48px; height: 48px; flex-shrink: 0;">
+                    <i class="bi bi-calendar2-check-fill fs-5"></i>
+                </div>
+                <div>
+                    <div class="text-muted small text-uppercase fw-semibold" style="font-size:0.75rem;">Lịch xác nhận</div>
+                    <h4 class="fw-bold mb-0 text-dark">@ViewBag.StatConfirmed</h4>
+                </div>
+            </div>
+        </div>
     </div>
-    <input type="date" name="date" value="@ViewBag.Date" class="form-control rounded-pill" style="width:175px;" />
-    <select name="status" class="form-select rounded-pill" style="width:180px;">
-        <option value="">Tất cả trạng thái</option>
-        @foreach (var s in new[] { "Đã xác nhận", "Đang chờ", "Đang khám", "Đã khám xong", "Đã hủy", "Vắng mặt" })
-        {
-            <option value="@s" selected="@(ViewBag.Status == s)">@s</option>
-        }
-    </select>
-    <button type="submit" class="btn btn-outline-primary rounded-pill px-4">Lọc</button>
-    <a href="/Appointment" class="btn btn-outline-secondary rounded-pill px-3">Xóa lọc</a>
-</form>
+    <div class="col-6 col-lg-3">
+        <div class="card border-0 shadow-sm rounded-4 h-100 bg-white">
+            <div class="card-body p-3 d-flex align-items-center gap-3">
+                <div class="bg-info-subtle text-info rounded-4 d-grid place-items-center" style="width: 48px; height: 48px; flex-shrink: 0;">
+                    <i class="bi bi-person-workspace fs-5"></i>
+                </div>
+                <div>
+                    <div class="text-muted small text-uppercase fw-semibold" style="font-size:0.75rem;">Đang khám</div>
+                    <h4 class="fw-bold mb-0 text-dark">@ViewBag.StatInSession</h4>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-lg-3">
+        <div class="card border-0 shadow-sm rounded-4 h-100 bg-white">
+            <div class="card-body p-3 d-flex align-items-center gap-3">
+                <div class="bg-success-subtle text-success rounded-4 d-grid place-items-center" style="width: 48px; height: 48px; flex-shrink: 0;">
+                    <i class="bi bi-check-circle-fill fs-5"></i>
+                </div>
+                <div>
+                    <div class="text-muted small text-uppercase fw-semibold" style="font-size:0.75rem;">Khám xong</div>
+                    <h4 class="fw-bold mb-0 text-dark">@ViewBag.StatCompleted</h4>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-lg-3">
+        <div class="card border-0 shadow-sm rounded-4 h-100 bg-white">
+            <div class="card-body p-3 d-flex align-items-center gap-3">
+                <div class="bg-danger-subtle text-danger rounded-4 d-grid place-items-center" style="width: 48px; height: 48px; flex-shrink: 0;">
+                    <i class="bi bi-x-circle-fill fs-5"></i>
+                </div>
+                <div>
+                    <div class="text-muted small text-uppercase fw-semibold" style="font-size:0.75rem;">Lịch hủy</div>
+                    <h4 class="fw-bold mb-0 text-dark">@ViewBag.StatCancelled</h4>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 
+<!-- Filters -->
+<div class="card border-0 shadow-sm rounded-4 mb-4">
+    <div class="card-body p-3">
+        <form method="get" class="row g-3 align-items-center">
+            <div class="col-md-3">
+                <div class="input-group">
+                    <span class="input-group-text bg-light border-end-0 rounded-start-pill"><i class="bi bi-search text-muted"></i></span>
+                    <input type="text" name="search" value="@ViewBag.Search" class="form-control bg-light border-start-0 rounded-end-pill" placeholder="Tên, SĐT hoặc mã BN..." />
+                </div>
+            </div>
+            
+            <div class="col-md-3">
+                <input type="date" name="date" value="@ViewBag.Date" class="form-control rounded-pill" />
+            </div>
+
+            <div class="col-md-3">
+                <select name="status" class="form-select rounded-pill">
+                    <option value="">Tất cả trạng thái</option>
+                    @foreach (var s in new[] { "Đã xác nhận", "Đang chờ", "Đang khám", "Đã khám xong", "Đã hủy", "Vắng mặt" })
+                    {
+                        <!option value="@s" @(ViewBag.Status == s ? "selected" : "")>@s</!option>
+                    }
+                </select>
+            </div>
+
+            <div class="col-md-3 d-flex gap-2 justify-content-end">
+                <button type="submit" class="btn btn-primary rounded-pill px-4" style="background:#1b75d0; border-color:#1b75d0;">Lọc</button>
+                <a href="/Appointment" class="btn btn-outline-secondary rounded-pill px-3">Xóa lọc</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Appointment List Table -->
 <div class="card border-0 shadow-sm rounded-4">
     <div class="card-body p-0">
         @if (!Model.Any())
         {
             <div class="text-center py-5 text-muted">
                 <i class="bi bi-calendar-x display-4 opacity-25 d-block mb-3"></i>
-                Không tìm thấy lịch hẹn nào.
+                Không tìm thấy lịch hẹn nào khớp với bộ lọc.
             </div>
         }
         else
@@ -74,10 +149,10 @@
                     <thead style="background:#f8faff; border-bottom:2px solid #e8edf5;">
                         <tr>
                             <th class="px-4 py-3 text-muted fw-semibold">Bệnh nhân</th>
-                            <th class="py-3 text-muted fw-semibold">Bác sĩ</th>
+                            <th class="py-3 text-muted fw-semibold">Bác sĩ khám</th>
                             <th class="py-3 text-muted fw-semibold">Phòng / Chuyên khoa</th>
                             <th class="py-3 text-muted fw-semibold text-center">Ngày hẹn</th>
-                            <th class="py-3 text-muted fw-semibold text-center">Giờ / Buổi</th>
+                            <th class="py-3 text-muted fw-semibold text-center">Khung giờ</th>
                             <th class="py-3 text-muted fw-semibold text-center">Trạng thái</th>
                             <th class="py-3 text-muted fw-semibold pe-4 text-center">Hành động</th>
                         </tr>
@@ -86,46 +161,51 @@
                         @foreach (var appt in Model)
                         {
                             <tr class="border-bottom">
-                                <td class="px-4">
+                                <td class="px-4 py-3">
                                     <div class="fw-semibold text-dark">@appt.Patient?.FullName</div>
-                                    <div class="text-muted small">@appt.Patient?.PhoneNumber · @appt.Patient?.PatientCode</div>
+                                    <div class="text-muted small">@appt.Patient?.PhoneNumber · <span class="badge bg-light text-dark">@appt.Patient?.PatientCode</span></div>
                                 </td>
                                 <td>
-                                    <div class="fw-semibold small text-dark">@(appt.StaffProfile?.User?.FullName ?? "—")</div>
+                                    <div class="fw-semibold text-dark">@(appt.StaffProfile?.User?.FullName ?? "—")</div>
+                                    <div class="text-muted small">@(appt.StaffProfile?.PositionTitle ?? "Nha sĩ")</div>
                                 </td>
                                 <td>
-                                    <div class="small text-dark">@(appt.Clinic?.Name ?? "—")</div>
-                                    <div class="text-muted" style="font-size:0.75rem;">@(appt.Specialty?.Name ?? "—")</div>
+                                    <div class="text-dark fw-semibold">@(appt.Clinic?.Name ?? "—")</div>
+                                    <div class="text-muted small">@(appt.Specialty?.Name ?? "—")</div>
                                 </td>
-                                <td class="text-center fw-semibold">@appt.AppointmentDate.ToString("dd/MM/yyyy")</td>
+                                <td class="text-center fw-semibold text-dark">@appt.AppointmentDate.ToString("dd/MM/yyyy")</td>
                                 <td class="text-center">
-                                    <span class="badge bg-light text-dark border rounded-pill px-2">@appt.TimeSlot</span>
-                                    <div class="text-muted" style="font-size:0.72rem;">@appt.Session</div>
+                                    <span class="badge bg-light text-primary border border-primary-subtle rounded-pill px-3">@appt.TimeSlot</span>
+                                    <div class="text-muted small mt-1">@appt.Session</div>
                                 </td>
                                 <td class="text-center">
                                     @{
                                         var cls = statusColors.GetValueOrDefault(appt.Status, "bg-light text-dark");
                                     }
-                                    <span class="badge @cls rounded-pill px-3 py-1">@appt.Status</span>
+                                    <span class="badge @cls rounded-pill px-3 py-1 fw-semibold">@appt.Status</span>
                                     @if (appt.IsWalkIn)
                                     {
-                                        <div><span class="badge bg-warning-subtle text-warning rounded-pill px-2 mt-1" style="font-size:0.7rem;">Walk-in</span></div>
+                                        <div><span class="badge bg-warning-subtle text-warning rounded-pill px-2 mt-1" style="font-size:0.7rem;">Vãng lai</span></div>
                                     }
                                 </td>
                                 <td class="text-center pe-4">
-                                    <div class="d-flex gap-1 justify-content-center">
-                                        @if (appt.Status != "Đang khám" && appt.Status != "Đã khám xong" && appt.Status != "Đã hủy")
+                                    <div class="d-flex gap-2 justify-content-center">
+                                        @if (appt.Status == "Đã xác nhận" || appt.Status == "Đang chờ")
                                         {
-                                            <a href="/Appointment/Edit/@appt.Id" class="btn btn-outline-secondary btn-sm rounded-pill" title="Dời lịch">
-                                                <i class="bi bi-pencil"></i>
+                                            <a href="/Appointment/Edit/@appt.Id" class="btn btn-outline-primary btn-sm rounded-pill px-3" title="Dời lịch">
+                                                <i class="bi bi-clock-history"></i> Dời lịch
                                             </a>
                                             <form action="/Appointment/Cancel/@appt.Id" method="post" class="d-inline"
-                                                  onsubmit="return confirm('Xác nhận hủy lịch hẹn này?')">
+                                                  onsubmit="return confirm('Bạn có chắc chắn muốn hủy lịch hẹn này?')">
                                                 @Html.AntiForgeryToken()
-                                                <button class="btn btn-outline-danger btn-sm rounded-pill" title="Hủy lịch">
-                                                    <i class="bi bi-x-circle"></i>
+                                                <button class="btn btn-outline-danger btn-sm rounded-pill px-3" title="Hủy lịch">
+                                                    <i class="bi bi-trash"></i> Hủy
                                                 </button>
                                             </form>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted small">—</span>
                                         }
                                     </div>
                                 </td>

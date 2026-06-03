@@ -1,10 +1,13 @@
 using Microsoft.EntityFrameworkCore;
 using Nhakhoa.Data;
+using Nhakhoa.Hubs;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddControllersWithViews();
+builder.Services.AddSignalR();
+
 
 builder.Services.AddDbContext<Nhakhoa.Data.ApplicationDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"))
@@ -38,6 +41,8 @@ app.UseMiddleware<Nhakhoa.Middleware.ForcePasswordChangeMiddleware>();
 
 app.MapStaticAssets();
 
+app.MapHub<QueueHub>("/queueHub");
+
 app.MapControllerRoute(
     name: "root",
     pattern: "",
@@ -47,6 +52,5 @@ app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Home}/{action=Index}/{id?}")
     .WithStaticAssets();
-
 
 app.Run();

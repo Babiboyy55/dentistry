@@ -26,6 +26,7 @@ namespace Nhakhoa.Data
         public DbSet<HolidayDate> HolidayDates { get; set; }
         public DbSet<Appointment> Appointments { get; set; }
         public DbSet<ShiftSetting> ShiftSettings { get; set; }
+        public DbSet<PatientToothRecord> PatientToothRecords { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -122,6 +123,37 @@ namespace Nhakhoa.Data
                 .WithMany()
                 .HasForeignKey(a => a.SpecialtyId)
                 .OnDelete(DeleteBehavior.SetNull);
+
+            modelBuilder.Entity<Appointment>()
+                .HasIndex(a => new { a.StaffProfileId, a.AppointmentDate, a.TimeSlot })
+                .IsUnique()
+                .HasFilter("[Status] != 'Đã hủy'");
+
+            // Patient - PrimaryDoctor relationship
+            modelBuilder.Entity<Patient>()
+                .HasOne(p => p.PrimaryDoctor)
+                .WithMany()
+                .HasForeignKey(p => p.PrimaryDoctorId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            // PatientToothRecord relationships
+            modelBuilder.Entity<PatientToothRecord>()
+                .HasOne(tr => tr.Patient)
+                .WithMany(p => p.ToothRecords)
+                .HasForeignKey(tr => tr.PatientId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<PatientToothRecord>()
+                .HasOne(tr => tr.Doctor)
+                .WithMany()
+                .HasForeignKey(tr => tr.DoctorId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<PatientToothRecord>()
+                .HasOne(tr => tr.Appointment)
+                .WithMany()
+                .HasForeignKey(tr => tr.AppointmentId)
+                .OnDelete(DeleteBehavior.Restrict);
 
             // Seed Users (Admin & 4 Doctors)
             modelBuilder.Entity<User>().HasData(

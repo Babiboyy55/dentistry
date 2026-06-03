@@ -1,0 +1,1103 @@
+@model Nhakhoa.Models.Patient
+@{
+    Layout = "_AdminLayout";
+    ViewData["Title"] = "Hồ sơ lâm sàng - " + Model.FullName;
+
+    // Phân quyền: Chỉ cho phép Admin hoặc Bác sĩ điều trị chính được chỉnh sửa (EX4.3-01)
+    bool isDoctor = User.IsInRole("Doctor");
+    bool isAdmin = User.IsInRole("Admin");
+    bool canEdit = isAdmin || (isDoctor && (Model.PrimaryDoctorId == null || Model.PrimaryDoctorId == ViewBag.CurrentDoctor?.Id));
+}
+
+<style>
+    /* Premium styling for interactive tooth chart */
+    :root {
+        --normal-color: #22c55e;
+        --caries-color: #eab308;
+        --filling-color: #3b82f6;
+        --rct-color: #14b8a6;
+        --extraction-color: #ef4444;
+        --implant-color: #6366f1;
+        --crown-color: #a855f7;
+        --bridge-color: #f97316;
+    }
+
+    .tooth-container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        width: 50px;
+        margin: 5px;
+        position: relative;
+    }
+
+    .tooth-label {
+        font-size: 0.75rem;
+        font-weight: 700;
+        color: #64748b;
+        margin-top: 4px;
+        text-align: center;
+    }
+
+    .tooth-svg-wrapper {
+        position: relative;
+        width: 44px;
+        height: 52px;
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .tooth-svg-wrapper:hover {
+        transform: translateY(-4px) scale(1.08);
+        filter: drop-shadow(0 10px 8px rgba(0, 0, 0, 0.08));
+    }
+
+    .tooth-path {
+        fill: #f1f5f9;
+        stroke: #cbd5e1;
+        stroke-width: 2.5;
+        transition: fill 0.3s ease, stroke 0.3s ease;
+    }
+
+    /* Status coloring */
+    .tooth-path.status-normal { fill: var(--normal-color); stroke: #16a34a; }
+    .tooth-path.status-caries { fill: var(--caries-color); stroke: #ca8a04; }
+    .tooth-path.status-filling { fill: var(--filling-color); stroke: #2563eb; }
+    .tooth-path.status-rct { fill: var(--rct-color); stroke: #0d9488; }
+    .tooth-path.status-extraction { fill: var(--extraction-color); stroke: #dc2626; }
+    .tooth-path.status-implant { fill: var(--implant-color); stroke: #4f46e5; }
+    .tooth-path.status-crown { fill: var(--crown-color); stroke: #9333ea; }
+    .tooth-path.status-bridge { fill: var(--bridge-color); stroke: #ea580c; }
+
+    /* Selection & Preview States */
+    .tooth-svg-wrapper.selected {
+        filter: drop-shadow(0 0 8px rgba(59, 130, 246, 0.6));
+    }
+    .tooth-svg-wrapper.selected .tooth-path {
+        stroke: #1e3a8a !important;
+        stroke-width: 3.5 !important;
+    }
+
+    .tooth-svg-wrapper.pending-change::after {
+        content: '';
+        position: absolute;
+        top: -4px;
+        left: -4px;
+        right: -4px;
+        bottom: -4px;
+        border: 2px dashed #f59e0b;
+        border-radius: 50%;
+        animation: rotate 8s linear infinite;
+        pointer-events: none;
+    }
+
+    @@keyframes rotate {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+    }
+
+    /* Custom tab navigation styling */
+    .nav-pills-custom .nav-link {
+        color: #475569;
+        font-weight: 600;
+        border-radius: 30px;
+        padding: 8px 20px;
+        transition: all 0.2s ease;
+        border: 1px solid transparent;
+    }
+    .nav-pills-custom .nav-link.active {
+        background-color: #1e293b !important;
+        color: #ffffff !important;
+    }
+    .nav-pills-custom .nav-link:hover:not(.active) {
+        background-color: #f1f5f9;
+        border-color: #cbd5e1;
+    }
+
+    /* Legend colors */
+    .legend-dot {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        display: inline-block;
+        margin-right: 6px;
+    }
+
+    /* Fixed bottom actions bar */
+    .action-bar {
+        position: fixed;
+        bottom: 24px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: rgba(15, 23, 42, 0.95);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        padding: 16px 28px;
+        border-radius: 20px;
+        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3), 0 10px 10px -5px rgba(0, 0, 0, 0.3);
+        display: flex;
+        align-items: center;
+        gap: 20px;
+        z-index: 1050;
+        opacity: 0;
+        visibility: hidden;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .action-bar.show {
+        opacity: 1;
+        visibility: visible;
+        transform: translateX(-50%) translateY(0);
+    }
+
+    /* Sidebar history timeline */
+    .tooth-timeline {
+        border-left: 2px solid #e2e8f0;
+        padding-left: 16px;
+        margin-left: 8px;
+    }
+    .tooth-timeline-item {
+        position: relative;
+        margin-bottom: 20px;
+    }
+    .tooth-timeline-item::before {
+        content: '';
+        position: absolute;
+        left: -23px;
+        top: 4px;
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background: #cbd5e1;
+        border: 2px solid #ffffff;
+    }
+    .tooth-timeline-item.active-item::before {
+        background: var(--normal-color);
+        box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.2);
+    }
+
+    /* Custom scrollbar */
+    .custom-scrollbar::-webkit-scrollbar {
+        width: 6px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-track {
+        background: #f1f5f9;
+        border-radius: 10px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 10px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+        background: #94a3b8;
+    }
+</style>
+
+<div class="d-flex align-items-center justify-content-between mb-4">
+    <div>
+        <h4 class="fw-bold mb-0" style="color:#0b1f35">
+            <i class="bi bi-file-medical-fill text-danger me-2"></i>Hồ sơ bệnh án điện tử (EMR)
+        </h4>
+        <div class="text-muted small mt-1">Ghi nhận tình trạng lâm sàng và sơ đồ răng của bệnh nhân</div>
+    </div>
+    <div class="d-flex gap-2">
+        <a href="/Patient/Details/@Model.Id" class="btn btn-outline-secondary rounded-pill px-3">
+            <i class="bi bi-arrow-left"></i> Quay lại
+        </a>
+    </div>
+</div>
+
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success border-0 rounded-4 py-2 px-3 mb-3 shadow-sm alert-dismissible fade show" role="alert">
+        <i class="bi bi-check-circle me-2"></i>@TempData["Success"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+<!-- Patient Info Card -->
+<div class="card border-0 shadow-sm rounded-4 mb-4" style="background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);">
+    <div class="card-body p-4">
+        <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3 border-bottom pb-3">
+            <div class="d-flex align-items-center gap-3">
+                <div class="bg-primary-subtle text-primary rounded-circle d-grid place-items-center" style="width: 50px; height: 50px;">
+                    <i class="bi bi-person-badge fs-4"></i>
+                </div>
+                <div>
+                    <h5 class="fw-bold mb-0">@Model.FullName</h5>
+                    <span class="badge bg-danger-subtle text-danger rounded-pill px-3 mt-1">Mã HS: @Model.PatientCode</span>
+                </div>
+            </div>
+            
+            <!-- Doctor Assignment Status (EX4.3-01) -->
+            <div class="d-flex align-items-center gap-2">
+                @if (Model.PrimaryDoctorId != null)
+                {
+                    <div class="bg-dark text-white rounded-pill px-3 py-2 d-flex align-items-center gap-2 shadow-sm small">
+                        <i class="bi bi-person-heart text-danger"></i>
+                        <span>Bác sĩ điều trị chính: <strong>@Model.PrimaryDoctor?.User?.FullName</strong></span>
+                    </div>
+                    @if (isAdmin)
+                    {
+                        <!-- Admin can reassign -->
+                        <button class="btn btn-light btn-sm rounded-circle shadow-sm" data-bs-toggle="modal" data-bs-target="#assignDoctorModal" title="Chuyển giao bác sĩ">
+                            <i class="bi bi-arrow-left-right text-primary"></i>
+                        </button>
+                    }
+                }
+                else
+                {
+                    <div class="bg-warning-subtle text-warning-emphasis border border-warning-subtle rounded-pill px-3 py-2 d-flex align-items-center gap-2 small">
+                        <i class="bi bi-exclamation-triangle-fill"></i>
+                        <span>Chưa có bác sĩ điều trị chính</span>
+                    </div>
+                    @if (canEdit)
+                    {
+                        <button class="btn btn-primary btn-sm rounded-pill px-3 shadow-sm" data-bs-toggle="modal" data-bs-target="#assignDoctorModal">
+                            <i class="bi bi-plus-circle me-1"></i> Nhận điều trị chính
+                        </button>
+                    }
+                }
+            </div>
+        </div>
+
+        <div class="row g-4">
+            <div class="col-md-6 col-lg-3">
+                <div class="text-muted small">Ngày sinh</div>
+                <div class="fw-semibold">@(Model.DateOfBirth?.ToString("dd/MM/yyyy") ?? "—")</div>
+            </div>
+            <div class="col-md-6 col-lg-3">
+                <div class="text-muted small">Giới tính</div>
+                <div class="fw-semibold">@(Model.Gender ?? "—")</div>
+            </div>
+            <div class="col-md-6 col-lg-3">
+                <div class="text-muted small">Số điện thoại</div>
+                <div class="fw-semibold">@Model.PhoneNumber</div>
+            </div>
+            <div class="col-md-6 col-lg-3">
+                <div class="text-muted small">Tiền sử dị ứng</div>
+                <div class="fw-semibold text-danger">@(Model.AllergyHistory ?? "Không có")</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Tabs Navigation -->
+<div class="mb-4">
+    <ul class="nav nav-pills nav-pills-custom gap-2" id="clinicalRecordTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="timeline-tab" data-bs-toggle="tab" data-bs-target="#timeline-content" type="button" role="tab" aria-selected="true">
+                <i class="bi bi-journal-text me-2"></i>Nhật ký điều trị lâm sàng
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="odontogram-tab" data-bs-toggle="tab" data-bs-target="#odontogram-content" type="button" role="tab" aria-selected="false">
+                <i class="bi bi-diagram-3 me-2"></i>Sơ đồ răng tương tác
+            </button>
+        </li>
+    </ul>
+</div>
+
+<!-- Tabs Content -->
+<div class="tab-content" id="clinicalRecordTabsContent">
+    
+    <!-- Tab 1: Timeline điều trị lâm sàng -->
+    <div class="tab-pane fade show active" id="timeline-content" role="tabpanel" aria-labelledby="timeline-tab">
+        <div class="row g-4">
+            <div class="col-md-8">
+                <div class="card border-0 shadow-sm rounded-4 mb-4">
+                    <div class="card-header bg-white border-0 pt-4 px-4 pb-0">
+                        <h5 class="fw-bold mb-0"><i class="bi bi-clock-history text-primary me-2"></i>Nhật ký điều trị lâm sàng</h5>
+                    </div>
+                    <div class="card-body px-4 pb-4">
+                        <div class="timeline mt-3">
+                            <div class="d-flex gap-3 mb-4 position-relative">
+                                <div class="text-end" style="min-width: 90px;">
+                                    <div class="fw-bold">12/05/2026</div>
+                                    <div class="text-muted small">09:15</div>
+                                </div>
+                                <div class="bg-primary rounded-circle" style="width:12px; height:12px; margin-top: 6px; flex-shrink: 0; z-index:1;"></div>
+                                <div>
+                                    <div class="fw-bold">Khám tổng quát & Chẩn đoán hình ảnh</div>
+                                    <div class="text-muted small mt-1">Bác sĩ thực hiện: BS. Nguyễn Văn Đạt</div>
+                                    <p class="mt-2 text-secondary">Bệnh nhân đau răng số 36 âm ỉ, răng nhạy cảm với nhiệt độ nóng/lạnh. Tiến hành chụp X-quang răng cận chóp phát hiện sâu răng tiến triển sát tủy.</p>
+                                    <div class="p-3 bg-light rounded-3">
+                                        <strong>Chỉ định lâm sàng:</strong>
+                                        <ul class="mb-0 mt-1">
+                                            <li>Lấy tủy buồng, tạo hình ống tủy</li>
+                                            <li>Trám kết thúc bằng composite thẩm mỹ</li>
+                                            <li>Kê đơn thuốc giảm đau kháng viêm Hapacol 650mg</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-4">
+                <div class="card border-0 shadow-sm rounded-4">
+                    <div class="card-header bg-white border-0 pt-4 px-4 pb-0">
+                        <h5 class="fw-bold mb-0"><i class="bi bi-capsule text-danger me-2"></i>Đơn thuốc & Phác đồ</h5>
+                    </div>
+                    <div class="card-body p-4">
+                        <div class="p-3 bg-danger-subtle text-danger rounded-3 mb-3">
+                            <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                            <strong>Chú ý dị ứng:</strong> @(Model.AllergyHistory ?? "Không ghi nhận dị ứng đặc biệt.")
+                        </div>
+                        <div class="text-muted small mb-2">ĐƠN THUỐC GẦN NHẤT</div>
+                        <div class="border rounded-3 p-3 mb-3 bg-light">
+                            <div class="fw-bold">Hapacol 650mg</div>
+                            <div class="text-muted small">Số lượng: 10 viên | Ngày uống 2 lần, mỗi lần 1 viên sau ăn.</div>
+                            <hr class="my-2">
+                            <div class="fw-bold">Amoxicillin 500mg</div>
+                            <div class="text-muted small">Số lượng: 14 viên | Ngày uống 2 lần, mỗi lần 1 viên sau ăn.</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Tab 2: Sơ đồ răng tương tác -->
+    <div class="tab-pane fade" id="odontogram-content" role="tabpanel" aria-labelledby="odontogram-tab">
+        <div class="row g-4">
+            
+            <!-- Left Side: Interactive Odontogram Chart -->
+            <div class="col-lg-8">
+                <div class="card border-0 shadow-sm rounded-4 mb-4">
+                    <div class="card-body p-4">
+                        
+                        <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
+                            <div>
+                                <h5 class="fw-bold mb-1">Sơ đồ răng khám nha khoa</h5>
+                                <div class="text-muted small">Nhấp chọn một răng bất kỳ để xem lịch sử và cập nhật trạng thái</div>
+                            </div>
+                            
+                            <!-- Dentition Toggle -->
+                            <div class="btn-group rounded-pill p-1 bg-light border" role="group">
+                                <button type="button" class="btn btn-sm btn-dark rounded-pill px-3 shadow-none border-0" id="btn-adult" onclick="toggleDentition('adult')">Người lớn (32)</button>
+                                <button type="button" class="btn btn-sm text-dark rounded-pill px-3 shadow-none border-0" id="btn-child" onclick="toggleDentition('child')">Trẻ em (20)</button>
+                            </div>
+                        </div>
+
+                        <!-- Status Color Legends -->
+                        <div class="d-flex flex-wrap gap-3 p-3 bg-light rounded-4 mb-4 small justify-content-center">
+                            <div><span class="legend-dot" style="background:var(--normal-color)"></span>Bình thường</div>
+                            <div><span class="legend-dot" style="background:var(--caries-color)"></span>Sâu răng</div>
+                            <div><span class="legend-dot" style="background:var(--filling-color)"></span>Răng trám</div>
+                            <div><span class="legend-dot" style="background:var(--rct-color)"></span>Điều trị tủy (RCT)</div>
+                            <div><span class="legend-dot" style="background:var(--extraction-color)"></span>Nhổ răng</div>
+                            <div><span class="legend-dot" style="background:var(--implant-color)"></span>Cấy ghép Implant</div>
+                            <div><span class="legend-dot" style="background:var(--crown-color)"></span>Bọc mão sứ</div>
+                            <div><span class="legend-dot" style="background:var(--bridge-color)"></span>Cầu răng</div>
+                        </div>
+
+                        <!-- Odontogram Chart Arches (Scrollable container for small screens) -->
+                        <div class="text-center overflow-x-auto py-3 custom-scrollbar">
+                            
+                            <!-- ADULT VIEW -->
+                            <div id="adult-odontogram">
+                                <h6 class="text-muted text-uppercase fw-bold small mb-3 letter-spacing-1">Cung hàm trên (Maxillary Arch)</h6>
+                                
+                                <!-- Maxillary Row -->
+                                <div class="d-flex justify-content-center align-items-center mb-5 px-3">
+                                    <!-- Quadrant 1 (Right): 18 -> 11 -->
+                                    <div class="d-flex align-items-center flex-row-reverse border-end pe-3 border-secondary border-opacity-25">
+                                        @for (int i = 18; i >= 11; i--)
+                                        {
+                                            @Html.Raw(RenderToothSvgHtml(i))
+                                        }
+                                    </div>
+                                    <!-- Quadrant 2 (Left): 21 -> 28 -->
+                                    <div class="d-flex align-items-center ps-3">
+                                        @for (int i = 21; i <= 28; i++)
+                                        {
+                                            @Html.Raw(RenderToothSvgHtml(i))
+                                        }
+                                    </div>
+                                </div>
+
+                                <hr class="my-4 border-secondary border-opacity-25" style="border-style: dashed;">
+
+                                <h6 class="text-muted text-uppercase fw-bold small mb-3 letter-spacing-1 mt-4">Cung hàm dưới (Mandibular Arch)</h6>
+                                <!-- Mandibular Row -->
+                                <div class="d-flex justify-content-center align-items-center mb-3 px-3">
+                                    <!-- Quadrant 4 (Right): 48 -> 41 -->
+                                    <div class="d-flex align-items-center flex-row-reverse border-end pe-3 border-secondary border-opacity-25">
+                                        @for (int i = 48; i >= 41; i--)
+                                        {
+                                            @Html.Raw(RenderToothSvgHtml(i))
+                                        }
+                                    </div>
+                                    <!-- Quadrant 3 (Left): 31 -> 38 -->
+                                    <div class="d-flex align-items-center ps-3">
+                                        @for (int i = 31; i <= 38; i++)
+                                        {
+                                            @Html.Raw(RenderToothSvgHtml(i))
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- CHILD VIEW (Hidden by default) -->
+                            <div id="child-odontogram" class="d-none">
+                                <h6 class="text-muted text-uppercase fw-bold small mb-3 letter-spacing-1">Cung răng sữa hàm trên</h6>
+                                <!-- Child Maxillary Row -->
+                                <div class="d-flex justify-content-center align-items-center mb-5 px-3">
+                                    <!-- Quadrant 5 (Right): 55 -> 51 -->
+                                    <div class="d-flex align-items-center flex-row-reverse border-end pe-3 border-secondary border-opacity-25">
+                                        @for (int i = 55; i >= 51; i--)
+                                        {
+                                            @Html.Raw(RenderToothSvgHtml(i))
+                                        }
+                                    </div>
+                                    <!-- Quadrant 6 (Left): 61 -> 65 -->
+                                    <div class="d-flex align-items-center ps-3">
+                                        @for (int i = 61; i <= 65; i++)
+                                        {
+                                            @Html.Raw(RenderToothSvgHtml(i))
+                                        }
+                                    </div>
+                                </div>
+
+                                <hr class="my-4 border-secondary border-opacity-25" style="border-style: dashed;">
+
+                                <h6 class="text-muted text-uppercase fw-bold small mb-3 letter-spacing-1 mt-4">Cung răng sữa hàm dưới</h6>
+                                <!-- Child Mandibular Row -->
+                                <div class="d-flex justify-content-center align-items-center mb-3 px-3">
+                                    <!-- Quadrant 8 (Right): 85 -> 81 -->
+                                    <div class="d-flex align-items-center flex-row-reverse border-end pe-3 border-secondary border-opacity-25">
+                                        @for (int i = 85; i >= 81; i--)
+                                        {
+                                            @Html.Raw(RenderToothSvgHtml(i))
+                                        }
+                                    </div>
+                                    <!-- Quadrant 7 (Left): 71 -> 75 -->
+                                    <div class="d-flex align-items-center ps-3">
+                                        @for (int i = 71; i <= 75; i++)
+                                        {
+                                            @Html.Raw(RenderToothSvgHtml(i))
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+                            
+                        </div>
+
+                        <div class="d-flex align-items-center justify-content-between mt-4 text-muted small border-top pt-3">
+                            <div><i class="bi bi-clock-history me-1"></i>Phiên bản sơ đồ: <strong>V.<span id="version-label">@Model.ToothChartVersion</span></strong></div>
+                            <div><i class="bi bi-info-circle me-1"></i>Click trực tiếp vào răng để ghi nhận tình trạng lâm sàng</div>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Side: Tooth Information and Action Panel -->
+            <div class="col-lg-4">
+                <div class="card border-0 shadow-sm rounded-4 h-100" style="min-height: 500px;">
+                    <div class="card-body p-4 d-flex flex-column" id="tooth-detail-panel">
+                        
+                        <!-- Initial placeholder state -->
+                        <div class="my-auto text-center py-5 text-muted" id="panel-placeholder">
+                            <i class="bi bi-heart-pulse display-3 opacity-25 d-block mb-3"></i>
+                            <h6 class="fw-bold mb-1">Chưa chọn vị trí răng</h6>
+                            <p class="small text-secondary px-4">Bác sĩ hãy chọn một răng trên sơ đồ để xem thông tin chi tiết và cập nhật tiến trình điều trị.</p>
+                        </div>
+                        
+                        <!-- Real detailed content (hidden by default) -->
+                        <div id="panel-content" class="d-none flex-grow-1 d-flex flex-column">
+                            
+                            <!-- Tooth header -->
+                            <div class="d-flex align-items-start gap-3 border-bottom pb-3 mb-3">
+                                <div id="selected-tooth-svg-icon" class="p-2 bg-light rounded-3">
+                                    <!-- Large tooth SVG will render here -->
+                                </div>
+                                <div class="flex-grow-1">
+                                    <h5 class="fw-bold mb-0 text-dark">Răng <span id="lbl-tooth-number">#16</span></h5>
+                                    <div class="text-muted small mt-1" id="lbl-tooth-name">Răng cối lớn thứ nhất</div>
+                                    <span class="badge rounded-pill px-3 py-1 mt-2 small" id="lbl-tooth-status-badge" style="font-size:0.8rem">Bình thường</span>
+                                </div>
+                            </div>
+
+                            <!-- Attending Info -->
+                            <div class="row g-2 mb-3 bg-light p-3 rounded-4 small">
+                                <div class="col-6">
+                                    <div class="text-muted">Bác sĩ ghi nhận:</div>
+                                    <div class="fw-bold text-dark mt-1" id="lbl-doctor-name">BS. Nguyễn Văn Đạt</div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="text-muted">Ngày ghi nhận cuối:</div>
+                                    <div class="fw-bold text-dark mt-1" id="lbl-last-visit">12/05/2026</div>
+                                </div>
+                            </div>
+
+                            <!-- Tooth History Timeline -->
+                            <h6 class="fw-bold mb-2 small text-muted"><i class="bi bi-clock-history me-1"></i>Lịch sử điều trị (Append-Only)</h6>
+                            <div class="custom-scrollbar overflow-y-auto mb-3 pe-1 flex-grow-1" style="max-height: 180px;" id="lbl-tooth-history-list">
+                                <!-- Timeline items inserted via JS -->
+                            </div>
+
+                            <!-- Action Form / Input (EX4.3-04: Edit restrict) -->
+                            <div class="border-top pt-3 mt-auto">
+                                <h6 class="fw-bold mb-3 text-primary"><i class="bi bi-plus-circle-fill me-1"></i>Ghi nhận tình trạng mới</h6>
+                                
+                                @if (canEdit)
+                                {
+                                    <div class="mb-3">
+                                        <label class="form-label small fw-bold">Tình trạng răng</label>
+                                        <select class="form-select rounded-3 shadow-none border-secondary-subtle" id="form-tooth-status">
+                                            <option value="Normal">Normal — Bình thường</option>
+                                            <option value="Caries">Caries — Sâu răng</option>
+                                            <option value="Filling">Filling — Răng trám</option>
+                                            <option value="RCT">RCT — Điều trị tủy</option>
+                                            <option value="Extraction">Extraction — Nhổ răng</option>
+                                            <option value="Implant">Implant — Cấy ghép Implant</option>
+                                            <option value="Crown">Crown — Bọc mão sứ</option>
+                                            <option value="Bridge">Bridge — Cầu răng</option>
+                                        </select>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label class="form-label small fw-bold">Ghi chú lâm sàng</label>
+                                        <textarea class="form-control rounded-3 shadow-none border-secondary-subtle small" rows="2" id="form-tooth-notes" placeholder="Nhập ghi chú lâm sàng cụ thể..."></textarea>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label class="form-label small fw-bold">Chỉ định điều trị & Đơn thuốc</label>
+                                        <textarea class="form-control rounded-3 shadow-none border-secondary-subtle small" rows="2" id="form-tooth-prescription" placeholder="Kê đơn thuốc hoặc ghi chú chỉ định điều trị..."></textarea>
+                                    </div>
+
+                                    <div class="d-grid gap-2">
+                                        <button class="btn btn-primary rounded-pill fw-semibold py-2 shadow-sm" type="button" onclick="applyPendingChange()">
+                                            <i class="bi bi-eye me-1"></i> Xem trước thay đổi
+                                        </button>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <div class="alert alert-warning border-0 rounded-4 p-3 small mb-0">
+                                        <i class="bi bi-shield-lock-fill me-2 fs-5 text-warning align-middle"></i>
+                                        <span class="align-middle"><strong>Chế độ Xem:</strong> Bạn không có quyền chỉnh sửa. Sơ đồ này thuộc quản lý của <strong>@Model.PrimaryDoctor?.User?.FullName</strong>.</span>
+                                    </div>
+                                }
+
+                            </div>
+
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<!-- Floating Action Bar for batch save -->
+<div class="action-bar" id="save-action-bar">
+    <div class="text-white d-flex align-items-center gap-2">
+        <div class="spinner-grow spinner-grow-sm text-warning" role="status"></div>
+        <span>Bạn có <strong><span id="unsaved-changes-count">0</span></strong> thay đổi chưa lưu trên sơ đồ răng.</span>
+    </div>
+    <div class="d-flex gap-2">
+        <button class="btn btn-light btn-sm rounded-pill px-3 fw-semibold text-dark shadow-sm" onclick="cancelChanges()">
+            <i class="bi bi-x-circle me-1"></i> Hủy bỏ
+        </button>
+        <button class="btn btn-success btn-sm rounded-pill px-3 fw-semibold shadow-sm" onclick="saveToothChanges()">
+            <i class="bi bi-save me-1"></i> Lưu sơ đồ răng
+        </button>
+    </div>
+</div>
+
+<!-- Modal: Assign Primary Doctor (EX4.3-01) -->
+<div class="modal fade" id="assignDoctorModal" tabindex="-1" aria-labelledby="assignDoctorModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4 border-0 shadow">
+            <div class="modal-header border-bottom-0 pb-0">
+                <h5 class="modal-title fw-bold" id="assignDoctorModalLabel"><i class="bi bi-person-check-fill text-primary me-2"></i>Gán Bác sĩ Phụ trách</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form action="/Patient/AssignPrimaryDoctor" method="post">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="patientId" value="@Model.Id" />
+                <div class="modal-body py-4">
+                    <p class="text-muted small">Vui lòng chọn bác sĩ nha khoa điều trị chính cho bệnh nhân <strong>@Model.FullName</strong>. Bác sĩ này sẽ là người duy nhất có quyền cập nhật sơ đồ răng lâm sàng của bệnh nhân này.</p>
+                    
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Chọn Bác sĩ</label>
+                        <select class="form-select rounded-3 shadow-none border-secondary-subtle" name="doctorId" required>
+                            <option value="">-- Chọn bác sĩ --</option>
+                            @foreach (var doc in (List<Nhakhoa.Models.StaffProfile>)ViewBag.Doctors)
+                            {
+                                <option value="@doc.Id" selected="@(doc.Id == Model.PrimaryDoctorId)">@doc.User?.FullName (@doc.PositionTitle)</option>
+                            }
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer border-top-0 pt-0">
+                    <button type="button" class="btn btn-outline-secondary rounded-pill px-3" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-primary rounded-pill px-4" style="background:#1b75d0; border-color:#1b75d0;">Xác nhận gán</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Concurrency Collision Conflict (EX4.3-02) -->
+<div class="modal fade" id="conflictModal" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-labelledby="conflictModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4 border-0 shadow">
+            <div class="modal-body text-center p-4">
+                <div class="text-danger mb-3">
+                    <i class="bi bi-exclamation-triangle-fill display-2"></i>
+                </div>
+                <h5 class="fw-bold text-dark" id="conflictModalLabel">Xung đột dữ liệu sơ đồ răng</h5>
+                <p class="text-secondary small mt-2 px-3">
+                    Sơ đồ răng của bệnh nhân này đã được một bác sĩ khác chỉnh sửa và lưu thành công trong lúc bạn đang thao tác. Hệ thống đã từ chối lưu thay đổi để tránh ghi đè thông tin.
+                </p>
+                <div class="alert alert-light border rounded-3 text-start small mb-3 p-3 bg-light">
+                    <i class="bi bi-info-circle me-1"></i> Lịch sử sơ đồ là <strong>Append-Only</strong>. Vui lòng làm mới trang để cập nhật tình trạng răng mới nhất và tiến hành lưu lại.
+                </div>
+                <button type="button" class="btn btn-primary rounded-pill px-5 py-2 shadow-sm" onclick="location.reload()">
+                    <i class="bi bi-arrow-clockwise me-1"></i> Làm mới trang ngay
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Helper Functions in Razor to render Tooth SVG wrapper -->
+@functions {
+    public string RenderToothSvgHtml(int num)
+    {
+        return $@"
+        <div class='tooth-container' id='tooth-container-{num}'>
+            <div class='tooth-svg-wrapper' id='tooth-svg-wrapper-{num}' onclick='selectTooth({num})'>
+                <svg viewBox='0 0 100 100' style='width:100%; height:100%;'>
+                    <path class='tooth-path status-normal' id='tooth-path-{num}' d='M 25,30 C 25,15 35,10 50,10 C 65,10 75,15 75,30 C 75,45 70,55 65,65 C 60,75 58,85 58,90 C 58,93 56,95 53,95 C 50,95 48,93 48,90 C 48,85 45,75 40,65 C 35,55 25,45 25,30 Z'></path>
+                    <path d='M 35,30 C 35,22 42,18 50,18 C 58,18 65,22 65,30 C 65,35 62,40 59,45 C 56,50 54,55 54,60 C 52,60 48,60 46,60 C 46,55 44,50 41,45 C 38,40 35,35 35,30 Z' fill='#ffffff' opacity='0.15'></path>
+                </svg>
+            </div>
+            <div class='tooth-label'>#{num}</div>
+        </div>";
+    }
+}
+
+<!-- JavaScript for Interactive Tooth Chart Logic -->
+<script>
+    // Seeding current data from C# Model to JS Memory
+    let toothData = {};
+    const patientId = @Model.Id;
+    let toothChartVersion = @Model.ToothChartVersion;
+    const canEdit = @(canEdit ? "true" : "false");
+    
+    // Status color mapping object
+    const statusTextMapping = {
+        "Normal": { text: "Bình thường", class: "bg-success-subtle text-success", hex: "var(--normal-color)" },
+        "Caries": { text: "Sâu răng", class: "bg-warning-subtle text-warning-emphasis", hex: "var(--caries-color)" },
+        "Filling": { text: "Răng trám", class: "bg-primary-subtle text-primary", hex: "var(--filling-color)" },
+        "RCT": { text: "Điều trị tủy (RCT)", class: "bg-info-subtle text-info-emphasis", hex: "var(--rct-color)" },
+        "Extraction": { text: "Đã nhổ", class: "bg-danger-subtle text-danger", hex: "var(--extraction-color)" },
+        "Implant": { text: "Cấy ghép Implant", class: "bg-indigo-subtle text-indigo", hex: "var(--implant-color)" },
+        "Crown": { text: "Bọc mão sứ", class: "bg-purple-subtle text-purple", hex: "var(--crown-color)" },
+        "Bridge": { text: "Cầu răng", class: "bg-orange-subtle text-orange", hex: "var(--bridge-color)" }
+    };
+
+    // Tooth names helper mapping
+    const toothNames = {
+        // Upper right
+        18: "Răng khôn hàm trên bên phải",
+        17: "Răng cối lớn thứ hai hàm trên bên phải",
+        16: "Răng cối lớn thứ nhất hàm trên bên phải",
+        15: "Răng cối nhỏ thứ hai hàm trên bên phải",
+        14: "Răng cối nhỏ thứ nhất hàm trên bên phải",
+        13: "Răng nanh hàm trên bên phải",
+        12: "Răng cửa bên hàm trên bên phải",
+        11: "Răng cửa giữa hàm trên bên phải",
+        // Upper left
+        21: "Răng cửa giữa hàm trên bên trái",
+        22: "Răng cửa bên hàm trên bên trái",
+        23: "Răng nanh hàm trên bên trái",
+        24: "Răng cối nhỏ thứ nhất hàm trên bên trái",
+        25: "Răng cối nhỏ thứ hai hàm trên bên trái",
+        26: "Răng cối lớn thứ nhất hàm trên bên trái",
+        27: "Răng cối lớn thứ hai hàm trên bên trái",
+        28: "Răng khôn hàm trên bên trái",
+        // Lower left
+        38: "Răng khôn hàm dưới bên trái",
+        37: "Răng cối lớn thứ hai hàm dưới bên trái",
+        36: "Răng cối lớn thứ nhất hàm dưới bên trái",
+        35: "Răng cối nhỏ thứ hai hàm dưới bên trái",
+        34: "Răng cối nhỏ thứ nhất hàm dưới bên trái",
+        33: "Răng nanh hàm dưới bên trái",
+        32: "Răng cửa bên hàm dưới bên trái",
+        31: "Răng cửa giữa hàm dưới bên trái",
+        // Lower right
+        41: "Răng cửa giữa hàm dưới bên phải",
+        42: "Răng cửa bên hàm dưới bên phải",
+        43: "Răng nanh hàm dưới bên phải",
+        44: "Răng cối nhỏ thứ nhất hàm dưới bên phải",
+        45: "Răng cối nhỏ thứ hai hàm dưới bên phải",
+        46: "Răng cối lớn thứ nhất hàm dưới bên phải",
+        47: "Răng cối lớn thứ hai hàm dưới bên phải",
+        48: "Răng khôn hàm dưới bên phải",
+        
+        // Deciduous Teeth (Children)
+        55: "Răng cối sữa thứ hai hàm trên bên phải",
+        54: "Răng cối sữa thứ nhất hàm trên bên phải",
+        53: "Răng nanh sữa hàm trên bên phải",
+        52: "Răng cửa bên sữa hàm trên bên phải",
+        51: "Răng cửa giữa sữa hàm trên bên phải",
+        61: "Răng cửa giữa sữa hàm trên bên trái",
+        62: "Răng cửa bên sữa hàm trên bên trái",
+        63: "Răng nanh sữa hàm trên bên trái",
+        64: "Răng cối sữa thứ nhất hàm trên bên trái",
+        65: "Răng cối sữa thứ hai hàm trên bên trái",
+        75: "Răng cối sữa thứ hai hàm dưới bên trái",
+        74: "Răng cối sữa thứ nhất hàm dưới bên trái",
+        73: "Răng nanh sữa hàm dưới bên trái",
+        72: "Răng cửa bên sữa hàm dưới bên trái",
+        71: "Răng cửa giữa sữa hàm dưới bên trái",
+        81: "Răng cửa giữa sữa hàm dưới bên phải",
+        82: "Răng cửa bên sữa hàm dưới bên phải",
+        83: "Răng nanh sữa hàm dưới bên phải",
+        84: "Răng cối sữa thứ nhất hàm dưới bên phải",
+        85: "Răng cối sữa thứ hai hàm dưới bên phải"
+    };
+
+    let selectedTooth = null;
+    let pendingChanges = {}; // stores local updates: { toothNumber: { status, notes, prescription } }
+
+    document.addEventListener("DOMContentLoaded", function () {
+        // Initialize memory with initial state from DB
+        @foreach (var toothNum in new int[] {
+            18, 17, 16, 15, 14, 13, 12, 11, 21, 22, 23, 24, 25, 26, 27, 28,
+            48, 47, 46, 45, 44, 43, 42, 41, 31, 32, 33, 34, 35, 36, 37, 38,
+            55, 54, 53, 52, 51, 61, 62, 63, 64, 65,
+            85, 84, 83, 82, 81, 71, 72, 73, 74, 75
+        })
+        {
+            var latestRecord = Model.ToothRecords
+                .Where(r => r.ToothNumber == toothNum)
+                .OrderByDescending(r => r.Timestamp)
+                .FirstOrDefault();
+            var status = latestRecord?.Status ?? "Normal";
+            var notes = latestRecord?.Notes ?? "";
+            var rx = latestRecord?.Prescription ?? "";
+            var doc = latestRecord?.Doctor?.User?.FullName ?? "Hệ thống";
+            var date = latestRecord?.Timestamp.ToString("dd/MM/yyyy HH:mm") ?? "—";
+
+            <text>
+            toothData["@toothNum"] = {
+                status: "@status",
+                notes: `@Html.Raw(notes.Replace("`", "\\`").Replace("\r\n", " ").Replace("\n", " "))`,
+                prescription: `@Html.Raw(rx.Replace("`", "\\`").Replace("\r\n", " ").Replace("\n", " "))`,
+                doctorName: "@doc",
+                date: "@date"
+            };
+            </text>
+        }
+
+
+        // Draw the initial colors on the odontogram
+        drawAllTeethColors();
+    });
+
+    // Color the SVGs based on current data
+    function drawAllTeethColors() {
+        for (const num in toothData) {
+            const data = toothData[num];
+            setToothColor(num, data.status);
+        }
+    }
+
+    function setToothColor(num, status) {
+        const path = document.getElementById("tooth-path-" + num);
+        if (path) {
+            // Remove previous statuses
+            path.className.baseVal = "tooth-path";
+            path.classList.add("status-" + status.toLowerCase());
+        }
+    }
+
+    // Toggle between Adult and Child dentition views
+    function toggleDentition(type) {
+        const btnAdult = document.getElementById("btn-adult");
+        const btnChild = document.getElementById("btn-child");
+        const adultChart = document.getElementById("adult-odontogram");
+        const childChart = document.getElementById("child-odontogram");
+
+        if (type === "adult") {
+            btnAdult.className = "btn btn-sm btn-dark rounded-pill px-3 shadow-none border-0";
+            btnChild.className = "btn btn-sm text-dark rounded-pill px-3 shadow-none border-0";
+            adultChart.classList.remove("d-none");
+            childChart.classList.add("d-none");
+        } else {
+            btnChild.className = "btn btn-sm btn-dark rounded-pill px-3 shadow-none border-0";
+            btnAdult.className = "btn btn-sm text-dark rounded-pill px-3 shadow-none border-0";
+            childChart.classList.remove("d-none");
+            adultChart.classList.add("d-none");
+        }
+        
+        // Reset selected tooth since the active view changed
+        resetSelectedTooth();
+    }
+
+    function resetSelectedTooth() {
+        if (selectedTooth) {
+            const el = document.getElementById("tooth-svg-wrapper-" + selectedTooth);
+            if (el) el.classList.remove("selected");
+        }
+        selectedTooth = null;
+        document.getElementById("panel-placeholder").classList.remove("d-none");
+        document.getElementById("panel-content").classList.add("d-none");
+    }
+
+    // Select a tooth and update the panel
+    function selectTooth(num) {
+        // Toggle selection state
+        if (selectedTooth) {
+            const prevEl = document.getElementById("tooth-svg-wrapper-" + selectedTooth);
+            if (prevEl) prevEl.classList.remove("selected");
+        }
+
+        selectedTooth = num;
+        const newEl = document.getElementById("tooth-svg-wrapper-" + num);
+        if (newEl) newEl.classList.add("selected");
+
+        // Show panel
+        document.getElementById("panel-placeholder").classList.add("d-none");
+        const panel = document.getElementById("panel-content");
+        panel.classList.remove("d-none");
+
+        // Get details
+        const info = toothData[num];
+        const pending = pendingChanges[num];
+        const status = pending ? pending.status : info.status;
+        const notes = pending ? pending.notes : info.notes;
+        const rx = pending ? pending.prescription : info.prescription;
+
+        // Render header
+        document.getElementById("lbl-tooth-number").innerText = "#" + num;
+        document.getElementById("lbl-tooth-name").innerText = toothNames[num] || "Răng";
+        
+        // Render badge
+        const badge = document.getElementById("lbl-tooth-status-badge");
+        const badgeConfig = statusTextMapping[status] || { text: status, class: "bg-secondary text-white" };
+        badge.innerText = badgeConfig.text;
+        badge.className = "badge rounded-pill px-3 py-1 mt-2 small " + badgeConfig.class;
+
+        // Render large SVG icon in sidebar
+        const largeIconContainer = document.getElementById("selected-tooth-svg-icon");
+        largeIconContainer.innerHTML = `
+            <svg viewBox="0 0 100 100" style="width: 50px; height: 60px;">
+                <path class="tooth-path status-${status.toLowerCase()}" style="stroke-width:3" d="M 25,30 C 25,15 35,10 50,10 C 65,10 75,15 75,30 C 75,45 70,55 65,65 C 60,75 58,85 58,90 C 58,93 56,95 53,95 C 50,95 48,93 48,90 C 48,85 45,75 40,65 C 35,55 25,45 25,30 Z"></path>
+            </svg>
+        `;
+
+        // Render attending info
+        document.getElementById("lbl-doctor-name").innerText = pending ? "Nháp (chưa lưu)" : (info.doctorName || "Hệ thống");
+        document.getElementById("lbl-last-visit").innerText = pending ? "Hôm nay (chờ lưu)" : (info.date || "—");
+
+        // Load input fields (if can edit)
+        const selectEl = document.getElementById("form-tooth-status");
+        if (selectEl) {
+            selectEl.value = status;
+            document.getElementById("form-tooth-notes").value = notes || "";
+            document.getElementById("form-tooth-prescription").value = rx || "";
+        }
+
+        // Fetch and render single tooth timeline history from DB (Luồng 5.2)
+        fetch(`/Patient/GetToothHistory?patientId=${patientId}&toothNumber=${num}`)
+            .then(res => {
+                if (res.status === 403) {
+                    throw new Error("Bạn không có quyền truy cập.");
+                }
+                return res.json();
+            })
+            .then(history => {
+                const list = document.getElementById("lbl-tooth-history-list");
+                list.innerHTML = "";
+
+                if (history.length === 0) {
+                    list.innerHTML = `<div class="text-muted small py-2">Chưa có lịch sử điều trị tại vị trí này.</div>`;
+                    return;
+                }
+
+                // Render Progress Visualization flow
+                let timelineHtml = `<div class="tooth-timeline">`;
+                history.forEach((h, idx) => {
+                    const statusConfig = statusTextMapping[h.status] || { text: h.status, class: "bg-secondary text-white" };
+                    const isActive = idx === 0; // Latest is active
+                    
+                    timelineHtml += `
+                        <div class="tooth-timeline-item ${isActive ? 'active-item' : ''}">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <span class="badge ${statusConfig.class} rounded-pill px-2 py-0.5" style="font-size: 0.72rem;">${statusConfig.text}</span>
+                                <span class="text-muted text-xs font-monospace" style="font-size: 0.72rem;">${h.timestamp}</span>
+                            </div>
+                            <div class="fw-semibold text-dark text-xs" style="font-size: 0.75rem;">BS. ${h.doctorName}</div>
+                            ${h.notes ? `<p class="mb-1 text-secondary mt-1 small" style="font-size: 0.75rem; line-height:1.3">${h.notes}</p>` : ''}
+                            ${h.prescription ? `<div class="bg-light p-1.5 rounded-2 text-danger mt-1 small" style="font-size: 0.72rem;"><i class="bi bi-capsule me-1"></i>Chỉ định: ${h.prescription}</div>` : ''}
+                        </div>
+                    `;
+                });
+                timelineHtml += "</div>";
+                list.innerHTML = timelineHtml;
+            })
+            .catch(err => {
+                console.error(err);
+                document.getElementById("lbl-tooth-history-list").innerHTML = `<div class="text-danger small py-2"><i class="bi bi-exclamation-octagon me-1"></i>Lỗi tải lịch sử hoặc bị chặn quyền truy cập.</div>`;
+            });
+    }
+
+    // Apply change locally to preview (Luồng 5.1 - Bước 4)
+    function applyPendingChange() {
+        if (!selectedTooth || !canEdit) return;
+
+        const status = document.getElementById("form-tooth-status").value;
+        const notes = document.getElementById("form-tooth-notes").value;
+        const prescription = document.getElementById("form-tooth-prescription").value;
+
+        // Save into pendingChanges
+        pendingChanges[selectedTooth] = {
+            toothNumber: selectedTooth,
+            status: status,
+            notes: notes,
+            prescription: prescription
+        };
+
+        // Mark on UI
+        const wrapper = document.getElementById("tooth-svg-wrapper-" + selectedTooth);
+        if (wrapper) wrapper.classList.add("pending-change");
+
+        // Preview status color
+        setToothColor(selectedTooth, status);
+
+        // Update the details panel header badge
+        const badge = document.getElementById("lbl-tooth-status-badge");
+        const badgeConfig = statusTextMapping[status] || { text: status, class: "bg-secondary" };
+        badge.innerText = badgeConfig.text;
+        badge.className = "badge rounded-pill px-3 py-1 mt-2 small " + badgeConfig.class;
+        
+        // Render large SVG icon in sidebar
+        const largeIconContainer = document.getElementById("selected-tooth-svg-icon");
+        largeIconContainer.innerHTML = `
+            <svg viewBox="0 0 100 100" style="width: 50px; height: 60px;">
+                <path class="tooth-path status-${status.toLowerCase()}" style="stroke-width:3" d="M 25,30 C 25,15 35,10 50,10 C 65,10 75,15 75,30 C 75,45 70,55 65,65 C 60,75 58,85 58,90 C 58,93 56,95 53,95 C 50,95 48,93 48,90 C 48,85 45,75 40,65 C 35,55 25,45 25,30 Z"></path>
+            </svg>
+        `;
+
+        // Update bottom action bar count
+        const count = Object.keys(pendingChanges).length;
+        document.getElementById("unsaved-changes-count").innerText = count;
+        
+        const actionBar = document.getElementById("save-action-bar");
+        if (count > 0) {
+            actionBar.classList.add("show");
+        } else {
+            actionBar.classList.remove("show");
+        }
+    }
+
+    // Cancel all changes locally
+    function cancelChanges() {
+        // Clear pending wrapper classes
+        for (const num in pendingChanges) {
+            const wrapper = document.getElementById("tooth-svg-wrapper-" + num);
+            if (wrapper) wrapper.classList.remove("pending-change");
+        }
+
+        pendingChanges = {};
+        
+        // Reset colors
+        drawAllTeethColors();
+
+        // Hide action bar
+        document.getElementById("save-action-bar").classList.remove("show");
+
+        // Reload current selected tooth if any
+        if (selectedTooth) {
+            selectTooth(selectedTooth);
+        }
+    }
+
+    // AJAX POST to save all changes to server (Luồng 5.1 - Bước 5,6,7)
+    function saveToothChanges() {
+        const changesArray = Object.values(pendingChanges);
+        if (changesArray.length === 0) return;
+
+        const payload = {
+            patientId: patientId,
+            version: toothChartVersion,
+            changes: changesArray
+        };
+
+        const saveButton = document.querySelector(".action-bar .btn-success");
+        const originalHtml = saveButton.innerHTML;
+        saveButton.disabled = true;
+        saveButton.innerHTML = `<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span> Đang lưu...`;
+
+        fetch('/Patient/SaveToothChart', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(payload)
+        })
+        .then(res => res.json())
+        .then(data => {
+            saveButton.disabled = false;
+            saveButton.innerHTML = originalHtml;
+
+            if (data.success) {
+                // Success: update version and local dataset
+                toothChartVersion = data.newVersion;
+                document.getElementById("version-label").innerText = toothChartVersion;
+
+                // Update local dataset memory
+                for (const change of changesArray) {
+                    const num = change.toothNumber;
+                    toothData[num].status = change.status;
+                    toothData[num].notes = change.notes;
+                    toothData[num].prescription = change.prescription;
+                    toothData[num].doctorName = "@(ViewBag.CurrentDoctor?.User?.FullName ?? "Bác sĩ")";
+                    toothData[num].date = new Date().toLocaleDateString("vi-VN") + " " + new Date().toLocaleTimeString("vi-VN", { hour: '2-digit', minute: '2-digit' });
+
+                    const wrapper = document.getElementById("tooth-svg-wrapper-" + num);
+                    if (wrapper) wrapper.classList.remove("pending-change");
+                }
+
+                pendingChanges = {};
+                document.getElementById("save-action-bar").classList.remove("show");
+                
+                // Alert user
+                const alertContainer = document.createElement("div");
+                alertContainer.className = "alert alert-success border-0 rounded-4 py-2 px-3 mb-3 shadow-sm alert-dismissible fade show";
+                alertContainer.role = "alert";
+                alertContainer.innerHTML = `<i class="bi bi-check-circle me-2"></i>Đã lưu sơ đồ răng thành công! (Phiên bản mới: V.${toothChartVersion})<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>`;
+                document.querySelector(".container-fluid, .d-flex.align-items-center").before(alertContainer);
+                
+                // Reload selected tooth to show new history
+                if (selectedTooth) {
+                    selectTooth(selectedTooth);
+                }
+            } 
+            else if (data.conflict) {
+                // EX4.3-02: Concurrency collision
+                const conflictModal = new bootstrap.Modal(document.getElementById('conflictModal'));
+                conflictModal.show();
+            } 
+            else {
+                alert("Lỗi khi lưu sơ đồ răng: " + data.message);
+            }
+        })
+        .catch(err => {
+            saveButton.disabled = false;
+            saveButton.innerHTML = originalHtml;
+            console.error(err);
+            alert("Đã xảy ra lỗi mạng. Vui lòng kiểm tra kết nối.");
+        });
+    }
+</script>

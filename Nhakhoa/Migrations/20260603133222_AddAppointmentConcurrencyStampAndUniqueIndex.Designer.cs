@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Nhakhoa.Data;
 
@@ -11,9 +12,11 @@ using Nhakhoa.Data;
 namespace Nhakhoa.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260603133222_AddAppointmentConcurrencyStampAndUniqueIndex")]
+    partial class AddAppointmentConcurrencyStampAndUniqueIndex
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -272,7 +275,7 @@ namespace Nhakhoa.Migrations
                         new
                         {
                             Id = 1,
-                            CreatedAt = new DateTime(2026, 6, 3, 23, 2, 29, 601, DateTimeKind.Local).AddTicks(3860),
+                            CreatedAt = new DateTime(2026, 6, 3, 20, 32, 16, 242, DateTimeKind.Local).AddTicks(1535),
                             CreatedBy = "Hệ thống",
                             Date = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
                             HolidayType = "Cố định",
@@ -283,7 +286,7 @@ namespace Nhakhoa.Migrations
                         new
                         {
                             Id = 2,
-                            CreatedAt = new DateTime(2026, 6, 3, 23, 2, 29, 601, DateTimeKind.Local).AddTicks(7595),
+                            CreatedAt = new DateTime(2026, 6, 3, 20, 32, 16, 242, DateTimeKind.Local).AddTicks(7785),
                             CreatedBy = "Hệ thống",
                             Date = new DateTime(2026, 4, 30, 0, 0, 0, 0, DateTimeKind.Unspecified),
                             HolidayType = "Cố định",
@@ -294,7 +297,7 @@ namespace Nhakhoa.Migrations
                         new
                         {
                             Id = 3,
-                            CreatedAt = new DateTime(2026, 6, 3, 23, 2, 29, 601, DateTimeKind.Local).AddTicks(7602),
+                            CreatedAt = new DateTime(2026, 6, 3, 20, 32, 16, 242, DateTimeKind.Local).AddTicks(7805),
                             CreatedBy = "Hệ thống",
                             Date = new DateTime(2026, 5, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
                             HolidayType = "Cố định",
@@ -305,7 +308,7 @@ namespace Nhakhoa.Migrations
                         new
                         {
                             Id = 4,
-                            CreatedAt = new DateTime(2026, 6, 3, 23, 2, 29, 601, DateTimeKind.Local).AddTicks(7604),
+                            CreatedAt = new DateTime(2026, 6, 3, 20, 32, 16, 242, DateTimeKind.Local).AddTicks(7812),
                             CreatedBy = "Hệ thống",
                             Date = new DateTime(2026, 9, 2, 0, 0, 0, 0, DateTimeKind.Unspecified),
                             HolidayType = "Cố định",
@@ -459,67 +462,12 @@ namespace Nhakhoa.Migrations
                         .HasMaxLength(20)
                         .HasColumnType("nvarchar(20)");
 
-                    b.Property<int?>("PrimaryDoctorId")
-                        .HasColumnType("int");
-
-                    b.Property<int>("ToothChartVersion")
-                        .HasColumnType("int");
-
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("datetime2");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("PrimaryDoctorId");
-
                     b.ToTable("Patients");
-                });
-
-            modelBuilder.Entity("Nhakhoa.Models.PatientToothRecord", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<int?>("AppointmentId")
-                        .HasColumnType("int");
-
-                    b.Property<int>("DoctorId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Notes")
-                        .HasMaxLength(1000)
-                        .HasColumnType("nvarchar(1000)");
-
-                    b.Property<int>("PatientId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Prescription")
-                        .HasMaxLength(1000)
-                        .HasColumnType("nvarchar(1000)");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
-                    b.Property<DateTime>("Timestamp")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int>("ToothNumber")
-                        .HasColumnType("int");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("AppointmentId");
-
-                    b.HasIndex("DoctorId");
-
-                    b.HasIndex("PatientId");
-
-                    b.ToTable("PatientToothRecords");
                 });
 
             modelBuilder.Entity("Nhakhoa.Models.RolePermission", b =>
@@ -938,7 +886,7 @@ namespace Nhakhoa.Migrations
                         {
                             Id = 1,
                             ClinicId = 1,
-                            CreatedAt = new DateTime(2026, 6, 3, 23, 2, 29, 601, DateTimeKind.Local).AddTicks(468),
+                            CreatedAt = new DateTime(2026, 6, 3, 20, 32, 16, 241, DateTimeKind.Local).AddTicks(6153),
                             IsActive = true,
                             ShiftDate = new DateTime(2026, 12, 10, 0, 0, 0, 0, DateTimeKind.Unspecified),
                             ShiftType = "Sáng",
@@ -1613,42 +1561,6 @@ namespace Nhakhoa.Migrations
                     b.Navigation("Specialty");
                 });
 
-            modelBuilder.Entity("Nhakhoa.Models.Patient", b =>
-                {
-                    b.HasOne("Nhakhoa.Models.StaffProfile", "PrimaryDoctor")
-                        .WithMany()
-                        .HasForeignKey("PrimaryDoctorId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
-                    b.Navigation("PrimaryDoctor");
-                });
-
-            modelBuilder.Entity("Nhakhoa.Models.PatientToothRecord", b =>
-                {
-                    b.HasOne("Nhakhoa.Models.Appointment", "Appointment")
-                        .WithMany()
-                        .HasForeignKey("AppointmentId")
-                        .OnDelete(DeleteBehavior.Restrict);
-
-                    b.HasOne("Nhakhoa.Models.StaffProfile", "Doctor")
-                        .WithMany()
-                        .HasForeignKey("DoctorId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("Nhakhoa.Models.Patient", "Patient")
-                        .WithMany("ToothRecords")
-                        .HasForeignKey("PatientId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("Appointment");
-
-                    b.Navigation("Doctor");
-
-                    b.Navigation("Patient");
-                });
-
             modelBuilder.Entity("Nhakhoa.Models.Shift", b =>
                 {
                     b.HasOne("Nhakhoa.Models.Clinic", "Clinic")
@@ -1709,8 +1621,6 @@ namespace Nhakhoa.Migrations
             modelBuilder.Entity("Nhakhoa.Models.Patient", b =>
                 {
                     b.Navigation("Appointments");
-
-                    b.Navigation("ToothRecords");
                 });
 
             modelBuilder.Entity("Nhakhoa.Models.Specialty", b =>
