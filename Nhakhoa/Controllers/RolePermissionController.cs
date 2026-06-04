@@ -41,6 +41,23 @@ namespace Nhakhoa.Controllers
             return View();
         }
 
+        // GET: /RolePermission/ActivityLog
+        public async Task<IActionResult> ActivityLog()
+        {
+            if (!User.Identity?.IsAuthenticated == true)
+                return RedirectToAction("Login", "Auth");
+
+            var role = User.FindFirst(ClaimTypes.Role)?.Value;
+            if (role != "Admin")
+                return StatusCode(403);
+
+            var logs = await _context.ActivityLogs
+                .OrderByDescending(l => l.Timestamp)
+                .ToListAsync();
+
+            return View(logs);
+        }
+
         // POST: /RolePermission/Save
         [HttpPost]
         public async Task<IActionResult> Save([FromBody] SavePermissionsRequest request)

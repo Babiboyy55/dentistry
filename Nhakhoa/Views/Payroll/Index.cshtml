@@ -1,0 +1,656 @@
+@{
+    Layout = "_AdminLayout";
+    ViewData["Title"] = "Quản lý lương bác sĩ";
+    var doctors = ViewBag.Doctors as List<Nhakhoa.Models.StaffProfile> ?? new();
+    var config = ViewBag.Config as Nhakhoa.Models.DoctorSalaryConfig ?? new();
+}
+
+<style>
+/* ── Layout ────────────────────────────────────────────────────── */
+.payroll-layout {
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap;
+    gap: 0;
+    min-height: calc(100vh - 200px);
+    align-items: stretch;
+}
+
+/* ── Sidebar ───────────────────────────────────────────────────── */
+.pr-sidebar {
+    width: 260px; min-width: 220px; flex-shrink: 0;
+    background: #fff; border-right: 1px solid #e8ecf0;
+    border-radius: 16px 0 0 16px; padding: 20px 0;
+}
+.pr-sidebar .sidebar-title {
+    font-size: .72rem; font-weight: 700; letter-spacing: .08em;
+    color: #94a3b8; text-transform: uppercase;
+    padding: 0 18px; margin-bottom: 6px; margin-top: 10px;
+}
+.pr-sidebar .sidebar-title:first-child { margin-top: 0; }
+.pr-sidebar a.pr-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 9px 18px; font-size: .82rem; color: #475569;
+    cursor: pointer; text-decoration: none;
+    border-left: 3px solid transparent;
+    transition: all .15s ease;
+}
+.pr-sidebar a.pr-item:hover { background: #f1f5f9; color: #1e293b; }
+.pr-sidebar a.pr-item.active {
+    background: #eff6ff; color: #1d4ed8; font-weight: 600;
+    border-left-color: #3b82f6;
+}
+.pr-sidebar a.pr-item i { font-size: .95rem; width: 18px; text-align: center; }
+
+/* ── Content ───────────────────────────────────────────────────── */
+.pr-content {
+    flex: 1;
+    min-width: 0;
+    background: #f8fafc;
+    border-radius: 0 16px 16px 0;
+    padding: 28px 30px;
+    overflow-y: auto;
+}
+.pr-content .section { display: none; }
+.pr-content .section.active { display: block; }
+
+/* ── Cards ─────────────────────────────────────────────────────── */
+.pr-card {
+    background: #fff; border-radius: 14px;
+    box-shadow: 0 1px 6px rgba(0,0,0,.07);
+    padding: 24px; margin-bottom: 20px;
+}
+.pr-card .card-title {
+    font-size: 1rem; font-weight: 700; color: #0f172a;
+    margin-bottom: 18px; display: flex; align-items: center; gap: 8px;
+}
+.pr-card .card-title i { color: #3b82f6; font-size: 1.1rem; }
+
+/* ── Form helpers ──────────────────────────────────────────────── */
+.coeff-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+    gap: 12px;
+}
+.coeff-item label { font-size: .78rem; font-weight: 600; color: #64748b; margin-bottom: 4px; display: block; }
+.coeff-item input { width: 100%; }
+
+/* ── Table ─────────────────────────────────────────────────────── */
+.pr-table { width: 100%; border-collapse: separate; border-spacing: 0; }
+.pr-table thead th {
+    background: #f1f5f9; padding: 10px 14px;
+    font-size: .76rem; font-weight: 700; color: #475569;
+    text-transform: uppercase; letter-spacing: .06em;
+}
+.pr-table tbody td { padding: 10px 14px; font-size: .83rem; border-bottom: 1px solid #f1f5f9; }
+.pr-table tbody tr:hover td { background: #f8fbff; }
+
+/* ── Stat pills ────────────────────────────────────────────────── */
+.stat-pill {
+    background: #eff6ff; border-radius: 12px; padding: 18px 20px;
+    text-align: center;
+}
+.stat-pill .sp-val { font-size: 1.6rem; font-weight: 800; color: #1d4ed8; }
+.stat-pill .sp-lbl { font-size: .75rem; color: #64748b; margin-top: 2px; }
+
+/* ── Feedback toast ────────────────────────────────────────────── */
+#prFeedback { position: fixed; bottom: 24px; right: 24px; z-index: 9999;
+    display: none; min-width: 280px; }
+</style>
+
+<!-- Page Header -->
+<div class="d-flex align-items-center gap-3 mb-4">
+    <div class="rounded-3 d-flex align-items-center justify-content-center"
+         style="width:48px;height:48px;background:linear-gradient(135deg,#3b82f6,#6366f1);">
+        <i class="bi bi-currency-dollar text-white fs-5"></i>
+    </div>
+    <div>
+        <h4 class="fw-bold mb-0" style="color:#0b1f35;">Quản lý lương bác sĩ</h4>
+        <div class="text-muted small mt-1">Thiết lập, tính toán và báo cáo lương làm thêm bác sĩ</div>
+    </div>
+</div>
+
+<div style="border-radius:16px;box-shadow:0 1px 8px rgba(0,0,0,.08);background:#fff;display:flex;flex-direction:row;flex-wrap:nowrap;align-items:stretch;overflow:hidden;min-height:520px;">
+    <!-- ── Sidebar ─────────────────────────────────────────────────── -->
+    <div class="pr-sidebar">
+        <div class="sidebar-title">Cấu hình</div>
+        <a class="pr-item active" href="#" data-section="sec-hourly">
+            <i class="bi bi-cash-coin"></i> Mức tiền cơ bản/giờ
+        </a>
+        <a class="pr-item" href="#" data-section="sec-weekcoeff">
+            <i class="bi bi-calendar2-week"></i> Hệ số ngày trong tuần
+        </a>
+
+        <div class="sidebar-title">Quản lý dữ liệu</div>
+        <a class="pr-item" href="#" data-section="sec-complex">
+            <i class="bi bi-person-raised-hand"></i> Hệ số ca phức tạp
+        </a>
+
+        <div class="sidebar-title">Phiếu lương</div>
+        <a class="pr-item" href="#" data-section="sec-slip">
+            <i class="bi bi-receipt-cutoff"></i> Phiếu lương theo tháng
+        </a>
+        <a class="pr-item" href="#" data-section="sec-monthly-all">
+            <i class="bi bi-table"></i> Tổng hợp tháng (tất cả)
+        </a>
+
+        <div class="sidebar-title">Báo cáo</div>
+        <a class="pr-item" href="#" data-section="sec-yearly-one">
+            <i class="bi bi-bar-chart-line"></i> Biến động năm (1 bác sĩ)
+        </a>
+        <a class="pr-item" href="#" data-section="sec-yearly-all">
+            <i class="bi bi-pie-chart"></i> Tổng hợp năm (tất cả)
+        </a>
+    </div>
+
+    <!-- ── Content Area ───────────────────────────────────────────── -->
+    <div class="pr-content">
+
+        <!-- ══ UC4.1 — Mức tiền cơ bản/giờ & hệ số học vị ══════════ -->
+        <div class="section active" id="sec-hourly">
+            <div class="pr-card">
+                <div class="card-title"><i class="bi bi-cash-coin"></i> Mức tiền cơ bản & Hệ số học hàm/học vị</div>
+                <div class="row g-3 mb-4">
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold small">Tiền một giờ (VNĐ)</label>
+                        <input type="number" id="hourlyRate" class="form-control rounded-3"
+                               value="@config.HourlyRate" min="0" step="1000" />
+                    </div>
+                </div>
+                <div class="coeff-grid mb-4">
+                    <div class="coeff-item">
+                        <label>Đại học</label>
+                        <input type="number" id="degUniversity" class="form-control form-control-sm rounded-3"
+                               step="0.1" min="1" value="@config.DegreeUniversity.ToString("0.00")" />
+                    </div>
+                    <div class="coeff-item">
+                        <label>Thạc sỹ</label>
+                        <input type="number" id="degMaster" class="form-control form-control-sm rounded-3"
+                               step="0.1" min="1" value="@config.DegreeMaster.ToString("0.00")" />
+                    </div>
+                    <div class="coeff-item">
+                        <label>Tiến sỹ</label>
+                        <input type="number" id="degDoctorate" class="form-control form-control-sm rounded-3"
+                               step="0.1" min="1" value="@config.DegreeDoctorate.ToString("0.00")" />
+                    </div>
+                    <div class="coeff-item">
+                        <label>Phó giáo sư</label>
+                        <input type="number" id="degAssocProf" class="form-control form-control-sm rounded-3"
+                               step="0.1" min="1" value="@config.DegreeAssocProf.ToString("0.00")" />
+                    </div>
+                    <div class="coeff-item">
+                        <label>Giáo sư</label>
+                        <input type="number" id="degProfessor" class="form-control form-control-sm rounded-3"
+                               step="0.1" min="1" value="@config.DegreeProfessor.ToString("0.00")" />
+                    </div>
+                </div>
+                <button class="btn btn-primary rounded-pill px-4" onclick="saveConfig()">
+                    <i class="bi bi-save me-1"></i> Lưu cấu hình
+                </button>
+            </div>
+        </div>
+
+        <!-- ══ UC4.2 — Hệ số ca ngày trong tuần ═══════════════════════ -->
+        <div class="section" id="sec-weekcoeff">
+            <div class="pr-card">
+                <div class="card-title"><i class="bi bi-calendar2-week"></i> Hệ số ca theo ngày trong tuần</div>
+                <p class="small text-muted mb-4">Hệ số ca làm việc: ngày thường = 1.0, cuối tuần thường từ 1.1 – 1.5. Giá trị này nhân với giờ làm việc để tính giờ quy đổi.</p>
+                <div class="coeff-grid mb-4">
+                    @{
+                        var dayConfigs = new[] {
+                            ("mulMonday", "Thứ Hai", config.MultiplierMonday),
+                            ("mulTuesday", "Thứ Ba", config.MultiplierTuesday),
+                            ("mulWednesday", "Thứ Tư", config.MultiplierWednesday),
+                            ("mulThursday", "Thứ Năm", config.MultiplierThursday),
+                            ("mulFriday", "Thứ Sáu", config.MultiplierFriday),
+                            ("mulSaturday", "Thứ Bảy", config.MultiplierSaturday),
+                            ("mulSunday", "Chủ Nhật", config.MultiplierSunday),
+                        };
+                        foreach (var (id, lbl, val) in dayConfigs)
+                        {
+                            <div class="coeff-item">
+                                <label>@lbl</label>
+                                <input type="number" id="@id" class="form-control form-control-sm rounded-3"
+                                       step="0.05" min="1" max="3" value="@val.ToString("0.00")" />
+                            </div>
+                        }
+                    }
+                </div>
+                <button class="btn btn-primary rounded-pill px-4" onclick="saveWeekMultipliers()">
+                    <i class="bi bi-save me-1"></i> Lưu hệ số
+                </button>
+            </div>
+        </div>
+
+        <!-- ══ UC4.3 — Hệ số ca phức tạp ══════════════════════════════ -->
+        <div class="section" id="sec-complex">
+            <div class="pr-card">
+                <div class="card-title"><i class="bi bi-person-raised-hand"></i> Hệ số ca bệnh nhân phức tạp trong tháng</div>
+                <div class="row g-3 mb-4 align-items-end">
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold small">Bác sĩ</label>
+                        <select id="cxDoctor" class="form-select form-select-sm rounded-3">
+                            @foreach (var d in doctors)
+                            {
+                                <option value="@d.Id">@d.User?.FullName (@(d.AcademicDegree ?? "Đại học"))</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label fw-semibold small">Tháng</label>
+                        <input type="number" id="cxMonth" class="form-control form-control-sm rounded-3"
+                               min="1" max="12" value="@DateTime.Today.Month" />
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label fw-semibold small">Năm</label>
+                        <input type="number" id="cxYear" class="form-control form-control-sm rounded-3"
+                               min="2020" max="2099" value="@DateTime.Today.Year" />
+                    </div>
+                    <div class="col-md-2">
+                        <button class="btn btn-outline-primary btn-sm rounded-pill w-100" onclick="loadComplexSessions()">
+                            <i class="bi bi-search me-1"></i> Xem
+                        </button>
+                    </div>
+                </div>
+                <div id="cxTable" class="table-responsive"></div>
+            </div>
+        </div>
+
+        <!-- ══ UC4.4 — Phiếu lương 1 bác sĩ ══════════════════════════ -->
+        <div class="section" id="sec-slip">
+            <div class="pr-card">
+                <div class="card-title"><i class="bi bi-receipt-cutoff"></i> Phiếu lương bác sĩ theo tháng</div>
+                <div class="row g-3 mb-4 align-items-end">
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold small">Bác sĩ</label>
+                        <select id="slipDoctor" class="form-select form-select-sm rounded-3">
+                            @foreach (var d in doctors)
+                            {
+                                <option value="@d.Id">@d.User?.FullName</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label fw-semibold small">Tháng</label>
+                        <input type="number" id="slipMonth" class="form-control form-control-sm rounded-3"
+                               min="1" max="12" value="@DateTime.Today.Month" />
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label fw-semibold small">Năm</label>
+                        <input type="number" id="slipYear" class="form-control form-control-sm rounded-3"
+                               min="2020" max="2099" value="@DateTime.Today.Year" />
+                    </div>
+                    <div class="col-md-2">
+                        <button class="btn btn-primary btn-sm rounded-pill w-100" onclick="loadSlip()">
+                            <i class="bi bi-calculator me-1"></i> Tính lương
+                        </button>
+                    </div>
+                </div>
+                <div id="slipResult"></div>
+            </div>
+        </div>
+
+        <!-- ══ UC4.5 — Tổng hợp tháng (tất cả bác sĩ) ════════════════ -->
+        <div class="section" id="sec-monthly-all">
+            <div class="pr-card">
+                <div class="card-title"><i class="bi bi-table"></i> Báo cáo lương tất cả bác sĩ trong tháng</div>
+                <div class="row g-3 mb-4 align-items-end">
+                    <div class="col-md-2">
+                        <label class="form-label fw-semibold small">Tháng</label>
+                        <input type="number" id="maMonth" class="form-control form-control-sm rounded-3"
+                               min="1" max="12" value="@DateTime.Today.Month" />
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label fw-semibold small">Năm</label>
+                        <input type="number" id="maYear" class="form-control form-control-sm rounded-3"
+                               min="2020" max="2099" value="@DateTime.Today.Year" />
+                    </div>
+                    <div class="col-md-2">
+                        <button class="btn btn-primary btn-sm rounded-pill w-100" onclick="loadMonthlyAll()">
+                            <i class="bi bi-search me-1"></i> Xem báo cáo
+                        </button>
+                    </div>
+                </div>
+                <div id="maTable" class="table-responsive"></div>
+            </div>
+        </div>
+
+        <!-- ══ UC4.6 — Biến động năm (1 bác sĩ) ══════════════════════ -->
+        <div class="section" id="sec-yearly-one">
+            <div class="pr-card">
+                <div class="card-title"><i class="bi bi-bar-chart-line"></i> Lương bác sĩ qua các tháng trong năm</div>
+                <div class="row g-3 mb-4 align-items-end">
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold small">Bác sĩ</label>
+                        <select id="y1Doctor" class="form-select form-select-sm rounded-3">
+                            @foreach (var d in doctors) { <option value="@d.Id">@d.User?.FullName</option> }
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label fw-semibold small">Năm</label>
+                        <input type="number" id="y1Year" class="form-control form-control-sm rounded-3"
+                               min="2020" max="2099" value="@DateTime.Today.Year" />
+                    </div>
+                    <div class="col-md-2">
+                        <button class="btn btn-primary btn-sm rounded-pill w-100" onclick="loadYearlyOne()">
+                            <i class="bi bi-graph-up me-1"></i> Xem biểu đồ
+                        </button>
+                    </div>
+                </div>
+                <canvas id="chartY1" height="100"></canvas>
+                <div id="y1Table" class="table-responsive mt-4"></div>
+            </div>
+        </div>
+
+        <!-- ══ UC4.7 — Tổng hợp năm (tất cả bác sĩ) ══════════════════ -->
+        <div class="section" id="sec-yearly-all">
+            <div class="pr-card">
+                <div class="card-title"><i class="bi bi-pie-chart"></i> Tổng lương tất cả bác sĩ trong năm</div>
+                <div class="row g-3 mb-4 align-items-end">
+                    <div class="col-md-2">
+                        <label class="form-label fw-semibold small">Năm</label>
+                        <input type="number" id="yaYear" class="form-control form-control-sm rounded-3"
+                               min="2020" max="2099" value="@DateTime.Today.Year" />
+                    </div>
+                    <div class="col-md-2">
+                        <button class="btn btn-primary btn-sm rounded-pill w-100" onclick="loadYearlyAll()">
+                            <i class="bi bi-graph-up me-1"></i> Xem biểu đồ
+                        </button>
+                    </div>
+                </div>
+                <div class="row g-4">
+                    <div class="col-md-5">
+                        <canvas id="chartYA" height="250"></canvas>
+                    </div>
+                    <div class="col-md-7">
+                        <div id="yaTable" class="table-responsive"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div><!-- /.pr-content -->
+</div><!-- /payroll outer wrapper -->
+
+<!-- Toast feedback -->
+<div id="prFeedback" class="alert shadow-sm rounded-3 px-4 py-3"></div>
+
+@section Scripts {
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+// ─── Sidebar navigation ───────────────────────────────────────────
+document.querySelectorAll('.pr-item').forEach(link => {
+    link.addEventListener('click', e => {
+        e.preventDefault();
+        const target = link.dataset.section;
+        document.querySelectorAll('.pr-item').forEach(l => l.classList.remove('active'));
+        document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+        link.classList.add('active');
+        const sec = document.getElementById(target);
+        if (sec) sec.classList.add('active');
+    });
+});
+
+// ─── Feedback toast ───────────────────────────────────────────────
+function showToast(msg, type = 'success') {
+    const el = document.getElementById('prFeedback');
+    el.className = `alert alert-${type} shadow-sm rounded-3 px-4 py-3`;
+    el.textContent = msg;
+    el.style.display = 'block';
+    setTimeout(() => el.style.display = 'none', 3500);
+}
+
+function fmt(v) {
+    return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(v);
+}
+
+// ─── UC4.1 — Save config ─────────────────────────────────────────
+async function saveConfig() {
+    const payload = {
+        hourlyRate: parseFloat(document.getElementById('hourlyRate').value),
+        degreeUniversity: parseFloat(document.getElementById('degUniversity').value),
+        degreeMaster: parseFloat(document.getElementById('degMaster').value),
+        degreeDoctorate: parseFloat(document.getElementById('degDoctorate').value),
+        degreeAssocProf: parseFloat(document.getElementById('degAssocProf').value),
+        degreeProfessor: parseFloat(document.getElementById('degProfessor').value),
+    };
+    const res = await fetch('/Payroll/SaveConfig', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+    });
+    if (res.ok) showToast('Đã lưu cấu hình thành công!', 'success');
+    else showToast('Lỗi khi lưu.', 'danger');
+}
+
+// ─── UC4.2 — Save week multipliers ───────────────────────────────
+async function saveWeekMultipliers() {
+    const payload = {
+        multiplierMonday: parseFloat(document.getElementById('mulMonday').value),
+        multiplierTuesday: parseFloat(document.getElementById('mulTuesday').value),
+        multiplierWednesday: parseFloat(document.getElementById('mulWednesday').value),
+        multiplierThursday: parseFloat(document.getElementById('mulThursday').value),
+        multiplierFriday: parseFloat(document.getElementById('mulFriday').value),
+        multiplierSaturday: parseFloat(document.getElementById('mulSaturday').value),
+        multiplierSunday: parseFloat(document.getElementById('mulSunday').value),
+    };
+    const res = await fetch('/Payroll/SaveWeekMultipliers', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+    });
+    if (res.ok) showToast('Đã lưu hệ số ngày!', 'success');
+    else showToast('Lỗi khi lưu.', 'danger');
+}
+
+// ─── UC4.3 — Complex sessions ─────────────────────────────────────
+async function loadComplexSessions() {
+    const doctorId = document.getElementById('cxDoctor').value;
+    const month = document.getElementById('cxMonth').value;
+    const year = document.getElementById('cxYear').value;
+    const res = await fetch(`/Payroll/GetComplexSessions?doctorId=${doctorId}&month=${month}&year=${year}`);
+    const sessions = await res.json();
+
+    if (!sessions.length) {
+        document.getElementById('cxTable').innerHTML = '<div class="text-muted small p-3">Không có ca khám nào trong tháng này.</div>';
+        return;
+    }
+
+    let html = `<table class="pr-table">
+        <thead><tr><th>#</th><th>Ngày</th><th>Bệnh nhân</th><th>Chẩn đoán</th><th>Hệ số BN (0.0–0.5)</th><th></th></tr></thead><tbody>`;
+    sessions.forEach((s, i) => {
+        html += `<tr>
+            <td>${i + 1}</td>
+            <td>${new Date(s.createdAt).toLocaleDateString('vi-VN')}</td>
+            <td>${s.patientName}</td>
+            <td>${s.diagnosis || '—'}</td>
+            <td><input type="number" class="form-control form-control-sm w-auto" id="coeff_${s.id}"
+                min="0" max="0.5" step="0.1" value="${s.patientCoefficient}" style="width:90px!important;" /></td>
+            <td><button class="btn btn-outline-primary btn-sm rounded-pill" onclick="saveCoeff(${s.id})">
+                <i class="bi bi-check2"></i> Lưu
+            </button></td>
+        </tr>`;
+    });
+    html += '</tbody></table>';
+    document.getElementById('cxTable').innerHTML = html;
+}
+
+async function saveCoeff(sessionId) {
+    const val = parseFloat(document.getElementById(`coeff_${sessionId}`).value);
+    const res = await fetch('/Payroll/SaveComplexSessionCoefficient', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionId, coefficient: val })
+    });
+    if (res.ok) showToast('Đã lưu hệ số bệnh nhân!', 'success');
+    else { const d = await res.json(); showToast(d.error || 'Lỗi.', 'danger'); }
+}
+
+// ─── UC4.4 — Monthly slip ─────────────────────────────────────────
+async function loadSlip() {
+    const doctorId = document.getElementById('slipDoctor').value;
+    const month = document.getElementById('slipMonth').value;
+    const year = document.getElementById('slipYear').value;
+    const res = await fetch(`/Payroll/GetDoctorMonthlySlip?doctorId=${doctorId}&month=${month}&year=${year}`);
+    const data = await res.json();
+
+    if (!res.ok) { document.getElementById('slipResult').innerHTML = `<div class="alert alert-danger">${data.error}</div>`; return; }
+
+    let html = `
+    <div class="row g-3 mb-4">
+        <div class="col-md-4"><div class="stat-pill">
+            <div class="sp-val">${data.totalShifts}</div>
+            <div class="sp-lbl">Tổng số ca trực</div>
+        </div></div>
+        <div class="col-md-4"><div class="stat-pill">
+            <div class="sp-val">${data.degreeCoeff}</div>
+            <div class="sp-lbl">Hệ số học vị (${data.academicDegree})</div>
+        </div></div>
+        <div class="col-md-4"><div class="stat-pill" style="background:#f0fdf4;">
+            <div class="sp-val" style="color:#15803d;">${fmt(data.totalPay)}</div>
+            <div class="sp-lbl">Tổng tiền làm thêm</div>
+        </div></div>
+    </div>
+    <div class="small text-muted mb-3">
+        Công thức: <code>Tiền_ca = Số giờ × (Hệ số ca + Tổng HsBN) × Hệ số học vị × ${fmt(data.hourlyRate)}/giờ</code>
+    </div>
+    <table class="pr-table">
+        <thead><tr>
+            <th>Ngày</th><th>Thứ</th><th>Ca</th><th>Phòng</th>
+            <th>Giờ ca</th><th>Hệ số ngày</th><th>Tổng HsBN</th>
+            <th>Giờ quy đổi</th><th>Tiền ca</th>
+        </tr></thead><tbody>`;
+
+    data.details.forEach(d => {
+        html += `<tr>
+            <td>${d.date}</td><td>${d.dayName}</td><td>${d.shiftType}</td><td>${d.clinicName}</td>
+            <td>${d.durationHours}</td><td>${d.dayMultiplier}</td><td>${d.totalPatientCoeff}</td>
+            <td class="fw-semibold">${d.convertedHours}</td>
+            <td class="fw-bold text-primary">${fmt(d.casePay)}</td>
+        </tr>`;
+    });
+
+    html += `</tbody><tfoot>
+        <tr class="fw-bold border-top">
+            <td colspan="8" class="text-end pt-3">Tổng tiền làm thêm:</td>
+            <td class="text-success fs-5 pt-3">${fmt(data.totalPay)}</td>
+        </tr>
+    </tfoot></table>`;
+
+    document.getElementById('slipResult').innerHTML = html;
+}
+
+// ─── UC4.5 — Monthly all ──────────────────────────────────────────
+async function loadMonthlyAll() {
+    const month = document.getElementById('maMonth').value;
+    const year = document.getElementById('maYear').value;
+    const res = await fetch(`/Payroll/GetAllDoctorsMonthlyReport?month=${month}&year=${year}`);
+    const data = await res.json();
+
+    let total = data.reduce((s, d) => s + d.totalPay, 0);
+    let html = `<p class="small text-muted mb-3">Tháng ${month}/${year} — Tổng toàn phòng khám: <strong class="text-primary">${fmt(total)}</strong></p>
+    <table class="pr-table">
+        <thead><tr>
+            <th>#</th><th>Bác sĩ</th><th>Học vị</th><th>Hệ số</th>
+            <th>Số ca</th><th>Giờ quy đổi</th><th>Tổng tiền làm thêm</th>
+        </tr></thead><tbody>`;
+
+    data.forEach((d, i) => {
+        html += `<tr>
+            <td>${i + 1}</td><td class="fw-semibold">${d.doctorName}</td>
+            <td>${d.academicDegree}</td><td>${d.degreeCoeff}</td>
+            <td>${d.totalShifts}</td><td>${d.totalConvertedHours}</td>
+            <td class="fw-bold text-primary">${fmt(d.totalPay)}</td>
+        </tr>`;
+    });
+
+    html += '</tbody></table>';
+    document.getElementById('maTable').innerHTML = html;
+}
+
+// ─── UC4.6 — Yearly one doctor ────────────────────────────────────
+let chartY1Instance = null;
+async function loadYearlyOne() {
+    const doctorId = document.getElementById('y1Doctor').value;
+    const year = document.getElementById('y1Year').value;
+    const res = await fetch(`/Payroll/GetDoctorYearlyReport?doctorId=${doctorId}&year=${year}`);
+    const data = await res.json();
+
+    const labels = data.monthly.map(m => `T${m.month}`);
+    const values = data.monthly.map(m => m.pay);
+
+    if (chartY1Instance) chartY1Instance.destroy();
+    chartY1Instance = new Chart(document.getElementById('chartY1'), {
+        type: 'bar',
+        data: {
+            labels,
+            datasets: [{
+                label: `Lương làm thêm – ${data.doctorName} (${year})`,
+                data: values,
+                backgroundColor: 'rgba(59,130,246,0.7)',
+                borderColor: '#3b82f6',
+                borderWidth: 1.5,
+                borderRadius: 6,
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: { legend: { position: 'top' } },
+            scales: { y: { ticks: { callback: v => (v/1000).toLocaleString('vi-VN') + 'K' } } }
+        }
+    });
+
+    let html = `<table class="pr-table mt-2">
+        <thead><tr><th>Tháng</th><th>Tiền làm thêm</th></tr></thead><tbody>`;
+    data.monthly.forEach(m => {
+        html += `<tr><td>Tháng ${m.month}</td><td class="fw-bold text-primary">${fmt(m.pay)}</td></tr>`;
+    });
+    html += `<tr class="fw-bold border-top"><td>Cả năm</td>
+        <td class="text-success fs-5">${fmt(values.reduce((a,b)=>a+b,0))}</td></tr>
+    </tbody></table>`;
+    document.getElementById('y1Table').innerHTML = html;
+}
+
+// ─── UC4.7 — Yearly all doctors ───────────────────────────────────
+let chartYAInstance = null;
+async function loadYearlyAll() {
+    const year = document.getElementById('yaYear').value;
+    const res = await fetch(`/Payroll/GetAllDoctorsYearlyReport?year=${year}`);
+    const data = await res.json();
+
+    const palette = ['#3b82f6','#6366f1','#8b5cf6','#ec4899','#f59e0b','#10b981','#0ea5e9','#f97316'];
+
+    if (chartYAInstance) chartYAInstance.destroy();
+    chartYAInstance = new Chart(document.getElementById('chartYA'), {
+        type: 'doughnut',
+        data: {
+            labels: data.map(d => d.doctorName),
+            datasets: [{
+                data: data.map(d => d.total),
+                backgroundColor: data.map((_, i) => palette[i % palette.length]),
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: { position: 'bottom' },
+                tooltip: { callbacks: { label: ctx => ` ${ctx.label}: ${fmt(ctx.raw)}` } }
+            }
+        }
+    });
+
+    let total = data.reduce((s, d) => s + d.total, 0);
+    let html = `<p class="small text-muted mb-2">Năm ${year} — Tổng toàn phòng khám: <strong class="text-primary">${fmt(total)}</strong></p>
+    <table class="pr-table">
+        <thead><tr><th>#</th><th>Bác sĩ</th><th>Học vị</th><th>Tổng cả năm</th><th>Tỉ lệ</th></tr></thead><tbody>`;
+    data.forEach((d, i) => {
+        const pct = total > 0 ? ((d.total / total) * 100).toFixed(1) : 0;
+        html += `<tr>
+            <td><span class="badge rounded-pill" style="background:${palette[i % palette.length]}">${i+1}</span></td>
+            <td class="fw-semibold">${d.doctorName}</td>
+            <td>${d.academicDegree}</td>
+            <td class="fw-bold text-primary">${fmt(d.total)}</td>
+            <td>${pct}%</td>
+        </tr>`;
+    });
+    html += '</tbody></table>';
+    document.getElementById('yaTable').innerHTML = html;
+}
+</script>
+}

@@ -258,6 +258,53 @@ namespace Nhakhoa.Controllers
 
             ViewBag.CurrentDoctor = currentUser?.StaffProfile;
 
+            // Load real EMR details and set into ViewBag
+            ViewBag.ExaminationSessions = await _db.ExaminationSessions
+                .Include(es => es.Doctor)
+                    .ThenInclude(d => d!.User)
+                .Where(es => es.PatientId == id)
+                .OrderByDescending(es => es.CreatedAt)
+                .ToListAsync();
+
+            ViewBag.TreatmentPlans = await _db.TreatmentPlans
+                .Include(tp => tp.Doctor)
+                    .ThenInclude(d => d!.User)
+                .Include(tp => tp.MedicalService)
+                .Include(tp => tp.Sessions)
+                .Where(tp => tp.PatientId == id)
+                .OrderByDescending(tp => tp.CreatedAt)
+                .ToListAsync();
+
+            ViewBag.Prescriptions = await _db.Prescriptions
+                .Include(p => p.Doctor)
+                    .ThenInclude(d => d!.User)
+                .Include(p => p.Items)
+                    .ThenInclude(i => i.Medicine)
+                .Where(p => p.PatientId == id)
+                .OrderByDescending(p => p.CreatedAt)
+                .ToListAsync();
+
+            ViewBag.Warranties = await _db.DentalWarranties
+                .Include(w => w.Doctor)
+                    .ThenInclude(d => d!.User)
+                .Include(w => w.MedicalService)
+                .Where(w => w.PatientId == id)
+                .OrderByDescending(w => w.StartDate)
+                .ToListAsync();
+
+            ViewBag.MedicalServices = await _db.MedicalServices
+                .Where(ms => ms.IsActive)
+                .ToListAsync();
+
+            ViewBag.Medicines = await _db.MedicineInventories
+                .ToListAsync();
+
+            var activeAppt = patient.Appointments
+                .Where(a => a.AppointmentDate.Date == DateTime.Today && (a.Status == "Đang chờ" || a.Status == "Đang khám" || a.Status == "Đã xác nhận"))
+                .OrderByDescending(a => a.CheckedInAt)
+                .FirstOrDefault();
+            ViewBag.ActiveAppointment = activeAppt;
+
             return View(patient);
         }
 
@@ -471,6 +518,654 @@ namespace Nhakhoa.Controllers
                 .Select(p => new { p.Id, p.FullName, p.PhoneNumber, p.PatientCode, p.DateOfBirth })
                 .ToListAsync();
             return Json(results);
+        }
+
+        // ==========================================
+        // CLINICAL RECORD & EMR SESSION ACTIONS (UC4.1)
+        // ==========================================
+
+        // POST: /Patient/SaveEMRSession (AJAX)
+        [HttpPost]
+        public async Task<IActionResult> SaveEMRSession([FromBody] EMRSaveModel model)
+        {
+            if (model == null) return BadRequest("Dữ liệu không hợp lệ.");
+
+            var currentUser = await _db.Users.Include(u => u.StaffProfile).FirstOrDefaultAsync(u => u.Username == User.Identity.Name);
+            if (currentUser == null) return Json(new { success = false, message = "Người dùng không hợp lệ." });
+
+            var patient = await _db.Patients.FindAsync(model.PatientId);
+            if (patient == null) return Json(new { success = false, message = "Không tìm thấy bệnh nhân." });
+
+            // Check permissions (EX4.1-02 / EX4.3-01)
+            if (User.IsInRole("Doctor") && currentUser.StaffProfile != null)
+            {
+                if (patient.PrimaryDoctorId != null && patient.PrimaryDoctorId != currentUser.StaffProfile.Id)
+                {
+                    var logErr = new ActivityLog
+                    {
+                        Username = User.Identity?.Name ?? "Unknown",
+                        Action = "Truy cập trái phép",
+                        Details = $"Bác sĩ {currentUser.FullName} cố chỉnh sửa bệnh án của bệnh nhân {patient.FullName} ({patient.PatientCode}) của bác sĩ khác.",
+                        Timestamp = DateTime.Now
+                    };
+                    _db.ActivityLogs.Add(logErr);
+                    await _db.SaveChangesAsync();
+
+                    return Json(new { success = false, forbidden = true, message = "Bạn không có quyền chỉnh sửa bệnh án của bệnh nhân này." });
+                }
+            }
+
+            ExaminationSession session;
+            if (model.Id > 0)
+            {
+                session = await _db.ExaminationSessions.FindAsync(model.Id);
+                if (session == null) return Json(new { success = false, message = "Không tìm thấy phiên khám." });
+
+                // Concurrency Check (EX4.1-01)
+                if (session.ConcurrencyStamp != model.ConcurrencyStamp)
+                {
+                    return Json(new { success = false, conflict = true, message = "Xung đột phiên bản: Bệnh án đã được lưu bởi bác sĩ khác. Vui lòng tải lại trang." });
+                }
+
+                session.Diagnosis = model.Diagnosis;
+                session.ClinicalNotes = model.ClinicalNotes;
+                session.TreatmentPlanSummary = model.TreatmentPlanSummary;
+                session.HomeCareInstructions = model.HomeCareInstructions;
+                session.PatientCoefficient = model.PatientCoefficient;
+                session.ConcurrencyStamp = Guid.NewGuid();
+            }
+            else
+            {
+                session = new ExaminationSession
+                {
+                    PatientId = model.PatientId,
+                    DoctorId = currentUser.StaffProfile?.Id ?? 201,
+                    AppointmentId = model.AppointmentId,
+                    Diagnosis = model.Diagnosis,
+                    ClinicalNotes = model.ClinicalNotes,
+                    TreatmentPlanSummary = model.TreatmentPlanSummary,
+                    HomeCareInstructions = model.HomeCareInstructions,
+                    PatientCoefficient = model.PatientCoefficient,
+                    IsCompleted = false,
+                    CreatedAt = DateTime.Now,
+                    ConcurrencyStamp = Guid.NewGuid()
+                };
+                _db.ExaminationSessions.Add(session);
+            }
+
+            // Automatically assign doctor if not assigned
+            if (patient.PrimaryDoctorId == null && User.IsInRole("Doctor") && currentUser.StaffProfile != null)
+            {
+                patient.PrimaryDoctorId = currentUser.StaffProfile.Id;
+            }
+
+            await _db.SaveChangesAsync();
+
+            // Log activity
+            var auditLog = new ActivityLog
+            {
+                Username = User.Identity?.Name ?? "Unknown",
+                Action = "Lưu bệnh án",
+                Details = $"Lưu bệnh án điện tử cho bệnh nhân {patient.FullName} ({patient.PatientCode}).",
+                Timestamp = DateTime.Now
+            };
+            _db.ActivityLogs.Add(auditLog);
+            await _db.SaveChangesAsync();
+
+            return Json(new { success = true, sessionId = session.Id, concurrencyStamp = session.ConcurrencyStamp });
+        }
+
+        // POST: /Patient/FinishEMRSession (AJAX)
+        [HttpPost]
+        public async Task<IActionResult> FinishEMRSession([FromBody] EMRFinishModel model)
+        {
+            if (model == null) return BadRequest("Dữ liệu không hợp lệ.");
+
+            var session = await _db.ExaminationSessions
+                .Include(s => s.Patient)
+                .FirstOrDefaultAsync(s => s.Id == model.SessionId);
+            if (session == null) return Json(new { success = false, message = "Không tìm thấy phiên khám." });
+
+            // Validate patient coefficient (EX4.1-03)
+            if (session.PatientCoefficient < 0m || session.PatientCoefficient > 0.5m)
+            {
+                return Json(new { success = false, message = "Hệ số bệnh nhân bắt buộc phải nằm trong khoảng từ 0.0 đến 0.5." });
+            }
+
+            session.IsCompleted = true;
+
+            // Update Appointment Status to "Đã khám xong"
+            if (session.AppointmentId.HasValue)
+            {
+                var appointment = await _db.Appointments.FindAsync(session.AppointmentId.Value);
+                if (appointment != null)
+                {
+                    appointment.Status = "Đã khám xong";
+                    appointment.CompletedAt = DateTime.Now;
+                }
+            }
+
+            // Calculate price based on selected services and tooth chart changes
+            decimal totalAmount = 0m;
+            if (model.PerformedServiceIds != null && model.PerformedServiceIds.Any())
+            {
+                var services = await _db.MedicalServices
+                    .Where(s => model.PerformedServiceIds.Contains(s.Id))
+                    .ToListAsync();
+                totalAmount = services.Sum(s => s.Price);
+            }
+
+            // Create Draft Invoice
+            var draftInvoice = new DraftInvoice
+            {
+                PatientId = session.PatientId,
+                ExaminationSessionId = session.Id,
+                TotalAmount = totalAmount,
+                CreatedAt = DateTime.Now,
+                IsProcessed = false
+            };
+            _db.DraftInvoices.Add(draftInvoice);
+
+            // Automatically create Dental Warranty if service has warranty
+            if (model.PerformedServiceIds != null)
+            {
+                var warrantableServices = await _db.MedicalServices
+                    .Where(s => model.PerformedServiceIds.Contains(s.Id) && s.DefaultWarrantyMonths.HasValue)
+                    .ToListAsync();
+
+                foreach (var ws in warrantableServices)
+                {
+                    var warrantyCode = $"BH-{session.Patient?.PatientCode}-{ws.Id}";
+                    var existingWarranty = await _db.DentalWarranties.AnyAsync(w => w.WarrantyCode == warrantyCode);
+                    if (!existingWarranty)
+                    {
+                        var warranty = new DentalWarranty
+                        {
+                            PatientId = session.PatientId,
+                            DoctorId = session.DoctorId,
+                            MedicalServiceId = ws.Id,
+                            WarrantyCode = warrantyCode,
+                            StartDate = DateTime.Now,
+                            EndDate = DateTime.Now.AddMonths(ws.DefaultWarrantyMonths!.Value),
+                            Terms = $"Bảo hành chính hãng dịch vụ {ws.Name} trong vòng {ws.DefaultWarrantyMonths} tháng theo điều khoản phòng khám.",
+                            Status = "Active"
+                        };
+                        _db.DentalWarranties.Add(warranty);
+                    }
+                }
+            }
+
+            await _db.SaveChangesAsync();
+
+            // Log activity
+            var auditLog = new ActivityLog
+            {
+                Username = User.Identity?.Name ?? "Unknown",
+                Action = "Hoàn thành ca khám",
+                Details = $"Bác sĩ hoàn thành ca khám cho bệnh nhân {session.Patient?.FullName}. Tạo hóa đơn nháp trị giá {totalAmount:N0} VND.",
+                Timestamp = DateTime.Now
+            };
+            _db.ActivityLogs.Add(auditLog);
+            await _db.SaveChangesAsync();
+
+            return Json(new { success = true, message = "Ca khám đã hoàn thành." });
+        }
+
+
+        // ==========================================
+        // TREATMENT PLAN ACTIONS (UC4.2)
+        // ==========================================
+
+        // POST: /Patient/CreateTreatmentPlan (AJAX)
+        [HttpPost]
+        public async Task<IActionResult> CreateTreatmentPlan([FromBody] TreatmentPlanCreateModel model)
+        {
+            if (model == null) return BadRequest();
+
+            var currentUser = await _db.Users.Include(u => u.StaffProfile).FirstOrDefaultAsync(u => u.Username == User.Identity.Name);
+            if (currentUser == null) return Json(new { success = false, message = "Người dùng không hợp lệ." });
+
+            var service = await _db.MedicalServices.FindAsync(model.MedicalServiceId);
+            if (service == null) return Json(new { success = false, message = "Không tìm thấy dịch vụ." });
+
+            var plan = new TreatmentPlan
+            {
+                PatientId = model.PatientId,
+                DoctorId = currentUser.StaffProfile?.Id ?? 201,
+                MedicalServiceId = model.MedicalServiceId,
+                Title = model.Title ?? $"Phác đồ điều trị {service.Name}",
+                TotalSessions = model.TotalSessions,
+                Status = "Active",
+                CreatedAt = DateTime.Now,
+                UpdatedAt = DateTime.Now
+            };
+
+            for (int i = 1; i <= model.TotalSessions; i++)
+            {
+                plan.Sessions.Add(new TreatmentPlanSession
+                {
+                    SessionNumber = i,
+                    Status = "Scheduled",
+                    Notes = $"Buổi thứ {i} cho phác đồ {plan.Title}"
+                });
+            }
+
+            _db.TreatmentPlans.Add(plan);
+            await _db.SaveChangesAsync();
+
+            // Audit Log
+            var log = new ActivityLog
+            {
+                Username = User.Identity?.Name ?? "Unknown",
+                Action = "Lập phác đồ điều trị",
+                Details = $"Lập phác đồ điều trị '{plan.Title}' gồm {plan.TotalSessions} buổi cho bệnh nhân ID: {model.PatientId}",
+                Timestamp = DateTime.Now
+            };
+            _db.ActivityLogs.Add(log);
+            await _db.SaveChangesAsync();
+
+            return Json(new { success = true, planId = plan.Id });
+        }
+
+        // POST: /Patient/UpdatePlanSession (AJAX)
+        [HttpPost]
+        public async Task<IActionResult> UpdatePlanSession([FromBody] PlanSessionUpdateModel model)
+        {
+            var session = await _db.TreatmentPlanSessions
+                .Include(s => s.TreatmentPlan)
+                .FirstOrDefaultAsync(s => s.Id == model.SessionId);
+            if (session == null) return Json(new { success = false, message = "Không tìm thấy buổi khám." });
+
+            session.Status = model.Status;
+            session.Notes = model.Notes;
+            if (model.Status == "Completed")
+            {
+                session.CompletedAt = DateTime.Now;
+            }
+
+            // Check if all sessions in the plan are completed
+            var plan = session.TreatmentPlan;
+            if (plan != null)
+            {
+                var allSessions = await _db.TreatmentPlanSessions
+                    .Where(s => s.TreatmentPlanId == plan.Id)
+                    .ToListAsync();
+                
+                var unfinished = allSessions.Any(s => s.Id != session.Id ? s.Status != "Completed" : model.Status != "Completed");
+                if (!unfinished)
+                {
+                    plan.Status = "Completed";
+                }
+                plan.UpdatedAt = DateTime.Now;
+            }
+
+            await _db.SaveChangesAsync();
+            return Json(new { success = true });
+        }
+
+        // POST: /Patient/CancelTreatmentPlan (AJAX)
+        [HttpPost]
+        public async Task<IActionResult> CancelTreatmentPlan([FromBody] PlanCancelModel model)
+        {
+            var plan = await _db.TreatmentPlans.FindAsync(model.PlanId);
+            if (plan == null) return Json(new { success = false, message = "Không tìm thấy phác đồ." });
+
+            if (string.IsNullOrWhiteSpace(model.Reason))
+            {
+                return Json(new { success = false, message = "Lý do hủy là bắt buộc." });
+            }
+
+            plan.Status = "Cancelled";
+            plan.CancellationReason = model.Reason;
+            plan.UpdatedAt = DateTime.Now;
+
+            // Mark remaining sessions as Cancelled/Postponed
+            var sessions = await _db.TreatmentPlanSessions
+                .Where(s => s.TreatmentPlanId == plan.Id && s.Status == "Scheduled")
+                .ToListAsync();
+            foreach (var s in sessions)
+            {
+                s.Status = "Postponed";
+            }
+
+            // Audit log
+            var log = new ActivityLog
+            {
+                Username = User.Identity?.Name ?? "Unknown",
+                Action = "Hủy phác đồ điều trị",
+                Details = $"Hủy phác đồ điều trị ID: {plan.Id} vì lý do: {model.Reason}",
+                Timestamp = DateTime.Now
+            };
+            _db.ActivityLogs.Add(log);
+
+            await _db.SaveChangesAsync();
+            return Json(new { success = true });
+        }
+
+
+        // ==========================================
+        // PRESCRIPTION & DISPENSING ACTIONS (UC4.4)
+        // ==========================================
+
+        // GET: /Patient/GetMedicines (AJAX)
+        [HttpGet]
+        public async Task<IActionResult> GetMedicines()
+        {
+            var meds = await _db.MedicineInventories
+                .Select(m => new { m.Id, m.MedicineName, m.StockQuantity, m.PricePerUnit, m.Unit })
+                .ToListAsync();
+            return Json(meds);
+        }
+
+        // POST: /Patient/SavePrescription (AJAX)
+        [HttpPost]
+        public async Task<IActionResult> SavePrescription([FromBody] PrescriptionSaveModel model)
+        {
+            if (model == null || model.Items == null || !model.Items.Any())
+                return BadRequest("Đơn thuốc không hợp lệ.");
+
+            var patient = await _db.Patients.FindAsync(model.PatientId);
+            if (patient == null) return NotFound("Không tìm thấy bệnh nhân.");
+
+            // Allergy Check (EX4.4-01)
+            var medicineIds = model.Items.Select(i => i.MedicineId).ToList();
+            var medicines = await _db.MedicineInventories
+                .Where(m => medicineIds.Contains(m.Id))
+                .ToListAsync();
+
+            bool hasAllergy = false;
+            string allergicMeds = "";
+            if (!string.IsNullOrEmpty(patient.AllergyHistory))
+            {
+                var allergyTerms = patient.AllergyHistory.ToLower().Split(new[] { ',', ';', ' ' }, StringSplitOptions.RemoveEmptyEntries);
+                foreach (var med in medicines)
+                {
+                    if (allergyTerms.Any(term => med.MedicineName.ToLower().Contains(term)))
+                    {
+                        hasAllergy = true;
+                        allergicMeds += (allergicMeds == "" ? "" : ", ") + med.MedicineName;
+                    }
+                }
+            }
+
+            if (hasAllergy && !model.BypassAllergy)
+            {
+                return Json(new { 
+                    success = false, 
+                    allergyWarning = true, 
+                    message = $"Cảnh báo dị ứng: Bệnh nhân có tiền sử dị ứng liên quan đến thuốc: {allergicMeds}. Bạn có chắc chắn muốn kê đơn thuốc này?" 
+                });
+            }
+
+            if (hasAllergy && model.BypassAllergy && string.IsNullOrWhiteSpace(model.BypassReason))
+            {
+                return Json(new { success = false, message = "Bạn phải nhập lý do xác nhận bỏ qua cảnh báo dị ứng." });
+            }
+
+            var currentUser = await _db.Users.Include(u => u.StaffProfile).FirstOrDefaultAsync(u => u.Username == User.Identity.Name);
+
+            var prescription = new Prescription
+            {
+                PatientId = model.PatientId,
+                DoctorId = currentUser?.StaffProfile?.Id ?? 201,
+                ExaminationSessionId = model.ExaminationSessionId,
+                Status = "Prescribed",
+                IsAllergyWarningBypassed = hasAllergy,
+                AllergyBypassReason = hasAllergy ? model.BypassReason : null,
+                CreatedAt = DateTime.Now
+            };
+
+            foreach (var item in model.Items)
+            {
+                prescription.Items.Add(new PrescriptionItem
+                {
+                    MedicineId = item.MedicineId,
+                    Quantity = item.Quantity,
+                    Dosage = item.Dosage,
+                    DurationDays = item.DurationDays
+                });
+            }
+
+            _db.Prescriptions.Add(prescription);
+
+            // Audit log if bypassed
+            if (hasAllergy)
+            {
+                var bypassLog = new ActivityLog
+                {
+                    Username = User.Identity?.Name ?? "Unknown",
+                    Action = "Bỏ qua cảnh báo dị ứng",
+                    Details = $"Bác sĩ {currentUser?.FullName} bỏ qua cảnh báo dị ứng thuốc '{allergicMeds}' cho bệnh nhân {patient.FullName} với lý do: {model.BypassReason}",
+                    Timestamp = DateTime.Now
+                };
+                _db.ActivityLogs.Add(bypassLog);
+            }
+
+            await _db.SaveChangesAsync();
+
+            return Json(new { success = true, prescriptionId = prescription.Id });
+        }
+
+        // POST: /Patient/DispensePrescription (AJAX - Dành cho Lễ tân)
+        [HttpPost]
+        public async Task<IActionResult> DispensePrescription([FromBody] DispenseModel model)
+        {
+            if (!User.IsInRole("Receptionist") && !User.IsInRole("Admin"))
+            {
+                return StatusCode(403);
+            }
+
+            var prescription = await _db.Prescriptions
+                .Include(p => p.Items)
+                    .ThenInclude(i => i.Medicine)
+                .Include(p => p.Patient)
+                .FirstOrDefaultAsync(p => p.Id == model.PrescriptionId);
+
+            if (prescription == null) return Json(new { success = false, message = "Không tìm thấy đơn thuốc." });
+
+            if (prescription.Status == "Dispensed")
+            {
+                return Json(new { success = false, message = "Đơn thuốc này đã được phát trước đó." });
+            }
+
+            // Check stock (EX4.4-02)
+            foreach (var item in prescription.Items)
+            {
+                if (item.Medicine == null || item.Medicine.StockQuantity < item.Quantity)
+                {
+                    return Json(new { 
+                        success = false, 
+                        outOfStock = true, 
+                        message = $"Hết hàng: Thuốc '{item.Medicine?.MedicineName}' trong kho không đủ (Hiện còn: {item.Medicine?.StockQuantity ?? 0}). Vui lòng báo bác sĩ điều chỉnh đơn thuốc." 
+                    });
+                }
+            }
+
+            // Subtract stock
+            foreach (var item in prescription.Items)
+            {
+                item.Medicine!.StockQuantity -= item.Quantity;
+            }
+
+            prescription.Status = "Dispensed";
+            await _db.SaveChangesAsync();
+
+            // Audit log
+            var log = new ActivityLog
+            {
+                Username = User.Identity?.Name ?? "Unknown",
+                Action = "Phát thuốc",
+                Details = $"Phát thuốc cho đơn thuốc ID: {prescription.Id} của bệnh nhân {prescription.Patient?.FullName}.",
+                Timestamp = DateTime.Now
+            };
+            _db.ActivityLogs.Add(log);
+            await _db.SaveChangesAsync();
+
+            return Json(new { success = true, message = "Phát thuốc thành công! Đã trừ số lượng tồn kho." });
+        }
+
+
+        // ==========================================
+        // DENTAL WARRANTY ACTIONS (UC4.5)
+        // ==========================================
+
+        // POST: /Patient/ClaimWarranty (AJAX - Lễ tân tiếp nhận)
+        [HttpPost]
+        public async Task<IActionResult> ClaimWarranty([FromBody] WarrantyClaimModel model)
+        {
+            var warranty = await _db.DentalWarranties
+                .Include(w => w.Patient)
+                .Include(w => w.MedicalService)
+                .FirstOrDefaultAsync(w => w.Id == model.WarrantyId);
+
+            if (warranty == null) return Json(new { success = false, message = "Không tìm thấy thông tin bảo hành." });
+
+            // Check if expired
+            if (warranty.EndDate < DateTime.Today)
+            {
+                warranty.Status = "Expired";
+                await _db.SaveChangesAsync();
+                
+                return Json(new { 
+                    success = false, 
+                    expired = true, 
+                    message = $"Bảo hành dịch vụ '{warranty.MedicalService?.Name}' đã hết hạn vào ngày {warranty.EndDate:dd/MM/yyyy}. Chỉ Admin mới có quyền duyệt bảo hành hết hạn." 
+                });
+            }
+
+            var auditLog = new ActivityLog
+            {
+                Username = User.Identity?.Name ?? "Unknown",
+                Action = "Tiếp nhận bảo hành",
+                Details = $"Lễ tân tiếp nhận yêu cầu bảo hành cho bệnh nhân {warranty.Patient?.FullName} ({warranty.WarrantyCode})",
+                Timestamp = DateTime.Now
+            };
+            _db.ActivityLogs.Add(auditLog);
+            await _db.SaveChangesAsync();
+
+            return Json(new { success = true, message = "Tiếp nhận yêu cầu bảo hành thành công." });
+        }
+
+        // POST: /Patient/OverrideWarranty (AJAX - Chỉ Admin)
+        [HttpPost]
+        public async Task<IActionResult> OverrideWarranty([FromBody] WarrantyOverrideModel model)
+        {
+            if (!User.IsInRole("Admin"))
+            {
+                return StatusCode(403);
+            }
+
+            var warranty = await _db.DentalWarranties
+                .Include(w => w.Patient)
+                .Include(w => w.MedicalService)
+                .FirstOrDefaultAsync(w => w.Id == model.WarrantyId);
+
+            if (warranty == null) return Json(new { success = false, message = "Không tìm thấy bảo hành." });
+
+            if (string.IsNullOrWhiteSpace(model.Reason))
+            {
+                return Json(new { success = false, message = "Lý do ghi đè bảo hành là bắt buộc." });
+            }
+
+            warranty.OverrideReason = model.Reason;
+            warranty.Status = "Active"; 
+            
+            if (model.ExtendMonths > 0)
+            {
+                warranty.EndDate = warranty.EndDate.AddMonths(model.ExtendMonths);
+            }
+
+            // Audit log
+            var log = new ActivityLog
+            {
+                Username = User.Identity?.Name ?? "Unknown",
+                Action = "Admin ghi đè bảo hành",
+                Details = $"Admin ghi đè bảo hành hết hạn ({warranty.WarrantyCode}) của bệnh nhân {warranty.Patient?.FullName} với lý do: {model.Reason}. Gia hạn thêm {model.ExtendMonths} tháng.",
+                Timestamp = DateTime.Now
+            };
+            _db.ActivityLogs.Add(log);
+            await _db.SaveChangesAsync();
+
+            return Json(new { success = true, message = "Ghi đè và gia hạn bảo hành thành công." });
+        }
+
+
+        // ==========================================
+        // CLINICAL DTOs & VIEW MODELS
+        // ==========================================
+
+        public class EMRSaveModel
+        {
+            public int Id { get; set; }
+            public int PatientId { get; set; }
+            public int? AppointmentId { get; set; }
+            public string Diagnosis { get; set; } = string.Empty;
+            public string? ClinicalNotes { get; set; }
+            public string? TreatmentPlanSummary { get; set; }
+            public string? HomeCareInstructions { get; set; }
+            public decimal PatientCoefficient { get; set; }
+            public Guid? ConcurrencyStamp { get; set; }
+        }
+
+        public class EMRFinishModel
+        {
+            public int SessionId { get; set; }
+            public List<int> PerformedServiceIds { get; set; } = new();
+        }
+
+        public class TreatmentPlanCreateModel
+        {
+            public int PatientId { get; set; }
+            public int MedicalServiceId { get; set; }
+            public string? Title { get; set; }
+            public int TotalSessions { get; set; }
+        }
+
+        public class PlanSessionUpdateModel
+        {
+            public int SessionId { get; set; }
+            public string Status { get; set; } = "Completed";
+            public string? Notes { get; set; }
+        }
+
+        public class PlanCancelModel
+        {
+            public int PlanId { get; set; }
+            public string Reason { get; set; } = string.Empty;
+        }
+
+        public class PrescriptionSaveModel
+        {
+            public int PatientId { get; set; }
+            public int? ExaminationSessionId { get; set; }
+            public List<PrescriptionItemModel> Items { get; set; } = new();
+            public bool BypassAllergy { get; set; }
+            public string? BypassReason { get; set; }
+        }
+
+        public class PrescriptionItemModel
+        {
+            public int MedicineId { get; set; }
+            public int Quantity { get; set; }
+            public string Dosage { get; set; } = string.Empty;
+            public int DurationDays { get; set; }
+        }
+
+        public class DispenseModel
+        {
+            public int PrescriptionId { get; set; }
+        }
+
+        public class WarrantyClaimModel
+        {
+            public int WarrantyId { get; set; }
+        }
+
+        public class WarrantyOverrideModel
+        {
+            public int WarrantyId { get; set; }
+            public string Reason { get; set; } = string.Empty;
+            public int ExtendMonths { get; set; }
         }
     }
 }

@@ -29,6 +29,8 @@ namespace Nhakhoa.Models
 
         public bool IsActive { get; set; } = true;
 
+        public int? DefaultWarrantyMonths { get; set; }
+
         public DateTime UpdatedAt { get; set; } = DateTime.Now;
     }
 }

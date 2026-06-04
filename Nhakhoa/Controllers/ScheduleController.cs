@@ -19,21 +19,43 @@ namespace Nhakhoa.Controllers
             _db = db;
         }
 
-        // GET: /Schedule — Doctor's personal schedule or Admin's overview
-        public async Task<IActionResult> Index(int? month, int? year)
+        // GET: /Schedule — Weekly grid view
+        public async Task<IActionResult> Index(DateTime? weekStart, DateTime? calMonth)
         {
-            int m = month ?? DateTime.Now.Month;
-            int y = year ?? DateTime.Now.Year;
+            // Snap to Monday of the selected week
+            DateTime today = DateTime.Today;
+            DateTime wStart;
+            if (weekStart.HasValue)
+            {
+                int d = (int)weekStart.Value.DayOfWeek;
+                int back = (d == 0) ? 6 : d - 1;
+                wStart = weekStart.Value.AddDays(-back).Date;
+            }
+            else
+            {
+                int d = (int)today.DayOfWeek;
+                int back = (d == 0) ? 6 : d - 1;
+                wStart = today.AddDays(-back);
+            }
+            DateTime wEnd = wStart.AddDays(6);
 
-            var startDate = new DateTime(y, m, 1);
-            var endDate = startDate.AddMonths(1).AddDays(-1);
+            // Mini-calendar month
+            DateTime monthStart;
+            if (calMonth.HasValue)
+            {
+                monthStart = new DateTime(calMonth.Value.Year, calMonth.Value.Month, 1);
+            }
+            else
+            {
+                monthStart = new DateTime(wStart.Year, wStart.Month, 1);
+            }
+            DateTime monthEnd = monthStart.AddMonths(1).AddDays(-1);
 
             IQueryable<Shift> shiftQuery = _db.Shifts
                 .Include(s => s.StaffProfile).ThenInclude(sp => sp.User)
                 .Include(s => s.Clinic)
-                .Where(s => s.ShiftDate >= startDate && s.ShiftDate <= endDate && s.IsActive);
+                .Where(s => s.ShiftDate >= wStart && s.ShiftDate <= wEnd && s.IsActive);
 
-            // Doctors only see their own shifts
             if (User.IsInRole("Doctor"))
             {
                 var staffProfile = await _db.StaffProfiles
@@ -43,18 +65,23 @@ namespace Nhakhoa.Controllers
             }
 
             var shifts = await shiftQuery.ToListAsync();
-            var holidays = await _db.HolidayDates
-                .Where(h => h.Date >= startDate && h.Date <= endDate)
+            var allHolidays = await _db.HolidayDates
+                .Where(h => h.Date >= monthStart && h.Date <= monthEnd)
                 .ToListAsync();
 
-            var settings = await _db.ShiftSettings.ToListAsync();
+            var monthShiftDates = await _db.Shifts
+                .Where(s => s.ShiftDate >= monthStart && s.ShiftDate <= monthEnd && s.IsActive)
+                .Select(s => s.ShiftDate.Date)
+                .Distinct()
+                .ToListAsync();
 
-            ViewBag.Month = m;
-            ViewBag.Year = y;
-            ViewBag.StartDate = startDate;
-            ViewBag.EndDate = endDate;
-            ViewBag.Holidays = holidays;
-            ViewBag.ShiftSettings = settings;
+            ViewBag.WeekStart = wStart;
+            ViewBag.WeekEnd = wEnd;
+            ViewBag.MonthStart = monthStart;
+            ViewBag.MonthEnd = monthEnd;
+            ViewBag.AllHolidays = allHolidays;
+            ViewBag.MonthShiftDates = monthShiftDates;
+            ViewBag.ShiftSettings = await _db.ShiftSettings.ToListAsync();
             ViewBag.Clinics = await _db.Clinics.Where(c => c.IsActive).ToListAsync();
             ViewBag.Doctors = await _db.StaffProfiles
                 .Include(sp => sp.User)
@@ -187,7 +214,198 @@ namespace Nhakhoa.Controllers
             return Ok(new { success = true, shiftId = shift.Id });
         }
 
-        // POST: /Schedule/CancelShift/5
+        // POST: /Schedule/RegisterMultipleShifts (AJAX — hỗ trợ nhiều ca + lặp tuần)
+        [HttpPost]
+        public async Task<IActionResult> RegisterMultipleShifts([FromBody] MultiShiftRegisterModel model)
+        {
+            if (model == null || model.ShiftTypes == null || !model.ShiftTypes.Any())
+                return BadRequest(new { error = "Vui lòng chọn ít nhất một ca." });
+
+            var staffProfile = await _db.StaffProfiles
+                .FirstOrDefaultAsync(sp => sp.User!.Username == User.Identity!.Name);
+            if (staffProfile == null)
+                return BadRequest(new { error = "Không tìm thấy hồ sơ nhân sự." });
+
+            return await ProcessMultiShiftRegistration(
+                model, staffProfile.Id, User.Identity?.Name ?? "Unknown");
+        }
+
+        // POST: /Schedule/RegisterMultipleShiftsForDoctor (AJAX — Admin only)
+        [HttpPost, Authorize(Roles = "Admin")]
+        public async Task<IActionResult> RegisterMultipleShiftsForDoctor([FromBody] MultiShiftRegisterModel model)
+        {
+            if (model == null || model.ShiftTypes == null || !model.ShiftTypes.Any())
+                return BadRequest(new { error = "Vui lòng chọn ít nhất một ca." });
+
+            if (model.StaffProfileId <= 0)
+                return BadRequest(new { error = "Vui lòng chọn bác sĩ." });
+
+            return await ProcessMultiShiftRegistration(
+                model, model.StaffProfileId, $"Admin ({User.Identity?.Name})");
+        }
+
+        private async Task<IActionResult> ProcessMultiShiftRegistration(
+            MultiShiftRegisterModel model, int staffProfileId, string registeredBy)
+        {
+            // Build all target dates (start date + weekly repeats)
+            var targetDates = new List<DateTime> { model.StartDate.Date };
+            if (model.RepeatWeeks > 1)
+            {
+                for (int w = 1; w < model.RepeatWeeks; w++)
+                    targetDates.Add(model.StartDate.AddDays(7 * w).Date);
+            }
+
+            int created = 0, skipped = 0;
+            var errors = new List<string>();
+            var holidays = await _db.HolidayDates.ToListAsync();
+            var shiftSettings = await _db.ShiftSettings.ToListAsync();
+
+            foreach (var date in targetDates)
+            {
+                // Skip holidays
+                var holiday = holidays.FirstOrDefault(h => h.Date.Date == date);
+                if (holiday != null)
+                {
+                    skipped++;
+                    errors.Add($"{date:dd/MM/yyyy}: Ngày nghỉ ({holiday.Name}) — bỏ qua.");
+                    continue;
+                }
+
+                // Validate week limit per shift type
+                int diff = (7 + (int)date.DayOfWeek - (int)DayOfWeek.Monday) % 7;
+                DateTime weekStart = date.AddDays(-1 * diff);
+                DateTime weekEnd = weekStart.AddDays(6);
+
+                foreach (var shiftType in model.ShiftTypes)
+                {
+                    // Check duplicate
+                    bool dup = await _db.Shifts.AnyAsync(s =>
+                        s.StaffProfileId == staffProfileId &&
+                        s.ShiftDate.Date == date &&
+                        s.ShiftType == shiftType &&
+                        s.IsActive);
+
+                    if (dup)
+                    {
+                        skipped++;
+                        errors.Add($"{date:dd/MM/yyyy} — {shiftType}: Đã đăng ký, bỏ qua.");
+                        continue;
+                    }
+
+                    // Weekly limit check
+                    var limitSetting = shiftSettings.FirstOrDefault(s => s.ShiftName == shiftType);
+                    if (limitSetting != null)
+                    {
+                        var weekCount = await _db.Shifts.CountAsync(s =>
+                            s.StaffProfileId == staffProfileId &&
+                            s.ShiftDate.Date >= weekStart && s.ShiftDate.Date <= weekEnd &&
+                            s.ShiftType == shiftType &&
+                            s.IsActive);
+                        if (weekCount >= limitSetting.MaxShiftsPerWeek)
+                        {
+                            skipped++;
+                            errors.Add($"{date:dd/MM/yyyy} — {shiftType}: Đã đạt giới hạn {limitSetting.MaxShiftsPerWeek} ca/tuần, bỏ qua.");
+                            continue;
+                        }
+                    }
+
+                    _db.Shifts.Add(new Shift
+                    {
+                        ClinicId = model.ClinicId,
+                        StaffProfileId = staffProfileId,
+                        ShiftDate = date,
+                        ShiftType = shiftType,
+                        IsActive = true,
+                        RegisteredBy = registeredBy,
+                        CreatedAt = DateTime.Now
+                    });
+                    created++;
+                }
+            }
+
+            await _db.SaveChangesAsync();
+
+            return Ok(new
+            {
+                success = true,
+                created,
+                skipped,
+                warnings = errors
+            });
+        }
+
+
+        // POST: /Schedule/RegisterWeekRow (AJAX — đăng ký cả hàng cho một hoặc nhiều tuần)
+        [HttpPost]
+        public async Task<IActionResult> RegisterWeekRow([FromBody] WeekRowModel model)
+        {
+            if (string.IsNullOrWhiteSpace(model.ShiftType))
+                return BadRequest(new { error = "Ca không hợp lệ." });
+
+            int staffProfileId;
+            string registeredBy;
+
+            if (User.IsInRole("Admin") && model.StaffProfileId > 0)
+            {
+                staffProfileId = model.StaffProfileId;
+                registeredBy = $"Admin ({User.Identity?.Name})";
+            }
+            else
+            {
+                var sp = await _db.StaffProfiles.FirstOrDefaultAsync(s => s.User!.Username == User.Identity!.Name);
+                if (sp == null) return BadRequest(new { error = "Không tìm thấy hồ sơ nhân sự." });
+                staffProfileId = sp.Id;
+                registeredBy = User.Identity?.Name ?? "Unknown";
+            }
+
+            // Build all target dates: 7 days × RepeatWeeks
+            var targetDates = new List<DateTime>();
+            for (int w = 0; w < Math.Max(1, model.RepeatWeeks); w++)
+                for (int d = 0; d < 7; d++)
+                    targetDates.Add(model.WeekStart.AddDays(w * 7 + d).Date);
+
+            int created = 0, skipped = 0;
+            var errors = new List<string>();
+            var holidays = await _db.HolidayDates.ToListAsync();
+            var shiftSettings = await _db.ShiftSettings.ToListAsync();
+
+            foreach (var date in targetDates)
+            {
+                var holiday = holidays.FirstOrDefault(h => h.Date.Date == date);
+                if (holiday != null) { skipped++; errors.Add($"{date:dd/MM}: Ngày nghỉ ({holiday.Name})"); continue; }
+
+                bool dup = await _db.Shifts.AnyAsync(s =>
+                    s.StaffProfileId == staffProfileId && s.ShiftDate.Date == date &&
+                    s.ShiftType == model.ShiftType && s.IsActive);
+                if (dup) { skipped++; errors.Add($"{date:dd/MM}: Đã đăng ký"); continue; }
+
+                int diff = (7 + (int)date.DayOfWeek - (int)DayOfWeek.Monday) % 7;
+                DateTime weekS = date.AddDays(-diff); DateTime weekE = weekS.AddDays(6);
+                var limit = shiftSettings.FirstOrDefault(s => s.ShiftName == model.ShiftType);
+                if (limit != null)
+                {
+                    var cnt = await _db.Shifts.CountAsync(s =>
+                        s.StaffProfileId == staffProfileId && s.ShiftDate.Date >= weekS &&
+                        s.ShiftDate.Date <= weekE && s.ShiftType == model.ShiftType && s.IsActive);
+                    if (cnt >= limit.MaxShiftsPerWeek)
+                    { skipped++; errors.Add($"{date:dd/MM}: Đạt giới hạn {limit.MaxShiftsPerWeek} ca/tuần"); continue; }
+                }
+
+                _db.Shifts.Add(new Shift
+                {
+                    ClinicId = model.ClinicId, StaffProfileId = staffProfileId,
+                    ShiftDate = date, ShiftType = model.ShiftType,
+                    IsActive = true, RegisteredBy = registeredBy, CreatedAt = DateTime.Now
+                });
+                created++;
+            }
+
+            await _db.SaveChangesAsync();
+            return Ok(new { success = true, created, skipped, warnings = errors });
+        }
+
+
+
         [HttpPost]
         public async Task<IActionResult> CancelShift(int id)
         {
@@ -366,4 +584,23 @@ namespace Nhakhoa.Controllers
             return Json(new { shifts, holidays });
         }
     }
+
+    public class MultiShiftRegisterModel
+    {
+        public int ClinicId { get; set; }
+        public int StaffProfileId { get; set; }
+        public DateTime StartDate { get; set; }
+        public List<string> ShiftTypes { get; set; } = new();
+        public int RepeatWeeks { get; set; } = 1;
+    }
+
+    public class WeekRowModel
+    {
+        public int ClinicId { get; set; }
+        public int StaffProfileId { get; set; }
+        public DateTime WeekStart { get; set; }
+        public string ShiftType { get; set; } = "";
+        public int RepeatWeeks { get; set; } = 1;
+    }
 }
+

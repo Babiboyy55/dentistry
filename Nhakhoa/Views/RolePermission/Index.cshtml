@@ -514,7 +514,7 @@
             <a href="/RolePermission" style="display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 10px; color: #1a2332; text-decoration: none; font-weight: 600; font-size: 0.9rem; background: #edf4ff; transition: all 0.2s;">
                 <i class="bi bi-shield-check" style="color: #1b75d0;"></i> Phân quyền
             </a>
-            <a href="#" style="display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 10px; color: #6b7a90; text-decoration: none; font-weight: 500; font-size: 0.9rem; margin-top: 8px; transition: all 0.2s;" onmouseover="this.style.color='#1a2332'; this.style.background='#f8f9fc';" onmouseout="this.style.color='#6b7a90'; this.style.background='transparent';">
+            <a href="/RolePermission/ActivityLog" style="display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 10px; color: #6b7a90; text-decoration: none; font-weight: 500; font-size: 0.9rem; margin-top: 8px; transition: all 0.2s;" onmouseover="this.style.color='#1a2332'; this.style.background='#f8f9fc';" onmouseout="this.style.color='#6b7a90'; this.style.background='transparent';">
                 <i class="bi bi-clock-history"></i> Nhật ký hoạt động
             </a>
             <a href="#" style="display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 10px; color: #6b7a90; text-decoration: none; font-weight: 500; font-size: 0.9rem; margin-top: 8px; transition: all 0.2s;" onmouseover="this.style.color='#1a2332'; this.style.background='#f8f9fc';" onmouseout="this.style.color='#6b7a90'; this.style.background='transparent';">
@@ -639,7 +639,7 @@
     <div class="rbac-audit-card">
         <div class="audit-card-header">
             <h2><i class="bi bi-clock-history me-2" style="color: #1b75d0;"></i>Nhật ký thay đổi</h2>
-            <a href="#" title="Xem toàn bộ nhật ký">Xem tất cả</a>
+            <a href="/RolePermission/ActivityLog" title="Xem toàn bộ nhật ký">Xem tất cả</a>
         </div>
         @if (auditLogs.Count == 0)
         {

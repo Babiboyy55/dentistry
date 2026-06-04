@@ -1,0 +1,431 @@
+@model List<Nhakhoa.Models.ActivityLog>
+@{
+    ViewData["Title"] = "Nhật ký hoạt động";
+    
+    // Stats calculation
+    var totalLogs = Model.Count;
+    var todayLogs = Model.Count(l => l.Timestamp.Date == DateTime.Today);
+    var securityLogs = Model.Count(l => l.Action.Contains("quyền") || l.Action.Contains("Khóa") || l.Action.Contains("Cấp lại mật khẩu"));
+}
+
+<style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #f5f7fb; }
+    
+    /* ──── MAIN LAYOUT WITH SIDEBAR ──── */
+    .rbac-page-wrapper {
+        display: flex;
+        gap: 0;
+        min-height: 100vh;
+    }
+    
+    .rbac-sidebar-nav {
+        width: 260px;
+        background: #fff;
+        border-right: 1px solid #eef0f7;
+        padding: 24px 16px;
+        flex-shrink: 0;
+        box-shadow: 1px 0 4px rgba(0, 0, 0, 0.04);
+    }
+    
+    .rbac-main-content {
+        flex: 1;
+        overflow-y: auto;
+    }
+
+    /* ──── CONTAINER ──── */
+    .rbac-container { padding: 32px 24px; max-width: 1400px; margin: 0 auto; }
+    
+    /* ──── HEADER SECTION ──── */
+    .rbac-header-section {
+        display: flex; 
+        justify-content: space-between; 
+        align-items: flex-start; 
+        margin-bottom: 28px; 
+        gap: 20px;
+    }
+    .rbac-header-left h1 {
+        font-size: 1.8rem; 
+        font-weight: 800; 
+        color: #1a2332;
+        margin-bottom: 4px;
+    }
+    .rbac-header-left p {
+        font-size: 0.95rem; 
+        color: #6b7a90; 
+        line-height: 1.5;
+    }
+
+    /* ──── STATISTICS CARDS ──── */
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 16px;
+        margin-bottom: 24px;
+    }
+    .stat-card {
+        background: #fff;
+        border-radius: 12px;
+        padding: 20px;
+        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        transition: all 0.2s ease;
+    }
+    .stat-card:hover {
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        transform: translateY(-2px);
+    }
+    .stat-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.4rem;
+        flex-shrink: 0;
+    }
+    .stat-icon.blue { background: #edf4ff; color: #1b75d0; }
+    .stat-icon.green { background: #e8f5e9; color: #2e7d32; }
+    .stat-icon.orange { background: #fff3e0; color: #f57c00; }
+    
+    .stat-content h3 {
+        font-size: 0.8rem;
+        color: #6b7a90;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 4px;
+    }
+    .stat-content .value {
+        font-size: 1.6rem;
+        font-weight: 800;
+        color: #1a2332;
+    }
+
+    /* ──── FILTER BAR ──── */
+    .filter-bar {
+        display: flex;
+        gap: 16px;
+        margin-bottom: 20px;
+        background: #fff;
+        padding: 16px 24px;
+        border-radius: 16px;
+        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+        align-items: center;
+    }
+    .filter-input-wrapper {
+        position: relative;
+        flex: 1;
+    }
+    .filter-input-wrapper i {
+        position: absolute;
+        left: 14px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #94a3b8;
+    }
+    .filter-input-wrapper input {
+        width: 100%;
+        padding: 10px 16px 10px 40px;
+        border: 1.5px solid #e2e8f0;
+        border-radius: 10px;
+        outline: none;
+        font-size: 0.9rem;
+        transition: all 0.2s;
+    }
+    .filter-input-wrapper input:focus {
+        border-color: #1b75d0;
+        box-shadow: 0 0 0 3px rgba(27, 117, 208, 0.1);
+    }
+    .filter-select {
+        padding: 10px 36px 10px 16px;
+        border: 1.5px solid #e2e8f0;
+        border-radius: 10px;
+        outline: none;
+        font-size: 0.9rem;
+        background: #fff url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23475569' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e") no-repeat right 12px center/10px 10px;
+        appearance: none;
+        cursor: pointer;
+        min-width: 220px;
+        transition: all 0.2s;
+        color: #475569;
+    }
+    .filter-select:focus {
+        border-color: #1b75d0;
+        box-shadow: 0 0 0 3px rgba(27, 117, 208, 0.1);
+    }
+
+    /* ──── TABLE CARD ──── */
+    .rbac-main-card {
+        background: #fff;
+        border-radius: 16px;
+        box-shadow: 0 1px 8px rgba(0, 0, 0, 0.07);
+        overflow: hidden;
+        margin-bottom: 24px;
+    }
+    .rbac-main-card-header {
+        padding: 20px 24px;
+        border-bottom: 1.5px solid #eef0f7;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    .rbac-main-card-header h2 {
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: #1a2332;
+    }
+
+    .perm-table-wrapper {
+        padding: 24px;
+        overflow-x: auto;
+    }
+    .perm-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+    .perm-table thead th {
+        padding: 12px 16px;
+        font-weight: 700;
+        font-size: 0.75rem;
+        color: #6b7a90;
+        letter-spacing: 0.5px;
+        text-transform: uppercase;
+        background: #f8f9fc;
+        border-bottom: 2px solid #eef0f7;
+        text-align: left;
+    }
+    .perm-table tbody tr {
+        border-bottom: 1px solid #f1f3f8;
+        transition: background 0.15s ease;
+    }
+    .perm-table tbody tr:last-child {
+        border-bottom: none;
+    }
+    .perm-table tbody tr:hover {
+        background: #fafbff;
+    }
+    .perm-table td {
+        padding: 14px 16px;
+        vertical-align: middle;
+        font-size: 0.9rem;
+    }
+    
+    .badge-wrap {
+        font-size: 0.8rem;
+        font-weight: 600;
+        padding: 5px 12px;
+        border-radius: 30px;
+        display: inline-block;
+    }
+    
+    .badge-success { background: #e8f5e9; color: #2e7d32; }
+    .badge-primary { background: #edf4ff; color: #1b75d0; }
+    .badge-warning { background: #fff3e0; color: #e65100; }
+    .badge-danger { background: #ffebee; color: #c62828; }
+    .badge-secondary { background: #f1f3f8; color: #5b6b7a; }
+    .badge-indigo { background: #ede7f6; color: #512da8; }
+
+    /* ──── RESPONSIVE ──── */
+    @@media (max-width: 768px) {
+        .rbac-container { padding: 20px 16px; }
+        .rbac-header-section { flex-direction: column; }
+        .stats-grid { grid-template-columns: 1fr; }
+        .filter-bar { flex-direction: column; align-items: stretch; gap: 12px; }
+        .filter-select { width: 100%; }
+    }
+</style>
+
+<div class="rbac-page-wrapper">
+    <!-- ========== LEFT SIDEBAR ========== -->
+    <aside class="rbac-sidebar-nav">
+        <div style="margin-bottom: 24px;">
+            <a href="javascript:history.back()" style="display: inline-flex; align-items: center; gap: 8px; color: #1b75d0; text-decoration: none; font-weight: 600; font-size: 0.9rem;">
+                <i class="bi bi-arrow-left"></i> Quay lại
+            </a>
+        </div>
+        
+        <nav>
+            <div style="font-size: 0.75rem; font-weight: 700; color: #6b7a90; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 12px; padding: 0 8px;">Quản lý hệ thống</div>
+            <a href="/RolePermission" style="display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 10px; color: #6b7a90; text-decoration: none; font-weight: 500; font-size: 0.9rem; transition: all 0.2s;" onmouseover="this.style.color='#1a2332'; this.style.background='#f8f9fc';" onmouseout="this.style.color='#6b7a90'; this.style.background='transparent';">
+                <i class="bi bi-shield-check"></i> Phân quyền
+            </a>
+            <a href="/RolePermission/ActivityLog" style="display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 10px; color: #1a2332; text-decoration: none; font-weight: 600; font-size: 0.9rem; background: #edf4ff; margin-top: 8px; transition: all 0.2s;">
+                <i class="bi bi-clock-history" style="color: #1b75d0;"></i> Nhật ký hoạt động
+            </a>
+            <a href="#" style="display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 10px; color: #6b7a90; text-decoration: none; font-weight: 500; font-size: 0.9rem; margin-top: 8px; transition: all 0.2s;" onmouseover="this.style.color='#1a2332'; this.style.background='#f8f9fc';" onmouseout="this.style.color='#6b7a90'; this.style.background='transparent';">
+                <i class="bi bi-shield-exclamation"></i> Cảnh báo bảo mật
+            </a>
+        </nav>
+    </aside>
+
+    <!-- ========== MAIN CONTENT ========== -->
+    <main class="rbac-main-content">
+        <div class="rbac-container">
+            <div class="rbac-header-section">
+                <div class="rbac-header-left">
+                    <h1><i class="bi bi-clock-history me-2 text-primary"></i>Nhật ký hoạt động</h1>
+                    <p>Theo dõi toàn bộ các thao tác đăng nhập, phân quyền, thay đổi thông tin nhân sự và cấu hình hệ thống.</p>
+                </div>
+            </div>
+
+            <!-- ========== STATISTICS CARDS ========== -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-icon blue">
+                        <i class="bi bi-list-check"></i>
+                    </div>
+                    <div class="stat-content">
+                        <h3>Tổng số hoạt động</h3>
+                        <div class="value" id="statTotal">@totalLogs</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon green">
+                        <i class="bi bi-calendar-check"></i>
+                    </div>
+                    <div class="stat-content">
+                        <h3>Hoạt động hôm nay</h3>
+                        <div class="value">@todayLogs</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon orange">
+                        <i class="bi bi-shield-exclamation"></i>
+                    </div>
+                    <div class="stat-content">
+                        <h3>Cảnh báo & Bảo mật</h3>
+                        <div class="value">@securityLogs</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ========== FILTER BAR ========== -->
+            <div class="filter-bar">
+                <div class="filter-input-wrapper">
+                    <i class="bi bi-search"></i>
+                    <input type="text" id="logSearch" placeholder="Tìm kiếm theo tài khoản hoặc chi tiết hoạt động..." />
+                </div>
+                <select id="actionFilter" class="filter-select">
+                    <option value="">Tất cả hành động</option>
+                    <option value="Đăng nhập">Đăng nhập</option>
+                    <option value="Cập nhật phân quyền">Cập nhật phân quyền</option>
+                    <option value="Khôi phục phân quyền mặc định">Khôi phục phân quyền</option>
+                    <option value="Tạo tài khoản">Tạo tài khoản</option>
+                    <option value="Cập nhật thông tin">Cập nhật thông tin</option>
+                    <option value="Khóa tài khoản">Khóa tài khoản</option>
+                    <option value="Mở khóa tài khoản">Mở khóa tài khoản</option>
+                    <option value="Cấp lại mật khẩu">Cấp lại mật khẩu</option>
+                    <option value="Đổi mật khẩu">Đổi mật khẩu</option>
+                </select>
+            </div>
+
+            <!-- ========== LOGS DATAGRID ========== -->
+            <div class="rbac-main-card">
+                <div class="rbac-main-card-header">
+                    <h2><i class="bi bi-list-ul me-2" style="color: #1b75d0;"></i>Lịch sử hoạt động</h2>
+                </div>
+                <div class="perm-table-wrapper">
+                    <table class="perm-table" id="logsTable">
+                        <thead>
+                            <tr>
+                                <th style="width: 180px;">Thời gian</th>
+                                <th style="width: 200px;">Tài khoản thực hiện</th>
+                                <th style="width: 220px;">Hành động</th>
+                                <th>Chi tiết hoạt động</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (Model.Count == 0)
+                            {
+                                <tr class="no-records">
+                                    <td colspan="4" class="text-center text-muted py-4">Chưa có hoạt động nào được ghi nhận</td>
+                                </tr>
+                            }
+                            else
+                            {
+                                foreach (var log in Model)
+                                {
+                                    var actionBadge = log.Action switch
+                                    {
+                                        "Đăng nhập" => "badge-success",
+                                        "Mở khóa tài khoản" => "badge-success",
+                                        "Cập nhật phân quyền" => "badge-indigo",
+                                        "Khôi phục phân quyền mặc định" => "badge-indigo",
+                                        "Tạo tài khoản" => "badge-primary",
+                                        "Cập nhật thông tin" => "badge-primary",
+                                        "Khóa tài khoản" => "badge-danger",
+                                        "Cấp lại mật khẩu" => "badge-warning",
+                                        "Đổi mật khẩu" => "badge-warning",
+                                        _ => "badge-secondary"
+                                    };
+
+                                    <tr class="log-row" data-username="@log.Username.ToLower()" data-action="@log.Action">
+                                        <td class="text-muted">@log.Timestamp.ToString("dd/MM/yyyy HH:mm:ss")</td>
+                                        <td class="fw-semibold text-dark">@log.Username</td>
+                                        <td><span class="badge-wrap @actionBadge">@log.Action</span></td>
+                                        <td class="text-secondary log-details">@log.Details</td>
+                                    </tr>
+                                }
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </main>
+</div>
+
+@section Scripts {
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const searchInput = document.getElementById("logSearch");
+        const actionFilter = document.getElementById("actionFilter");
+        const tableRows = document.querySelectorAll(".log-row");
+        const statTotal = document.getElementById("statTotal");
+
+        function filterLogs() {
+            const searchText = searchInput.value.toLowerCase().trim();
+            const selectedAction = actionFilter.value;
+            let visibleCount = 0;
+
+            tableRows.forEach(row => {
+                const username = row.dataset.username || "";
+                const action = row.dataset.action || "";
+                const details = row.querySelector(".log-details").textContent.toLowerCase();
+
+                const matchesSearch = username.includes(searchText) || details.includes(searchText);
+                const matchesAction = !selectedAction || action === selectedAction;
+
+                if (matchesSearch && matchesAction) {
+                    row.style.display = "";
+                    visibleCount++;
+                } else {
+                    row.style.display = "none";
+                }
+            });
+
+            // Handle no records row visibility
+            let noRecordsRow = document.querySelector(".no-records-filtered");
+            if (visibleCount === 0 && tableRows.length > 0) {
+                if (!noRecordsRow) {
+                    noRecordsRow = document.createElement("tr");
+                    noRecordsRow.className = "no-records-filtered";
+                    noRecordsRow.innerHTML = `<td colspan="4" class="text-center text-muted py-4">Không tìm thấy nhật ký phù hợp</td>`;
+                    document.querySelector("#logsTable tbody").appendChild(noRecordsRow);
+                }
+            } else if (noRecordsRow) {
+                noRecordsRow.remove();
+            }
+
+            statTotal.textContent = visibleCount;
+        }
+
+        searchInput.addEventListener("input", filterLogs);
+        actionFilter.addEventListener("change", filterLogs);
+    });
+</script>
+}

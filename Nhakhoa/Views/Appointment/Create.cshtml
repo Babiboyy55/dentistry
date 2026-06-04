@@ -73,10 +73,29 @@
                 }
             </div>
 
-            <!-- Bước 2: Chọn bác sĩ & dịch vụ -->
+            <!-- Bước 2: Lịch bác sĩ theo ngày -->
             <div class="card border-0 shadow-sm rounded-4 mb-4 p-4">
                 <div class="d-flex align-items-center gap-2 mb-3">
                     <span class="badge bg-primary rounded-circle d-inline-flex align-items-center justify-content-center" style="width:24px; height:24px;">2</span>
+                    <h5 class="fw-bold text-dark mb-0">Lịch bác sĩ theo ngày</h5>
+                </div>
+                <div class="row g-3 align-items-end">
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold text-secondary small">Chọn ngày</label>
+                        <input type="date" id="doctorDate" class="form-control rounded-3" min="@DateTime.Today.ToString("yyyy-MM-dd")" value="@DateTime.Today.ToString("yyyy-MM-dd")" />
+                    </div>
+                    <div class="col-12">
+                        <div id="doctorDayList" class="row g-2">
+                            <div class="col-12 text-muted small">Chọn ngày để xem bác sĩ đang có ca trực.</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bước 3: Chọn bác sĩ & dịch vụ -->
+            <div class="card border-0 shadow-sm rounded-4 mb-4 p-4">
+                <div class="d-flex align-items-center gap-2 mb-3">
+                    <span class="badge bg-primary rounded-circle d-inline-flex align-items-center justify-content-center" style="width:24px; height:24px;">3</span>
                     <h5 class="fw-bold text-dark mb-0">Bác sĩ & Dịch vụ</h5>
                 </div>
                 <div class="row g-3">
@@ -113,16 +132,16 @@
                 </div>
             </div>
 
-            <!-- Bước 3: Chọn ngày giờ -->
+            <!-- Bước 4: Chọn ngày giờ -->
             <div class="card border-0 shadow-sm rounded-4 mb-4 p-4">
                 <div class="d-flex align-items-center gap-2 mb-3">
-                    <span class="badge bg-primary rounded-circle d-inline-flex align-items-center justify-content-center" style="width:24px; height:24px;">3</span>
+                    <span class="badge bg-primary rounded-circle d-inline-flex align-items-center justify-content-center" style="width:24px; height:24px;">4</span>
                     <h5 class="fw-bold text-dark mb-0">Ngày khám & Giờ hẹn</h5>
                 </div>
                 <div class="row g-3">
                     <div class="col-md-6">
                         <label class="form-label fw-semibold text-secondary small">Ngày khám <span class="text-danger">*</span></label>
-                        <input type="date" name="AppointmentDate" id="apptDate" class="form-control rounded-3" min="@DateTime.Today.ToString("yyyy-MM-dd")" required />
+                        <input type="date" name="AppointmentDate" id="apptDate" class="form-control rounded-3" min="@DateTime.Today.ToString("yyyy-MM-dd")" value="@DateTime.Today.ToString("yyyy-MM-dd")" required />
                     </div>
                     <div class="col-md-6">
                         <label class="form-label fw-semibold text-secondary small">Ca làm việc <span class="text-danger">*</span></label>
@@ -143,10 +162,10 @@
                 </div>
             </div>
 
-            <!-- Bước 4: Ghi chú thêm -->
+            <!-- Bước 5: Ghi chú thêm -->
             <div class="card border-0 shadow-sm rounded-4 mb-4 p-4">
                 <div class="d-flex align-items-center gap-2 mb-3">
-                    <span class="badge bg-primary rounded-circle d-inline-flex align-items-center justify-content-center" style="width:24px; height:24px;">4</span>
+                    <span class="badge bg-primary rounded-circle d-inline-flex align-items-center justify-content-center" style="width:24px; height:24px;">5</span>
                     <h5 class="fw-bold text-dark mb-0">Ghi chú & Yêu cầu thêm</h5>
                 </div>
                 <textarea name="Notes" class="form-control rounded-3" rows="3" placeholder="Ví dụ: Đau răng cấp tính, kiểm tra định kỳ, yêu cầu đặc biệt..."></textarea>
@@ -312,7 +331,76 @@
     }
 
     document.getElementById('doctorSelect')?.addEventListener('change', loadDoctorShifts);
-    document.getElementById('apptDate')?.addEventListener('change', loadDoctorShifts);
+    document.getElementById('apptDate')?.addEventListener('change', () => {
+        const doctorDate = document.getElementById('doctorDate');
+        if (doctorDate && doctorDate.value !== document.getElementById('apptDate').value) {
+            doctorDate.value = document.getElementById('apptDate').value;
+        }
+        loadDoctorShifts();
+        loadDoctorsOnDate();
+    });
     document.getElementById('sessionSelect')?.addEventListener('change', loadSlots);
+
+    async function loadDoctorsOnDate() {
+        const doctorDate = document.getElementById('doctorDate');
+        const list = document.getElementById('doctorDayList');
+        const dt = doctorDate?.value || document.getElementById('apptDate')?.value;
+        if (!list || !dt) return;
+
+        list.innerHTML = '<div class="col-12 text-muted small">Đang tải danh sách bác sĩ...</div>';
+        const res = await fetch(`/Appointment/DoctorsOnDate?date=${encodeURIComponent(dt)}`);
+        const data = await res.json();
+
+        if (!data.length) {
+            list.innerHTML = '<div class="col-12 text-danger small">Không có bác sĩ có ca trực trong ngày này.</div>';
+            return;
+        }
+
+        list.innerHTML = '';
+        data.forEach(d => {
+            const shifts = (d.shifts || []).join(', ');
+            const clinics = (d.clinics || []).join(', ');
+            const col = document.createElement('div');
+            col.className = 'col-12 col-md-6';
+            col.innerHTML = `
+                <div class="border rounded-4 p-3 h-100 d-flex flex-column gap-2" style="background:#f8fbff; border-color:#e2effe;">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <div>
+                            <div class="fw-semibold text-dark">${d.fullName}</div>
+                            <div class="small text-muted">${d.positionTitle || ''}</div>
+                        </div>
+                        <button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-3">Chọn</button>
+                    </div>
+                    <div class="small text-secondary">Ca trực: <span class="text-dark">${shifts || 'Chưa rõ'}</span></div>
+                    <div class="small text-secondary">Phòng khám: <span class="text-dark">${clinics || 'Chưa phân công'}</span></div>
+                </div>
+            `;
+
+            const btn = col.querySelector('button');
+            btn.onclick = () => {
+                const doctorSelect = document.getElementById('doctorSelect');
+                const apptDate = document.getElementById('apptDate');
+                if (doctorSelect) doctorSelect.value = d.staffProfileId;
+                if (apptDate && doctorDate && apptDate.value !== doctorDate.value) {
+                    apptDate.value = doctorDate.value;
+                }
+                loadDoctorShifts();
+            };
+
+            list.appendChild(col);
+        });
+    }
+
+    document.getElementById('doctorDate')?.addEventListener('change', () => {
+        const apptDate = document.getElementById('apptDate');
+        const doctorDate = document.getElementById('doctorDate');
+        if (apptDate && doctorDate && apptDate.value !== doctorDate.value) {
+            apptDate.value = doctorDate.value;
+        }
+        loadDoctorsOnDate();
+        loadDoctorShifts();
+    });
+
+    loadDoctorsOnDate();
 </script>
 }

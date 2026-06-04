@@ -16,34 +16,116 @@
         .admin-layout { display: flex; min-height: 100vh; }
         
         .admin-sidebar {
-            width: 250px;
-            background: #fff;
-            border-right: 1px solid #eef0f7;
-            padding: 24px 0;
+            width: 260px;
+            background: #ffffff;
+            border-right: 1px solid #e2e8f0;
+            padding: 24px 0 0;
             display: flex;
             flex-direction: column;
             height: 100vh;
             overflow: hidden;
+            flex-shrink: 0;
         }
 
-        .admin-sidebar .brand { padding: 0 24px 32px; font-weight: 700; color: #1b75d0; font-size: 1.2rem; display: flex; align-items: center; gap: 10px; }
-        .admin-sidebar .brand .icon { background: #1b75d0; color: #fff; width: 32px; height: 32px; border-radius: 8px; display: grid; place-items: center; }
+        .admin-sidebar .brand { 
+            padding: 0 24px 24px; 
+            display: flex; 
+            align-items: center; 
+            gap: 12px; 
+            border-bottom: 1px solid #f1f5f9;
+            margin-bottom: 16px;
+        }
+        .admin-sidebar .brand .icon { 
+            background: #0f45a3; 
+            color: #ffffff; 
+            width: 36px; 
+            height: 36px; 
+            border-radius: 8px; 
+            display: grid; 
+            place-items: center; 
+            font-size: 1.15rem;
+        }
+        .admin-sidebar .brand-text {
+            display: flex;
+            flex-direction: column;
+            line-height: 1.25;
+            white-space: nowrap;
+        }
 
         .sidebar-menu {
             display: flex;
             flex-direction: column;
-            gap: 4px;
-            padding: 0 12px 12px;
+            gap: 2px;
+            padding: 0 0 24px;
             flex: 1;
             min-height: 0;
             overflow-y: auto;
         }
-        .sidebar-menu a {
-            display: flex; align-items: center; gap: 12px; padding: 12px 16px; 
-            text-decoration: none; color: #5b6b7a; border-radius: 12px; font-weight: 500; transition: all 0.2s;
+
+        /* Modern scrollbar styling for sidebar */
+        .sidebar-menu::-webkit-scrollbar {
+            width: 5px;
         }
-        .sidebar-menu a:hover { background: #f4f9ff; color: #1b75d0; }
-        .sidebar-menu a.active { background: #1b75d0; color: #fff; }
+        .sidebar-menu::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .sidebar-menu::-webkit-scrollbar-thumb {
+            background: #e2e8f0;
+            border-radius: 99px;
+        }
+        .sidebar-menu::-webkit-scrollbar-thumb:hover {
+            background: #cbd5e1;
+        }
+        .sidebar-menu {
+            scrollbar-width: thin;
+            scrollbar-color: #e2e8f0 transparent;
+        }
+
+        .menu-category {
+            font-size: 0.72rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: #94a3b8;
+            padding: 16px 24px 6px;
+            letter-spacing: 0.05em;
+            user-select: none;
+        }
+
+        .sidebar-menu a {
+            display: flex; 
+            align-items: center; 
+            gap: 12px; 
+            padding: 10px 20px; 
+            margin: 1px 12px;
+            text-decoration: none; 
+            color: #475569; 
+            border-radius: 99px; 
+            font-weight: 500; 
+            font-size: 0.92rem;
+            transition: all 0.15s ease;
+            white-space: nowrap;
+        }
+        .sidebar-menu a i {
+            font-size: 1.1rem;
+            color: #64748b;
+            display: flex;
+            align-items: center;
+        }
+        .sidebar-menu a:hover { 
+            background: #f1f5f9; 
+            color: #1e293b; 
+        }
+        .sidebar-menu a:hover i {
+            color: #1e293b;
+        }
+        .sidebar-menu a.active { 
+            background: #0f45a3; 
+            color: #ffffff; 
+            font-weight: 600;
+        }
+        .sidebar-menu a.active i { 
+            color: #ffffff; 
+        }
         
         .admin-content { flex: 1; padding: 0; display: flex; flex-direction: column; height: 100vh; overflow-y: auto;}
         
@@ -62,38 +144,60 @@
 
         .topbar-datetime { color: #5b6b7a; font-weight: 500; font-size: 0.95rem; }
         
-        .bottom-actions { margin-top: auto; padding: 24px; display: flex; flex-direction: column; gap: 8px; border-top: 1px solid #eef0f7; }
+        .bottom-actions { 
+            margin-top: auto; 
+            padding: 16px 24px; 
+            display: flex; 
+            flex-direction: column; 
+            gap: 8px; 
+            border-top: 1px solid #e2e8f0; 
+        }
         .bottom-actions-header {
             display: flex;
             align-items: center;
             justify-content: space-between;
             font-weight: 600;
-            color: #5b6b7a;
-            padding: 0 8px;
+            color: #475569;
+            padding: 0 4px;
             cursor: pointer;
             user-select: none;
+            font-size: 0.92rem;
+            white-space: nowrap;
         }
         .bottom-actions-toggle {
             border: none;
-            background: #f4f7fe;
-            color: #5b6b7a;
-            width: 28px;
-            height: 28px;
+            background: #f1f5f9;
+            color: #64748b;
+            width: 24px;
+            height: 24px;
             border-radius: 999px;
             display: grid;
             place-items: center;
             transition: transform 0.2s ease, background 0.2s ease;
         }
-        .bottom-actions-toggle:hover { background: #e9f1ff; color: #1b75d0; }
-        .bottom-actions-content { display: none; flex-direction: column; gap: 8px; margin-top: 8px; }
+        .bottom-actions-toggle:hover { background: #e2e8f0; color: #1e293b; }
+        .bottom-actions-content { display: none; flex-direction: column; gap: 4px; margin-top: 8px; }
         .bottom-actions.open .bottom-actions-content { display: flex; }
         .bottom-actions.open .bottom-actions-toggle { transform: rotate(180deg); }
         .bottom-actions a, .bottom-actions button { 
-             display: flex; align-items: center; gap: 12px; text-decoration: none; color: #5b6b7a; 
-             background: none; border: none; width: 100%; text-align: left; padding: 8px; border-radius: 8px;
+             display: flex; 
+             align-items: center; 
+             gap: 12px; 
+             text-decoration: none; 
+             color: #475569; 
+             background: none; 
+             border: none; 
+             width: 100%; 
+             text-align: left; 
+             padding: 8px 16px; 
+             border-radius: 99px;
+             font-size: 0.9rem;
+             font-weight: 500;
+             transition: all 0.15s ease;
+             white-space: nowrap;
         }
-        .bottom-actions a:hover { background: #f4f9ff; color: #1b75d0; }
-        .bottom-actions button:hover { background: #ffe9e9; color: #d01b1b; }
+        .bottom-actions a:hover { background: #f1f5f9; color: #1e293b; }
+        .bottom-actions button:hover { background: #ffe4e6; color: #e11d48; }
 
         /* Avatar dropdown */
         .avatar-wrapper { position: relative; }
@@ -129,7 +233,10 @@
         <aside class="admin-sidebar">
             <div class="brand">
                 <div class="icon"><i class="bi bi-hospital"></i></div>
-                St. Mary's Clinic<br/><small class="text-muted" style="font-size: 0.75rem; font-weight: 500;">Admin Portal</small>
+                <div class="brand-text">
+                    <span style="font-weight: 700; color: #0f45a3; font-size: 1.1rem;">St. Mary's Clinic</span>
+                    <small class="text-muted" style="font-size: 0.75rem; font-weight: 500;">Admin Portal</small>
+                </div>
             </div>
             
             @{
@@ -137,28 +244,29 @@
                 var action = ViewContext.RouteData.Values["action"]?.ToString();
             }
             <nav class="sidebar-menu">
+                <div class="menu-category">Tổng quan</div>
                 <a asp-controller="Home" asp-action="Index" class="@(controller == "Home" && action == "Index" ? "active" : "")"><i class="bi bi-grid-1x2"></i> Tổng quan</a>
-
                 <a asp-controller="Appointment" asp-action="Index" class="@(controller == "Appointment" && action != "Queue" ? "active" : "")"><i class="bi bi-calendar-check"></i> Lịch hẹn</a>
-                <a asp-controller="Appointment" asp-action="Queue" class="@(controller == "Appointment" && action == "Queue" ? "active" : "")" style="padding-left:32px; font-size:0.88rem;"><i class="bi bi-clock-history"></i> Hàng chờ hôm nay</a>
-
+                <a asp-controller="Appointment" asp-action="Queue" class="@(controller == "Appointment" && action == "Queue" ? "active" : "")"><i class="bi bi-clock-history"></i> Hàng chờ hôm nay</a>
                 <a asp-controller="Patient" asp-action="Index" class="@(controller == "Patient" ? "active" : "")"><i class="bi bi-journal-medical"></i> Hồ sơ bệnh nhân</a>
 
+                <div class="menu-category">Hoạt động</div>
                 <a asp-controller="Schedule" asp-action="Index" class="@(controller == "Schedule" && action == "Index" ? "active" : "")"><i class="bi bi-calendar3"></i> Lịch làm việc</a>
                 @if (User.IsInRole("Admin"))
                 {
-                    <a asp-controller="Schedule" asp-action="Holidays" class="@(controller == "Schedule" && action == "Holidays" ? "active" : "")" style="padding-left:32px; font-size:0.88rem;"><i class="bi bi-calendar-x"></i> Ngày nghỉ lễ</a>
+                    <a asp-controller="Schedule" asp-action="Holidays" class="@(controller == "Schedule" && action == "Holidays" ? "active" : "")"><i class="bi bi-calendar-x"></i> Ngày nghỉ lễ</a>
                 }
-
                 <a asp-controller="MedicalService" asp-action="Index" class="@(controller == "MedicalService" ? "active" : "")"><i class="bi bi-activity"></i> Dịch vụ y tế</a>
                 <a asp-controller="Specialty" asp-action="Index" class="@(controller == "Specialty" ? "active" : "")"><i class="bi bi-heart-pulse"></i> Chuyên khoa</a>
                 <a asp-controller="Clinic" asp-action="Index" class="@(controller == "Clinic" ? "active" : "")"><i class="bi bi-building"></i> Phòng khám</a>
                 <a href="#"><i class="bi bi-receipt"></i> Thanh toán</a>
+
+                <div class="menu-category">Quản trị</div>
                 <a asp-controller="Staff" asp-action="Index" class="@(controller == "Staff" ? "active" : "")"><i class="bi bi-people"></i> Nhân sự</a>
                 @if (User.IsInRole("Admin"))
                 {
-                    <a asp-controller="Staff" asp-action="SalaryList" class="@(action == "SalaryList" || action == "Salary" ? "active" : "")" style="padding-left:32px; font-size:0.88rem;">
-                        <i class="bi bi-cash-stack"></i> Bảng lương
+                    <a asp-controller="Payroll" asp-action="Index" class="@(controller == "Payroll" ? "active" : "")">
+                        <i class="bi bi-cash-stack"></i> Bảng lương bác sĩ
                     </a>
                     <a asp-controller="RolePermission" asp-action="Index" class="@(controller == "RolePermission" ? "active" : "")">
                         <i class="bi bi-shield-lock"></i> Phân quyền

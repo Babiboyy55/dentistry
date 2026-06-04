@@ -528,6 +528,44 @@ namespace Nhakhoa.Controllers
             return Json(shifts);
         }
 
+        // GET: /Appointment/DoctorsOnDate
+        [HttpGet]
+        public async Task<IActionResult> DoctorsOnDate(string date)
+        {
+            if (!DateTime.TryParse(date, out var parsedDate))
+                return BadRequest();
+
+            var raw = await _db.Shifts
+                .Include(s => s.StaffProfile).ThenInclude(sp => sp.User)
+                .Include(s => s.Clinic)
+                .Where(s => s.ShiftDate.Date == parsedDate.Date && s.IsActive)
+                .Where(s => s.StaffProfile.User!.IsActive && s.StaffProfile.User.Role == "Doctor")
+                .Select(s => new
+                {
+                    s.StaffProfileId,
+                    FullName = s.StaffProfile.User!.FullName,
+                    PositionTitle = s.StaffProfile.PositionTitle,
+                    ClinicName = s.Clinic.Name,
+                    s.ShiftType
+                })
+                .ToListAsync();
+
+            var result = raw
+                .GroupBy(r => new { r.StaffProfileId, r.FullName, r.PositionTitle })
+                .Select(g => new
+                {
+                    staffProfileId = g.Key.StaffProfileId,
+                    fullName = g.Key.FullName,
+                    positionTitle = g.Key.PositionTitle,
+                    clinics = g.Select(x => x.ClinicName).Distinct().OrderBy(x => x).ToList(),
+                    shifts = g.Select(x => x.ShiftType).Distinct().OrderBy(x => x).ToList()
+                })
+                .OrderBy(x => x.fullName)
+                .ToList();
+
+            return Json(result);
+        }
+
         private async Task LoadViewBagDropdowns()
         {
             ViewBag.Doctors = await _db.StaffProfiles

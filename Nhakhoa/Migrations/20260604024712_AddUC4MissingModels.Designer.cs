@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Nhakhoa.Data;
 
@@ -11,9 +12,11 @@ using Nhakhoa.Data;
 namespace Nhakhoa.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260604024712_AddUC4MissingModels")]
+    partial class AddUC4MissingModels
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -257,81 +260,6 @@ namespace Nhakhoa.Migrations
                     b.ToTable("DentalWarranties");
                 });
 
-            modelBuilder.Entity("Nhakhoa.Models.DoctorSalaryConfig", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<decimal>("DegreeAssocProf")
-                        .HasColumnType("decimal(5,2)");
-
-                    b.Property<decimal>("DegreeDoctorate")
-                        .HasColumnType("decimal(5,2)");
-
-                    b.Property<decimal>("DegreeMaster")
-                        .HasColumnType("decimal(5,2)");
-
-                    b.Property<decimal>("DegreeProfessor")
-                        .HasColumnType("decimal(5,2)");
-
-                    b.Property<decimal>("DegreeUniversity")
-                        .HasColumnType("decimal(5,2)");
-
-                    b.Property<decimal>("HourlyRate")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<decimal>("MultiplierFriday")
-                        .HasColumnType("decimal(5,2)");
-
-                    b.Property<decimal>("MultiplierMonday")
-                        .HasColumnType("decimal(5,2)");
-
-                    b.Property<decimal>("MultiplierSaturday")
-                        .HasColumnType("decimal(5,2)");
-
-                    b.Property<decimal>("MultiplierSunday")
-                        .HasColumnType("decimal(5,2)");
-
-                    b.Property<decimal>("MultiplierThursday")
-                        .HasColumnType("decimal(5,2)");
-
-                    b.Property<decimal>("MultiplierTuesday")
-                        .HasColumnType("decimal(5,2)");
-
-                    b.Property<decimal>("MultiplierWednesday")
-                        .HasColumnType("decimal(5,2)");
-
-                    b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("DoctorSalaryConfigs");
-
-                    b.HasData(
-                        new
-                        {
-                            Id = 1,
-                            DegreeAssocProf = 2.50m,
-                            DegreeDoctorate = 2.00m,
-                            DegreeMaster = 1.50m,
-                            DegreeProfessor = 3.00m,
-                            DegreeUniversity = 1.20m,
-                            HourlyRate = 210000m,
-                            MultiplierFriday = 1.00m,
-                            MultiplierMonday = 1.00m,
-                            MultiplierSaturday = 1.20m,
-                            MultiplierSunday = 1.50m,
-                            MultiplierThursday = 1.00m,
-                            MultiplierTuesday = 1.00m,
-                            MultiplierWednesday = 1.00m,
-                            UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified)
-                        });
-                });
-
             modelBuilder.Entity("Nhakhoa.Models.DoctorSpecialty", b =>
                 {
                     b.Property<int>("StaffProfileId")
@@ -492,7 +420,7 @@ namespace Nhakhoa.Migrations
                         new
                         {
                             Id = 1,
-                            CreatedAt = new DateTime(2026, 6, 4, 11, 13, 47, 93, DateTimeKind.Local).AddTicks(8799),
+                            CreatedAt = new DateTime(2026, 6, 4, 9, 47, 11, 87, DateTimeKind.Local).AddTicks(7910),
                             CreatedBy = "Hệ thống",
                             Date = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
                             HolidayType = "Cố định",
@@ -503,7 +431,7 @@ namespace Nhakhoa.Migrations
                         new
                         {
                             Id = 2,
-                            CreatedAt = new DateTime(2026, 6, 4, 11, 13, 47, 93, DateTimeKind.Local).AddTicks(9739),
+                            CreatedAt = new DateTime(2026, 6, 4, 9, 47, 11, 87, DateTimeKind.Local).AddTicks(9054),
                             CreatedBy = "Hệ thống",
                             Date = new DateTime(2026, 4, 30, 0, 0, 0, 0, DateTimeKind.Unspecified),
                             HolidayType = "Cố định",
@@ -514,7 +442,7 @@ namespace Nhakhoa.Migrations
                         new
                         {
                             Id = 3,
-                            CreatedAt = new DateTime(2026, 6, 4, 11, 13, 47, 93, DateTimeKind.Local).AddTicks(9742),
+                            CreatedAt = new DateTime(2026, 6, 4, 9, 47, 11, 87, DateTimeKind.Local).AddTicks(9057),
                             CreatedBy = "Hệ thống",
                             Date = new DateTime(2026, 5, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
                             HolidayType = "Cố định",
@@ -525,7 +453,7 @@ namespace Nhakhoa.Migrations
                         new
                         {
                             Id = 4,
-                            CreatedAt = new DateTime(2026, 6, 4, 11, 13, 47, 93, DateTimeKind.Local).AddTicks(9744),
+                            CreatedAt = new DateTime(2026, 6, 4, 9, 47, 11, 87, DateTimeKind.Local).AddTicks(9058),
                             CreatedBy = "Hệ thống",
                             Date = new DateTime(2026, 9, 2, 0, 0, 0, 0, DateTimeKind.Unspecified),
                             HolidayType = "Cố định",
@@ -1319,7 +1247,7 @@ namespace Nhakhoa.Migrations
                         {
                             Id = 1,
                             ClinicId = 1,
-                            CreatedAt = new DateTime(2026, 6, 4, 11, 13, 47, 93, DateTimeKind.Local).AddTicks(7778),
+                            CreatedAt = new DateTime(2026, 6, 4, 9, 47, 11, 87, DateTimeKind.Local).AddTicks(6898),
                             IsActive = true,
                             ShiftDate = new DateTime(2026, 12, 10, 0, 0, 0, 0, DateTimeKind.Unspecified),
                             ShiftType = "Sáng",

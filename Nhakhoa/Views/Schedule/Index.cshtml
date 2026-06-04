@@ -2,185 +2,432 @@
 @{
     Layout = "_AdminLayout";
     ViewData["Title"] = "Lịch làm việc";
-    int month = ViewBag.Month;
-    int year = ViewBag.Year;
-    DateTime start = ViewBag.StartDate;
-    DateTime end = ViewBag.EndDate;
-    var holidays = ViewBag.Holidays as List<Nhakhoa.Models.HolidayDate> ?? new();
+
+    DateTime wStart = ViewBag.WeekStart;
+    DateTime wEnd = ViewBag.WeekEnd;
+    DateTime monthStart = ViewBag.MonthStart;
+    DateTime monthEnd = ViewBag.MonthEnd;
+    var allHolidays = ViewBag.AllHolidays as List<Nhakhoa.Models.HolidayDate> ?? new();
+    var monthShiftDates = ViewBag.MonthShiftDates as List<DateTime> ?? new();
+    var shiftSettings = ViewBag.ShiftSettings as List<Nhakhoa.Models.ShiftSetting> ?? new();
     var doctors = ViewBag.Doctors as List<Nhakhoa.Models.StaffProfile> ?? new();
     var clinics = ViewBag.Clinics as List<Nhakhoa.Models.Clinic> ?? new();
-    string monthName = start.ToString("MMMM yyyy", new System.Globalization.CultureInfo("vi-VN"));
     bool isAdmin = User.IsInRole("Admin");
+
+    var weekDays = Enumerable.Range(0, 7).Select(i => wStart.AddDays(i)).ToList();
+    string[] dayNames = { "T2", "T3", "T4", "T5", "T6", "T7", "CN" };
+
+    // Lookup: (date, shiftType) -> List<Shift>
+    var shiftMap = Model
+        .GroupBy(s => (Date: s.ShiftDate.Date, Type: s.ShiftType))
+        .ToDictionary(g => g.Key, g => g.ToList());
+
+    // Holidays in current week
+    var holidaySet = allHolidays
+        .Where(h => h.Date >= wStart && h.Date <= wEnd)
+        .ToDictionary(h => h.Date.Date, h => h.Name);
 }
 
-<div class="d-flex align-items-center justify-content-between gap-3 mb-4">
+<style>
+    /* ── Weekly Schedule Grid ─────────────────────────── */
+    .sched-table { border-collapse: separate; border-spacing: 0; width: 100%; table-layout: fixed; }
+    .sched-table th, .sched-table td { border: 1px solid #e2e8f0; }
+    .sched-table thead th {
+        background: #f8fafc; font-weight: 600; font-size: .8rem;
+        text-align: center; padding: 10px 6px; position: sticky; top: 0; z-index: 2;
+    }
+    .sched-table thead th.col-today { background: #eff6ff; }
+    .sched-table thead th.col-weekend { background: #faf8ff; }
+    .col-shift-label { width: 130px; background: #f8fafc !important; }
+    .col-day { min-width: 105px; }
+    .col-action { width: 76px; background: #f8fafc !important; text-align: center; }
+
+    /* ── Cells ──────────────────────────────────────────── */
+    .shift-label-cell { padding: 10px 12px; background: #f8fafc; }
+    .shift-label-cell .shift-name { font-weight: 700; font-size: .82rem; color: #1e293b; }
+    .shift-label-cell .shift-time { font-size: .71rem; color: #64748b; margin-top: 2px; }
+    .shift-label-cell .shift-hours { font-size: .7rem; color: #94a3b8; }
+
+    .day-cell { padding: 4px; vertical-align: top; }
+    .day-cell.cell-today { background: #f8fbff; }
+    .day-cell.cell-weekend { background: #fdfcff; }
+
+    /* Empty slot */
+    .slot-empty {
+        display: flex; align-items: center; justify-content: center;
+        min-height: 64px; border: 2px dashed #e2e8f0; border-radius: 8px;
+        cursor: pointer; color: #cbd5e1; font-size: 1.1rem;
+        transition: all .15s ease;
+    }
+    .slot-empty:hover { border-color: #3b82f6; background: #eff6ff; color: #3b82f6; }
+
+    /* Holiday slot */
+    .slot-holiday {
+        display: flex; flex-direction: column; align-items: center; justify-content: center;
+        min-height: 64px; border-radius: 8px;
+        background: #fff1f2; border: 1px solid #fecdd3;
+        color: #e11d48; font-size: .72rem; text-align: center; padding: 6px; gap: 3px;
+    }
+
+    /* Shift card */
+    .shift-card {
+        background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px;
+        padding: 7px 9px; margin-bottom: 4px; position: relative;
+    }
+    .shift-card .sc-name { font-weight: 700; font-size: .78rem; color: #1e40af; }
+    .shift-card .sc-clinic { font-size: .7rem; color: #64748b; margin-top: 1px; }
+    .shift-card .sc-done { font-size: .78rem; color: #15803d; font-weight: 600; }
+    .shift-card .btn-x {
+        position: absolute; top: 4px; right: 5px;
+        background: none; border: none; color: #94a3b8; padding: 0;
+        cursor: pointer; font-size: .9rem; line-height: 1;
+        transition: color .1s;
+    }
+    .shift-card .btn-x:hover { color: #ef4444; }
+
+    /* Add more button (inside filled cell - admin) */
+    .slot-add-more {
+        display: flex; align-items: center; justify-content: center; gap: 4px;
+        min-height: 28px; border: 1.5px dashed #bfdbfe; border-radius: 6px;
+        cursor: pointer; color: #93c5fd; font-size: .75rem;
+        transition: all .12s;
+    }
+    .slot-add-more:hover { border-color: #3b82f6; color: #3b82f6; background: #f0f9ff; }
+
+    /* Register whole row button */
+    .btn-reg-row {
+        display: flex; flex-direction: column; align-items: center; justify-content: center;
+        width: 100%; min-height: 64px; padding: 6px 4px; gap: 3px;
+        border: 1.5px solid #ddd6fe; background: #f5f3ff; color: #7c3aed;
+        border-radius: 8px; font-size: .72rem; font-weight: 700; cursor: pointer;
+        transition: all .15s;
+    }
+    .btn-reg-row:hover { background: #6d28d9; color: white; border-color: #6d28d9; }
+    .btn-reg-row i { font-size: 1rem; }
+
+    /* ── Mini Calendar ──────────────────────────────────── */
+    .mini-cal td, .mini-cal th {
+        text-align: center; padding: 5px 3px;
+        font-size: .78rem; border-radius: 6px; cursor: pointer;
+    }
+    .mini-cal th { color: #64748b; font-weight: 600; cursor: default; }
+    .mini-cal td:hover { background: #eff6ff; }
+    .mini-cal td.mc-today { background: #3b82f6; color: #fff; font-weight: 700; border-radius: 50%; }
+    .mini-cal td.mc-inweek { background: #eff6ff; color: #1d4ed8; font-weight: 600; }
+    .mini-cal td.mc-holiday { color: #e11d48; }
+    .mini-cal td.mc-other { color: #cbd5e1; }
+    .mini-cal td.mc-hasshift { position: relative; }
+    .mini-cal td.mc-hasshift::after {
+        content: ''; position: absolute; bottom: 3px; left: 50%; transform: translateX(-50%);
+        width: 4px; height: 4px; border-radius: 50%; background: #3b82f6;
+    }
+
+    /* ── Settings panel ─────────────────────────────────── */
+    .repeat-btn {
+        border: 1.5px solid #e2e8f0; border-radius: 8px; padding: 4px 10px;
+        font-size: .78rem; font-weight: 600; cursor: pointer; background: white;
+        transition: all .14s;
+    }
+    .repeat-btn.active { border-color: #6366f1; background: #eef2ff; color: #4338ca; }
+
+    /* ── Feedback toast ─────────────────────────────────── */
+    #regFeedback { transition: all .2s; }
+</style>
+
+<!-- Page header -->
+<div class="d-flex align-items-center justify-content-between gap-3 mb-4 flex-wrap">
     <div>
-        <h4 class="fw-bold mb-0" style="color:#0b1f35"><i class="bi bi-calendar3 text-primary me-2"></i>Lịch làm việc</h4>
-        <div class="text-muted small mt-1">Đăng ký và quản lý ca trực — Tháng @month/@year</div>
+        <h4 class="fw-bold mb-0" style="color:#0b1f35">
+            <i class="bi bi-calendar-week text-primary me-2"></i>Lịch làm việc
+        </h4>
+        <div class="text-muted small mt-1">Đăng ký và quản lý ca trực — xem theo tuần</div>
     </div>
-    <div class="d-flex gap-2">
-        @{ var prev = start.AddMonths(-1); var next = start.AddMonths(1); }
-        <a href="/Schedule?month=@prev.Month&year=@prev.Year" class="btn btn-outline-secondary btn-sm rounded-pill px-3"><i class="bi bi-chevron-left"></i></a>
-        <span class="btn btn-light btn-sm rounded-pill px-3 border fw-semibold">@monthName</span>
-        <a href="/Schedule?month=@next.Month&year=@next.Year" class="btn btn-outline-secondary btn-sm rounded-pill px-3"><i class="bi bi-chevron-right"></i></a>
+    <div class="d-flex gap-2 align-items-center flex-wrap">
+        <a href="/Schedule?weekStart=@wStart.AddDays(-7).ToString("yyyy-MM-dd")"
+           class="btn btn-outline-secondary btn-sm rounded-pill px-3">
+            <i class="bi bi-chevron-left"></i>
+        </a>
+        <span class="fw-semibold small bg-light border rounded-pill px-3 py-1 text-dark">
+            @wStart.ToString("dd/MM") – @wEnd.ToString("dd/MM/yyyy")
+        </span>
+        <a href="/Schedule?weekStart=@wStart.AddDays(7).ToString("yyyy-MM-dd")"
+           class="btn btn-outline-secondary btn-sm rounded-pill px-3">
+            <i class="bi bi-chevron-right"></i>
+        </a>
+        <a href="/Schedule" class="btn btn-outline-primary btn-sm rounded-pill px-3">
+            <i class="bi bi-calendar-day me-1"></i>Tuần này
+        </a>
         @if (isAdmin)
         {
-            <button type="button" class="btn btn-outline-primary btn-sm rounded-pill px-3 d-flex align-items-center gap-1" data-bs-toggle="modal" data-bs-target="#settingsModal">
-                <i class="bi bi-gear-fill"></i> Cấu hình ca
+            <button type="button" class="btn btn-outline-secondary btn-sm rounded-pill px-3"
+                    data-bs-toggle="modal" data-bs-target="#settingsModal" title="Cấu hình ca">
+                <i class="bi bi-gear"></i>
             </button>
-            <a href="/Schedule/Holidays" class="btn btn-outline-danger btn-sm rounded-pill px-3 d-flex align-items-center gap-1">
-                <i class="bi bi-calendar-x"></i> Ngày nghỉ
+            <a href="/Schedule/Holidays" class="btn btn-outline-danger btn-sm rounded-pill px-3" title="Ngày nghỉ">
+                <i class="bi bi-calendar-x"></i>
             </a>
         }
     </div>
 </div>
 
-<div class="row g-4">
-    <!-- Calendar Grid -->
-    <div class="col-lg-8">
-        <div class="card border-0 shadow-sm rounded-4 p-4">
-            <!-- Day headers -->
-            <div class="row g-0 mb-2">
-                @foreach (var day in new[] { "CN", "T2", "T3", "T4", "T5", "T6", "T7" })
-                {
-                    <div class="col text-center fw-semibold text-muted small py-2">@day</div>
-                }
-            </div>
-            <!-- Calendar days -->
-            @{
-                // Pad to start on the correct day of week (Sunday=0)
-                int firstDow = (int)start.DayOfWeek;
-            }
-            <div class="row g-1" id="calendarGrid">
-                @for (int pad = 0; pad < firstDow; pad++)
-                {
-                    <div class="col" style="min-height:80px;"></div>
-                }
-                @for (DateTime d = start; d <= end; d = d.AddDays(1))
-                {
-                    var dayHoliday = holidays.FirstOrDefault(h => h.Date.Date == d.Date);
-                    var dayShifts = Model.Where(s => s.ShiftDate.Date == d.Date).ToList();
-                    bool isToday = d.Date == DateTime.Today;
-                    bool isWeekend = d.DayOfWeek == DayOfWeek.Saturday || d.DayOfWeek == DayOfWeek.Sunday;
-
-                    <div class="col calendar-day rounded-3 p-1 @(isToday ? "border border-primary" : "") @(dayHoliday != null ? "bg-danger-subtle" : isWeekend ? "bg-light" : "")"
-                         style="min-height:80px; cursor:pointer;" data-date="@d.ToString("yyyy-MM-dd")">
-                        <div class="fw-bold @(isToday ? "text-primary" : dayHoliday != null ? "text-danger" : "text-dark") small text-end px-1">@d.Day</div>
-                        @if (dayHoliday != null)
-                        {
-                            <div class="badge bg-danger text-white rounded-2 w-100 text-truncate mt-1" style="font-size:0.65rem;">@dayHoliday.Name</div>
-                        }
-                        @foreach (var s in dayShifts.Take(3))
-                        {
-                            <div class="badge @(s.ShiftType == "Sáng" ? "bg-warning-subtle text-warning" : "bg-info-subtle text-info") rounded-2 w-100 text-truncate mt-1" style="font-size:0.65rem;">
-                                @(s.ShiftType == "Sáng" ? "☀" : "🌙") @(s.StaffProfile?.User?.FullName?.Split(' ').Last() ?? "")
-                            </div>
-                        }
-                        @if (dayShifts.Count > 3)
-                        {
-                            <div class="text-muted" style="font-size:0.65rem;">+@(dayShifts.Count - 3) ca khác</div>
-                        }
-                    </div>
-
-                    @if ((int)d.DayOfWeek == 6 && d < end)
-                    {
-                        <div class="w-100"></div>
-                    }
-                }
-            </div>
-
-            <!-- Legend -->
-            <div class="d-flex gap-3 mt-3 flex-wrap">
-                <span class="d-flex align-items-center gap-1 small text-muted"><span class="badge bg-warning-subtle text-warning px-2">☀ Sáng</span> Buổi sáng</span>
-                <span class="d-flex align-items-center gap-1 small text-muted"><span class="badge bg-info-subtle text-info px-2">🌙 Chiều</span> Buổi chiều</span>
-                <span class="d-flex align-items-center gap-1 small text-muted"><span class="badge bg-danger text-white px-2">Nghỉ lễ</span> Ngày nghỉ</span>
-                <span class="d-flex align-items-center gap-1 small text-muted"><span class="border border-primary rounded px-2">Hôm nay</span></span>
-            </div>
-        </div>
-    </div>
-
-    <!-- Right: Register Shift -->
-    <div class="col-lg-4">
-        <div class="card border-0 shadow-sm rounded-4 p-4 mb-3">
-            <h6 class="fw-bold mb-3 text-dark">
-                <i class="bi bi-plus-circle text-primary me-2"></i>
-                @(isAdmin ? "Đặt ca trực" : "Đăng ký ca trực")
-            </h6>
-            <div id="registerForm">
-                <div class="mb-3">
-                    <label class="form-label fw-semibold small">Ngày <span class="text-danger">*</span></label>
-                    <input type="date" id="shiftDate" class="form-control rounded-3"
-                           min="@start.ToString("yyyy-MM-dd")" max="@end.ToString("yyyy-MM-dd")" />
-                </div>
-                <div class="mb-3">
-                    <label class="form-label fw-semibold small">Buổi <span class="text-danger">*</span></label>
-                    <select id="shiftType" class="form-select rounded-3">
-                        @foreach (var setting in (ViewBag.ShiftSettings as List<Nhakhoa.Models.ShiftSetting> ?? new()))
-                        {
-                            <option value="@setting.ShiftName">Ca @setting.ShiftName (@setting.StartTime–@setting.EndTime)</option>
-                        }
-                    </select>
-                </div>
-                <div class="mb-3">
-                    <label class="form-label fw-semibold small">Phòng <span class="text-danger">*</span></label>
-                    <select id="shiftClinic" class="form-select rounded-3">
-                        @foreach (var c in clinics) { <option value="@c.Id">@c.Name</option> }
-                    </select>
-                </div>
-                @if (isAdmin)
-                {
-                    <div class="mb-3">
-                        <label class="form-label fw-semibold small">Bác sĩ</label>
-                        <select id="shiftDoctor" class="form-select rounded-3">
-                            @foreach (var d in doctors) { <option value="@d.Id">@d.User?.FullName</option> }
-                        </select>
-                    </div>
-                }
-                <div id="shiftError" class="alert alert-danger border-0 rounded-3 py-2 small" style="display:none;"></div>
-                <div id="shiftSuccess" class="alert alert-success border-0 rounded-3 py-2 small" style="display:none;"></div>
-                <button type="button" onclick="registerShift()" class="btn btn-primary w-100 rounded-3 fw-semibold" style="background:#1b75d0;border-color:#1b75d0;">
-                    <i class="bi bi-calendar-plus me-2"></i>@(isAdmin ? "Đặt ca hộ bác sĩ" : "Đăng ký ca")
-                </button>
-            </div>
-        </div>
-
-        <!-- Shift list this month -->
-        <div class="card border-0 shadow-sm rounded-4 p-4">
-            <h6 class="fw-bold mb-3 text-dark"><i class="bi bi-list-check me-2"></i>Ca trực trong tháng</h6>
-            @if (!Model.Any())
+<div class="row g-3">
+    <!-- ═══ Weekly Grid ══════════════════════════════════════════════════ -->
+    <div class="col-xl-9 col-lg-8">
+        <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
+            @if (!shiftSettings.Any())
             {
-                <div class="text-muted small text-center py-3">Chưa có ca trực nào trong tháng này.</div>
+                <div class="p-5 text-center text-muted">
+                    <i class="bi bi-calendar-plus display-4 d-block mb-3"></i>
+                    <div class="fw-semibold">Chưa có cấu hình ca nào.</div>
+                    @if (isAdmin)
+                    {
+                        <button class="btn btn-primary btn-sm mt-2 rounded-pill" data-bs-toggle="modal" data-bs-target="#settingsModal">
+                            <i class="bi bi-plus me-1"></i> Thêm ca trực
+                        </button>
+                    }
+                </div>
             }
             else
             {
-                <div class="d-flex flex-column gap-2">
-                    @foreach (var s in Model.OrderBy(s => s.ShiftDate).ThenBy(s => s.ShiftType).Take(20))
-                    {
-                        <div class="d-flex align-items-center justify-content-between border rounded-3 px-3 py-2">
-                            <div>
-                                <span class="fw-semibold small text-dark">@s.ShiftDate.ToString("dd/MM")</span>
-                                <span class="badge @(s.ShiftType == "Sáng" ? "bg-warning-subtle text-warning" : "bg-info-subtle text-info") ms-2 rounded-pill">@s.ShiftType</span>
-                                @if (isAdmin)
+                <div class="table-responsive">
+                    <table class="sched-table">
+                        <thead>
+                            <tr>
+                                <th class="col-shift-label" style="border-top-left-radius:12px;">Ca trực</th>
+                                @for (int i = 0; i < 7; i++)
                                 {
-                                    <div class="text-muted" style="font-size:0.72rem;">@s.StaffProfile?.User?.FullName — @s.Clinic?.Name</div>
+                                    var d = weekDays[i];
+                                    bool isToday = d.Date == DateTime.Today;
+                                    bool isWeekend = d.DayOfWeek == DayOfWeek.Saturday || d.DayOfWeek == DayOfWeek.Sunday;
+                                    bool isHol = holidaySet.ContainsKey(d.Date);
+                                    <th class="col-day @(isToday ? "col-today" : isWeekend ? "col-weekend" : "")">
+                                        <div class="@(isToday ? "text-primary fw-bold" : isHol ? "text-danger" : "text-secondary") small">@dayNames[i]</div>
+                                        <div class="@(isToday ? "text-primary" : "text-dark") fw-bold" style="font-size:.95rem;">@d.Day</div>
+                                        <div class="text-muted" style="font-size:.68rem;">@d.ToString("MM/yyyy")</div>
+                                        @if (isHol)
+                                        {
+                                            <div class="mt-1"><span class="badge bg-danger rounded-pill" style="font-size:.62rem;"><i class="bi bi-calendar-x"></i></span></div>
+                                        }
+                                    </th>
                                 }
-                                else
-                                {
-                                    <div class="text-muted" style="font-size:0.72rem;">@s.Clinic?.Name</div>
-                                }
-                            </div>
-                            <button type="button" class="btn btn-outline-danger btn-sm rounded-pill px-2" onclick="cancelShift(@s.Id, this)" title="Hủy ca">
-                                <i class="bi bi-trash"></i>
-                            </button>
-                        </div>
-                    }
+                                <th class="col-action" style="border-top-right-radius:12px;" title="Đăng ký cả hàng">
+                                    <i class="bi bi-lightning-fill text-warning"></i>
+                                    <div style="font-size:.65rem;" class="text-muted fw-normal">Cả tuần</div>
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var setting in shiftSettings)
+                            {
+                                <tr>
+                                    <!-- Shift label -->
+                                    <td class="shift-label-cell">
+                                        <div class="shift-name">@setting.ShiftName</div>
+                                        <div class="shift-time">
+                                            <i class="bi bi-clock"></i> @setting.StartTime – @setting.EndTime
+                                        </div>
+                                        <div class="shift-hours">@setting.DurationHours giờ</div>
+                                    </td>
+
+                                    <!-- Day cells -->
+                                    @for (int i = 0; i < 7; i++)
+                                    {
+                                        var day = weekDays[i];
+                                        bool isToday = day.Date == DateTime.Today;
+                                        bool isWeekend = day.DayOfWeek == DayOfWeek.Saturday || day.DayOfWeek == DayOfWeek.Sunday;
+                                        bool isHol = holidaySet.ContainsKey(day.Date);
+                                        var key = (Date: day.Date, Type: setting.ShiftName);
+                                        var cellShifts = shiftMap.TryGetValue(key, out var cs) ? cs : new List<Nhakhoa.Models.Shift>();
+                                        string dayStr = day.ToString("yyyy-MM-dd");
+
+                                        <td class="day-cell @(isToday ? "cell-today" : isWeekend ? "cell-weekend" : "")">
+                                            @if (isHol)
+                                            {
+                                                <div class="slot-holiday">
+                                                    <i class="bi bi-calendar-x"></i>
+                                                    <span>@(holidaySet[day.Date].Length > 12 ? holidaySet[day.Date].Substring(0, 12) + "…" : holidaySet[day.Date])</span>
+                                                </div>
+                                            }
+                                            else
+                                            {
+                                                @foreach (var s in cellShifts)
+                                                {
+                                                    <div class="shift-card">
+                                                        @if (isAdmin)
+                                                        {
+                                                            <div class="sc-name">@(s.StaffProfile?.User?.FullName?.Split(' ').Last() ?? "—")</div>
+                                                            <div class="sc-clinic"><i class="bi bi-building"></i> @(s.Clinic?.Name?.Length > 14 ? s.Clinic.Name.Substring(0, 14) + "…" : s.Clinic?.Name ?? "")</div>
+                                                        }
+                                                        else
+                                                        {
+                                                            <div class="sc-done"><i class="bi bi-check-circle-fill"></i> Đã đăng ký</div>
+                                                            <div class="sc-clinic"><i class="bi bi-building"></i> @(s.Clinic?.Name ?? "")</div>
+                                                        }
+                                                        <button class="btn-x" onclick="cancelShift(@s.Id, this)" title="Hủy ca">
+                                                            <i class="bi bi-x-circle"></i>
+                                                        </button>
+                                                    </div>
+                                                }
+
+                                                @* Show add button: always for admin, only if no shift for doctor *@
+                                                @if (!cellShifts.Any() || isAdmin)
+                                                {
+                                                    if (cellShifts.Any() && isAdmin)
+                                                    {
+                                                        <div class="slot-add-more" onclick="registerCell('@dayStr','@setting.ShiftName')">
+                                                            <i class="bi bi-plus"></i> Thêm
+                                                        </div>
+                                                    }
+                                                    else
+                                                    {
+                                                        <div class="slot-empty" onclick="registerCell('@dayStr','@setting.ShiftName')" title="Đăng ký ca @setting.ShiftName ngày @day.ToString("dd/MM")">
+                                                            <i class="bi bi-plus-lg"></i>
+                                                        </div>
+                                                    }
+                                                }
+                                            }
+                                        </td>
+                                    }
+
+                                    <!-- Register whole row -->
+                                    <td style="padding:4px; vertical-align:top;">
+                                        <button class="btn-reg-row" onclick="registerWeekRow('@setting.ShiftName')"
+                                                title="Đăng ký Ca @setting.ShiftName cho toàn bộ tuần">
+                                            <i class="bi bi-lightning-fill"></i>
+                                            <span>Cả tuần</span>
+                                        </button>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
                 </div>
             }
+        </div>
+    </div>
+
+    <!-- ═══ Right Panel ══════════════════════════════════════════════════ -->
+    <div class="col-xl-3 col-lg-4">
+
+        <!-- Mini Calendar -->
+        <div class="card border-0 shadow-sm rounded-4 p-3 mb-3">
+            @{
+                var prevMonthStart = monthStart.AddMonths(-1);
+                var nextMonthStart = monthStart.AddMonths(1);
+                string viMonth = monthStart.ToString("MMMM yyyy", new System.Globalization.CultureInfo("vi-VN"));
+
+                int mFirstDow = (int)monthStart.DayOfWeek;
+                int padStart = (mFirstDow == 0) ? 6 : mFirstDow - 1;
+                int totalDays = (int)(monthEnd - monthStart).TotalDays + 1;
+                int totalCells = padStart + totalDays;
+                int totalRows = (int)Math.Ceiling(totalCells / 7.0);
+                DateTime calDay = monthStart.AddDays(-padStart);
+            }
+            <div class="d-flex align-items-center justify-content-between mb-2">
+                <a href="/Schedule?weekStart=@wStart.ToString("yyyy-MM-dd")&calMonth=@prevMonthStart.ToString("yyyy-MM-dd")"
+                   class="btn btn-sm btn-outline-secondary rounded-circle p-1" style="width:28px;height:28px;line-height:1;">
+                    <i class="bi bi-chevron-left" style="font-size:.7rem;"></i>
+                </a>
+                <span class="fw-semibold small text-capitalize">@viMonth</span>
+                <a href="/Schedule?weekStart=@wStart.ToString("yyyy-MM-dd")&calMonth=@nextMonthStart.ToString("yyyy-MM-dd")"
+                   class="btn btn-sm btn-outline-secondary rounded-circle p-1" style="width:28px;height:28px;line-height:1;">
+                    <i class="bi bi-chevron-right" style="font-size:.7rem;"></i>
+                </a>
+            </div>
+
+            <table class="mini-cal w-100">
+                <thead>
+                    <tr>
+                        @foreach (var dn in dayNames) { <th>@dn</th> }
+                    </tr>
+                </thead>
+                <tbody>
+                    @for (int row = 0; row < totalRows; row++)
+                    {
+                        <tr>
+                            @for (int col = 0; col < 7; col++)
+                            {
+                                bool inMonth = calDay.Month == monthStart.Month;
+                                bool isToday2 = calDay.Date == DateTime.Today;
+                                bool inWeek = calDay >= wStart && calDay <= wEnd;
+                                bool isHol2 = allHolidays.Any(h => h.Date.Date == calDay.Date);
+                                bool hasShift = monthShiftDates.Contains(calDay.Date);
+
+                                string cls = "";
+                                if (!inMonth) cls = "mc-other";
+                                else if (isToday2) cls = "mc-today";
+                                else if (inWeek) cls = "mc-inweek";
+
+                                if (isHol2 && !isToday2) cls += " mc-holiday";
+                                if (hasShift && inMonth && !isToday2) cls += " mc-hasshift";
+
+                                var navDate = calDay;
+                                <td class="@cls" onclick="window.location='/Schedule?weekStart=@navDate.ToString("yyyy-MM-dd")'"
+                                    title="@calDay.ToString("dd/MM/yyyy")">@calDay.Day</td>
+                                calDay = calDay.AddDays(1);
+                            }
+                        </tr>
+                    }
+                </tbody>
+            </table>
+
+            <div class="d-flex flex-wrap gap-2 mt-2" style="font-size:.68rem; color:#64748b;">
+                <span><span class="badge bg-primary rounded-pill px-1">&nbsp;</span> Hôm nay</span>
+                <span><span style="display:inline-block;width:10px;height:10px;background:#eff6ff;border:1.5px solid #93c5fd;border-radius:3px;"></span> Tuần hiện tại</span>
+                <span><span style="display:inline-block;width:6px;height:6px;background:#3b82f6;border-radius:50%;vertical-align:middle;"></span> Có ca</span>
+                <span><span class="text-danger fw-bold">●</span> Nghỉ lễ</span>
+            </div>
+        </div>
+
+        <!-- Settings card -->
+        <div class="card border-0 shadow-sm rounded-4 p-3">
+            <h6 class="fw-bold mb-3 small text-dark">
+                <i class="bi bi-sliders text-primary me-1"></i> Tùy chọn đăng ký
+            </h6>
+
+            <div class="mb-3">
+                <label class="form-label fw-semibold small mb-1">Phòng <span class="text-danger">*</span></label>
+                <select id="regClinic" class="form-select form-select-sm rounded-3">
+                    @foreach (var c in clinics) { <option value="@c.Id">@c.Name</option> }
+                </select>
+            </div>
+
+            @if (isAdmin)
+            {
+                <div class="mb-3">
+                    <label class="form-label fw-semibold small mb-1">Bác sĩ</label>
+                    <select id="regDoctor" class="form-select form-select-sm rounded-3">
+                        @foreach (var d in doctors)
+                        {
+                            <option value="@d.Id">@d.User?.FullName</option>
+                        }
+                    </select>
+                </div>
+            }
+
+            <div class="mb-3">
+                <label class="form-label fw-semibold small mb-2">
+                    <i class="bi bi-arrow-repeat me-1"></i>Lặp lại hàng tuần
+                </label>
+                <div class="d-flex flex-wrap gap-1">
+                    @foreach (var w in new[] { 1, 2, 3, 4, 6, 8, 12 })
+                    {
+                        <button type="button" class="repeat-btn @(w == 1 ? "active" : "")"
+                                data-weeks="@w" onclick="selectRepeat(this)">
+                            @w<span class="fw-normal text-muted"> tuần</span>
+                        </button>
+                    }
+                </div>
+                <input type="hidden" id="repeatWeeks" value="1" />
+            </div>
+
+            <!-- Feedback -->
+            <div id="regFeedback" style="display:none;" class="alert py-2 px-3 small mb-0 rounded-3"></div>
         </div>
     </div>
 </div>
 
-<!-- Modal Cấu hình ca trực (Admin only) -->
+<!-- ═══ Settings Modal (Admin) ══════════════════════════════════════════ -->
 @if (isAdmin)
 {
     var settingsList = ViewBag.ShiftSettings as List<Nhakhoa.Models.ShiftSetting> ?? new();
@@ -188,35 +435,34 @@
         <div class="modal-dialog modal-xl">
             <div class="modal-content rounded-4 border-0">
                 <div class="modal-header border-0 pb-0">
-                    <h5 class="modal-title fw-bold text-dark"><i class="bi bi-gear-fill text-primary me-2"></i>Quản lý cấu hình Ca & Hạn mức trực</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    <h5 class="modal-title fw-bold text-dark">
+                        <i class="bi bi-gear-fill text-primary me-2"></i>Cấu hình ca trực
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body pt-3">
-                    <div class="alert alert-info border-0 rounded-4 py-2 px-3 mb-4 text-secondary small d-flex align-items-center gap-2">
-                        <i class="bi bi-info-circle-fill text-primary"></i>
-                        <span>Admin có thể tạo các ca trực nhỏ hơn (ví dụ: Ca Sáng 1, Ca Sáng 2) thay vì chỉ để chung ca Sáng. Quy định số giờ và số ca tối đa mỗi bác sĩ được đăng ký trong tuần.</span>
-                    </div>
-
                     <div class="row g-4">
-                        <!-- Left: List & Edit Shifts -->
                         <div class="col-lg-8 border-end">
-                            <h6 class="fw-bold mb-3 text-secondary"><i class="bi bi-list-stars me-1 text-primary"></i>Danh sách ca trực hiện tại</h6>
+                            <h6 class="fw-bold mb-3 text-secondary small">Danh sách ca hiện tại</h6>
                             <div class="row g-3">
                                 @foreach (var setting in settingsList)
                                 {
                                     <div class="col-md-6">
                                         <div class="card border rounded-3 p-3" style="background:#f8fbff; position:relative;">
-                                            <form method="post" action="/Schedule/DeleteShiftSetting/@setting.Id" onsubmit="return confirm('Xác nhận xóa cấu hình ca này?')" style="position:absolute; top:12px; right:12px;">
+                                            <form method="post" action="/Schedule/DeleteShiftSetting/@setting.Id"
+                                                  onsubmit="return confirm('Xác nhận xóa ca này?')"
+                                                  style="position:absolute; top:10px; right:10px;">
                                                 @Html.AntiForgeryToken()
-                                                <button type="submit" class="btn btn-outline-danger btn-sm border-0 px-2 py-1" title="Xóa ca"><i class="bi bi-trash-fill"></i></button>
+                                                <button type="submit" class="btn btn-outline-danger btn-sm border-0 px-2 py-0">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
                                             </form>
-
                                             <form method="post" action="/Schedule/UpdateSettings">
                                                 @Html.AntiForgeryToken()
                                                 <input type="hidden" name="id" value="@setting.Id" />
                                                 <div class="mb-2">
                                                     <label class="form-label small fw-semibold text-secondary">Tên ca</label>
-                                                    <input type="text" name="shiftName" value="@setting.ShiftName" class="form-control form-control-sm rounded-2 fw-semibold" required />
+                                                    <input type="text" name="shiftName" value="@setting.ShiftName" class="form-control form-control-sm rounded-2" required />
                                                 </div>
                                                 <div class="row g-2 mb-2">
                                                     <div class="col-6">
@@ -238,37 +484,37 @@
                                                         <input type="number" name="maxShiftsPerWeek" value="@setting.MaxShiftsPerWeek" class="form-control form-control-sm rounded-2" required />
                                                     </div>
                                                 </div>
-                                                <button type="submit" class="btn btn-sm btn-primary w-100 rounded-pill"><i class="bi bi-save me-1"></i> Lưu thay đổi</button>
+                                                <button type="submit" class="btn btn-sm btn-primary w-100 rounded-pill">
+                                                    <i class="bi bi-save me-1"></i> Lưu
+                                                </button>
                                             </form>
                                         </div>
                                     </div>
                                 }
                             </div>
                         </div>
-
-                        <!-- Right: Add New Shift -->
                         <div class="col-lg-4">
-                            <h6 class="fw-bold mb-3 text-secondary"><i class="bi bi-plus-circle-fill me-1 text-success"></i>Thêm ca trực mới</h6>
+                            <h6 class="fw-bold mb-3 text-secondary small">Thêm ca mới</h6>
                             <div class="card border rounded-3 p-3 bg-light">
                                 <form method="post" action="/Schedule/AddShiftSetting">
                                     @Html.AntiForgeryToken()
                                     <div class="mb-2">
-                                        <label class="form-label small fw-semibold text-secondary">Tên ca mới <span class="text-danger">*</span></label>
-                                        <input type="text" name="shiftName" class="form-control form-control-sm rounded-2" placeholder="Ví dụ: Sáng 1" required />
+                                        <label class="form-label small fw-semibold text-secondary">Tên ca <span class="text-danger">*</span></label>
+                                        <input type="text" name="shiftName" class="form-control form-control-sm rounded-2" placeholder="VD: Ca Tối" required />
                                     </div>
                                     <div class="row g-2 mb-2">
                                         <div class="col-6">
-                                            <label class="form-label small fw-semibold text-secondary">Bắt đầu <span class="text-danger">*</span></label>
+                                            <label class="form-label small fw-semibold text-secondary">Bắt đầu</label>
                                             <input type="text" name="startTime" class="form-control form-control-sm rounded-2" placeholder="07:00" required />
                                         </div>
                                         <div class="col-6">
-                                            <label class="form-label small fw-semibold text-secondary">Kết thúc <span class="text-danger">*</span></label>
+                                            <label class="form-label small fw-semibold text-secondary">Kết thúc</label>
                                             <input type="text" name="endTime" class="form-control form-control-sm rounded-2" placeholder="09:30" required />
                                         </div>
                                     </div>
                                     <div class="row g-2 mb-3">
                                         <div class="col-6">
-                                            <label class="form-label small fw-semibold text-secondary">Số giờ trong ca</label>
+                                            <label class="form-label small fw-semibold text-secondary">Số giờ</label>
                                             <input type="number" step="0.5" name="durationHours" class="form-control form-control-sm rounded-2" value="2.5" required />
                                         </div>
                                         <div class="col-6">
@@ -276,7 +522,9 @@
                                             <input type="number" name="maxShiftsPerWeek" class="form-control form-control-sm rounded-2" value="6" required />
                                         </div>
                                     </div>
-                                    <button type="submit" class="btn btn-sm btn-success w-100 rounded-pill"><i class="bi bi-plus-circle me-1"></i> Tạo ca mới</button>
+                                    <button type="submit" class="btn btn-sm btn-success w-100 rounded-pill">
+                                        <i class="bi bi-plus-circle me-1"></i> Tạo ca mới
+                                    </button>
                                 </form>
                             </div>
                         </div>
@@ -290,56 +538,114 @@
     </div>
 }
 
-
 @section Scripts {
 <script>
     const isAdmin = @(isAdmin ? "true" : "false");
+    const weekStartStr = '@wStart.ToString("yyyy-MM-dd")';
 
-    // Click calendar day to pre-fill date
-    document.querySelectorAll('.calendar-day').forEach(el => {
-        el.addEventListener('click', function () {
-            const d = this.dataset.date;
-            if (d) document.getElementById('shiftDate').value = d;
-        });
-    });
+    // ── Repeat selector ──────────────────────────────────
+    function selectRepeat(btn) {
+        document.querySelectorAll('.repeat-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        document.getElementById('repeatWeeks').value = btn.dataset.weeks;
+    }
 
-    async function registerShift() {
-        const date = document.getElementById('shiftDate').value;
-        const type = document.getElementById('shiftType').value;
-        const clinicId = document.getElementById('shiftClinic').value;
-        const errEl = document.getElementById('shiftError');
-        const okEl = document.getElementById('shiftSuccess');
-        errEl.style.display = 'none'; okEl.style.display = 'none';
+    // ── Feedback alert ───────────────────────────────────
+    function showFeedback(msg, type) {
+        const el = document.getElementById('regFeedback');
+        el.className = `alert alert-${type} py-2 px-3 small mb-0 rounded-3`;
+        el.textContent = msg;
+        el.style.display = 'block';
+        if (type !== 'danger') setTimeout(() => { el.style.display = 'none'; }, 3500);
+    }
 
-        if (!date || !clinicId) { errEl.textContent = 'Vui lòng chọn ngày và phòng.'; errEl.style.display = 'block'; return; }
+    function getSettings() {
+        return {
+            clinicId: parseInt(document.getElementById('regClinic').value),
+            doctorId: isAdmin ? parseInt(document.getElementById('regDoctor')?.value ?? 0) : 0,
+            repeatWeeks: parseInt(document.getElementById('repeatWeeks').value) || 1
+        };
+    }
 
-        let url, body;
-        if (isAdmin) {
-            const doctorId = document.getElementById('shiftDoctor').value;
-            url = '/Schedule/RegisterShiftForDoctor';
-            body = new URLSearchParams({ staffProfileId: doctorId, clinicId, shiftDate: date, shiftType: type });
-        } else {
-            url = '/Schedule/RegisterShift';
-            body = new URLSearchParams({ clinicId, shiftDate: date, shiftType: type });
-        }
+    // ── Register single cell ─────────────────────────────
+    async function registerCell(date, shiftType) {
+        const { clinicId, doctorId, repeatWeeks } = getSettings();
+        if (!clinicId) { showFeedback('Vui lòng chọn phòng.', 'danger'); return; }
 
-        const res = await fetch(url, { method: 'POST', body });
-        if (res.ok) {
-            okEl.textContent = '✓ Đã đăng ký ca thành công! Trang sẽ tải lại...';
-            okEl.style.display = 'block';
-            setTimeout(() => location.reload(), 1200);
-        } else {
+        const url = isAdmin ? '/Schedule/RegisterMultipleShiftsForDoctor' : '/Schedule/RegisterMultipleShifts';
+        const payload = {
+            clinicId,
+            staffProfileId: doctorId,
+            startDate: date,
+            shiftTypes: [shiftType],
+            repeatWeeks
+        };
+
+        try {
+            const res = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
             const data = await res.json();
-            errEl.textContent = data.error || 'Có lỗi xảy ra.';
-            errEl.style.display = 'block';
+            if (res.ok && data.success) {
+                showFeedback(
+                    `Đăng ký thành công ${data.created} ca.` + (data.skipped > 0 ? ` (${data.skipped} bỏ qua)` : ''),
+                    'success'
+                );
+                setTimeout(() => location.reload(), 1400);
+            } else {
+                showFeedback(data.error || 'Lỗi xảy ra.', 'danger');
+            }
+        } catch {
+            showFeedback('Lỗi kết nối.', 'danger');
         }
     }
 
+    // ── Register whole week row ──────────────────────────
+    async function registerWeekRow(shiftType) {
+        const { clinicId, doctorId, repeatWeeks } = getSettings();
+        if (!clinicId) { showFeedback('Vui lòng chọn phòng.', 'danger'); return; }
+
+        const payload = {
+            clinicId,
+            staffProfileId: doctorId,
+            weekStart: weekStartStr,
+            shiftType,
+            repeatWeeks
+        };
+
+        try {
+            const res = await fetch('/Schedule/RegisterWeekRow', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            const data = await res.json();
+            if (res.ok && data.success) {
+                showFeedback(
+                    `Đã tạo ${data.created} ca "${shiftType}".` + (data.skipped > 0 ? ` (${data.skipped} bỏ qua)` : ''),
+                    'success'
+                );
+                setTimeout(() => location.reload(), 1400);
+            } else {
+                showFeedback(data.error || 'Lỗi xảy ra.', 'danger');
+            }
+        } catch {
+            showFeedback('Lỗi kết nối.', 'danger');
+        }
+    }
+
+    // ── Cancel shift ─────────────────────────────────────
     async function cancelShift(id, btn) {
         if (!confirm('Xác nhận hủy ca trực này?')) return;
         const res = await fetch(`/Schedule/CancelShift/${id}`, { method: 'POST' });
-        if (res.ok) { location.reload(); }
-        else { const d = await res.json(); alert(d.error || 'Lỗi hủy ca.'); }
+        if (res.ok) {
+            location.reload();
+        } else {
+            const d = await res.json();
+            showFeedback(d.error || 'Lỗi hủy ca.', 'danger');
+        }
     }
 </script>
 }

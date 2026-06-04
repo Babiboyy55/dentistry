@@ -27,6 +27,15 @@ namespace Nhakhoa.Data
         public DbSet<Appointment> Appointments { get; set; }
         public DbSet<ShiftSetting> ShiftSettings { get; set; }
         public DbSet<PatientToothRecord> PatientToothRecords { get; set; }
+        public DbSet<ExaminationSession> ExaminationSessions { get; set; }
+        public DbSet<TreatmentPlan> TreatmentPlans { get; set; }
+        public DbSet<TreatmentPlanSession> TreatmentPlanSessions { get; set; }
+        public DbSet<Prescription> Prescriptions { get; set; }
+        public DbSet<PrescriptionItem> PrescriptionItems { get; set; }
+        public DbSet<MedicineInventory> MedicineInventories { get; set; }
+        public DbSet<DentalWarranty> DentalWarranties { get; set; }
+        public DbSet<DraftInvoice> DraftInvoices { get; set; }
+        public DbSet<DoctorSalaryConfig> DoctorSalaryConfigs { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -155,6 +164,125 @@ namespace Nhakhoa.Data
                 .HasForeignKey(tr => tr.AppointmentId)
                 .OnDelete(DeleteBehavior.Restrict);
 
+            // ExaminationSession relationships
+            modelBuilder.Entity<ExaminationSession>()
+                .HasOne(es => es.Patient)
+                .WithMany()
+                .HasForeignKey(es => es.PatientId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<ExaminationSession>()
+                .HasOne(es => es.Doctor)
+                .WithMany()
+                .HasForeignKey(es => es.DoctorId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<ExaminationSession>()
+                .HasOne(es => es.Appointment)
+                .WithMany()
+                .HasForeignKey(es => es.AppointmentId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // TreatmentPlan relationships
+            modelBuilder.Entity<TreatmentPlan>()
+                .HasOne(tp => tp.Patient)
+                .WithMany()
+                .HasForeignKey(tp => tp.PatientId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<TreatmentPlan>()
+                .HasOne(tp => tp.Doctor)
+                .WithMany()
+                .HasForeignKey(tp => tp.DoctorId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<TreatmentPlan>()
+                .HasOne(tp => tp.MedicalService)
+                .WithMany()
+                .HasForeignKey(tp => tp.MedicalServiceId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // TreatmentPlanSession relationships
+            modelBuilder.Entity<TreatmentPlanSession>()
+                .HasOne(tps => tps.TreatmentPlan)
+                .WithMany(tp => tp.Sessions)
+                .HasForeignKey(tps => tps.TreatmentPlanId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<TreatmentPlanSession>()
+                .HasOne(tps => tps.Appointment)
+                .WithMany()
+                .HasForeignKey(tps => tps.AppointmentId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // Prescription relationships
+            modelBuilder.Entity<Prescription>()
+                .HasOne(p => p.Patient)
+                .WithMany()
+                .HasForeignKey(p => p.PatientId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<Prescription>()
+                .HasOne(p => p.Doctor)
+                .WithMany()
+                .HasForeignKey(p => p.DoctorId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<Prescription>()
+                .HasOne(p => p.ExaminationSession)
+                .WithMany()
+                .HasForeignKey(p => p.ExaminationSessionId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // PrescriptionItem relationships
+            modelBuilder.Entity<PrescriptionItem>()
+                .HasOne(pi => pi.Prescription)
+                .WithMany(p => p.Items)
+                .HasForeignKey(pi => pi.PrescriptionId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<PrescriptionItem>()
+                .HasOne(pi => pi.Medicine)
+                .WithMany()
+                .HasForeignKey(pi => pi.MedicineId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // DentalWarranty relationships
+            modelBuilder.Entity<DentalWarranty>()
+                .HasOne(dw => dw.Patient)
+                .WithMany()
+                .HasForeignKey(dw => dw.PatientId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<DentalWarranty>()
+                .HasOne(dw => dw.Doctor)
+                .WithMany()
+                .HasForeignKey(dw => dw.DoctorId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<DentalWarranty>()
+                .HasOne(dw => dw.MedicalService)
+                .WithMany()
+                .HasForeignKey(dw => dw.MedicalServiceId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<DentalWarranty>()
+                .HasIndex(dw => dw.WarrantyCode)
+                .IsUnique();
+
+            // DraftInvoice relationships
+            modelBuilder.Entity<DraftInvoice>()
+                .HasOne(di => di.Patient)
+                .WithMany()
+                .HasForeignKey(di => di.PatientId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<DraftInvoice>()
+                .HasOne(di => di.ExaminationSession)
+                .WithMany()
+                .HasForeignKey(di => di.ExaminationSessionId)
+                .OnDelete(DeleteBehavior.Restrict);
+
             // Seed Users (Admin & 4 Doctors)
             modelBuilder.Entity<User>().HasData(
                 new User { Id = 1, Username = "admin", PasswordHash = "admin", Role = "Admin", IsActive = true, FullName = "Admin System", Email = "admin@clinic.com", PhoneNumber = "0123456789", SecurityStamp = "default-admin-security-stamp" },
@@ -280,11 +408,21 @@ namespace Nhakhoa.Data
 
             // Seed Medical Services (updated with SpecialtyId)
             modelBuilder.Entity<MedicalService>().HasData(
-                new MedicalService { Id = 1, Name = "Khám nội tổng quát", Description = "Khám sàng lọc và tư vấn sức khỏe cơ bản", Price = 500000m, Department = "Nội tổng quát", IsActive = true, SpecialtyId = 1, UpdatedAt = new DateTime(2023, 10, 12) },
-                new MedicalService { Id = 2, Name = "Xét nghiệm công thức máu (24 chỉ số)", Description = "Phân tích huyết học tự động công nghệ cao", Price = 150000m, Department = "Xét nghiệm", IsActive = true, SpecialtyId = 3, UpdatedAt = new DateTime(2023, 10, 8) },
-                new MedicalService { Id = 3, Name = "Siêu âm bụng tổng quát", Description = "Siêu âm 4D ổ bụng và các cơ quan nội tạng", Price = 350000m, Department = "Chẩn đoán hình ảnh", IsActive = false, SpecialtyId = 2, UpdatedAt = new DateTime(2023, 10, 5) },
-                new MedicalService { Id = 4, Name = "Nhổ răng khôn", Description = "Nhổ răng khôn mọc lệch, mọc ngầm sử dụng sóng siêu âm Piezotome", Price = 1200000m, Department = "Nha khoa tổng quát", IsActive = true, SpecialtyId = 4, UpdatedAt = new DateTime(2023, 10, 10) },
-                new MedicalService { Id = 5, Name = "Tẩy trắng răng Laser", Description = "Tẩy trắng răng công nghệ Laser Whitening nhanh chóng, không ê buốt", Price = 2500000m, Department = "Nha khoa thẩm mỹ", IsActive = true, SpecialtyId = 4, UpdatedAt = new DateTime(2023, 10, 15) }
+                new MedicalService { Id = 1, Name = "Khám nội tổng quát", Description = "Khám sàng lọc và tư vấn sức khỏe cơ bản", Price = 500000m, Department = "Nội tổng quát", IsActive = true, SpecialtyId = 1, DefaultWarrantyMonths = null, UpdatedAt = new DateTime(2023, 10, 12) },
+                new MedicalService { Id = 2, Name = "Xét nghiệm công thức máu (24 chỉ số)", Description = "Phân tích huyết học tự động công nghệ cao", Price = 150000m, Department = "Xét nghiệm", IsActive = true, SpecialtyId = 3, DefaultWarrantyMonths = null, UpdatedAt = new DateTime(2023, 10, 8) },
+                new MedicalService { Id = 3, Name = "Siêu âm bụng tổng quát", Description = "Siêu âm 4D ổ bụng và các cơ quan nội tạng", Price = 350000m, Department = "Chẩn đoán hình ảnh", IsActive = false, SpecialtyId = 2, DefaultWarrantyMonths = null, UpdatedAt = new DateTime(2023, 10, 5) },
+                new MedicalService { Id = 4, Name = "Nhổ răng khôn", Description = "Nhổ răng khôn mọc lệch, mọc ngầm sử dụng sóng siêu âm Piezotome", Price = 1200000m, Department = "Nha khoa tổng quát", IsActive = true, SpecialtyId = 4, DefaultWarrantyMonths = 6, UpdatedAt = new DateTime(2023, 10, 10) },
+                new MedicalService { Id = 5, Name = "Tẩy trắng răng Laser", Description = "Tẩy trắng răng công nghệ Laser Whitening nhanh chóng, không ê buốt", Price = 2500000m, Department = "Nha khoa thẩm mỹ", IsActive = true, SpecialtyId = 4, DefaultWarrantyMonths = 12, UpdatedAt = new DateTime(2023, 10, 15) }
+            );
+
+            // Seed MedicineInventory
+            modelBuilder.Entity<MedicineInventory>().HasData(
+                new MedicineInventory { Id = 1, MedicineName = "Hapacol 650mg", StockQuantity = 500, PricePerUnit = 2000m, Unit = "Viên" },
+                new MedicineInventory { Id = 2, MedicineName = "Amoxicillin 500mg", StockQuantity = 300, PricePerUnit = 5000m, Unit = "Viên" },
+                new MedicineInventory { Id = 3, MedicineName = "Ibuprofen 400mg", StockQuantity = 200, PricePerUnit = 4000m, Unit = "Viên" },
+                new MedicineInventory { Id = 4, MedicineName = "Paracetamol 500mg", StockQuantity = 1000, PricePerUnit = 1000m, Unit = "Viên" },
+                new MedicineInventory { Id = 5, MedicineName = "Sensodyne Toothpaste", StockQuantity = 50, PricePerUnit = 65000m, Unit = "Tuýp" },
+                new MedicineInventory { Id = 6, MedicineName = "Chlorhexidine Mouthwash", StockQuantity = 80, PricePerUnit = 45000m, Unit = "Chai" }
             );
 
             // Seed Clinics
@@ -349,6 +487,26 @@ namespace Nhakhoa.Data
                     );
                 }
             }
+
+            // Seed default DoctorSalaryConfig (singleton, Id=1)
+            modelBuilder.Entity<DoctorSalaryConfig>().HasData(new DoctorSalaryConfig
+            {
+                Id = 1,
+                HourlyRate = 210_000m,
+                DegreeUniversity = 1.20m,
+                DegreeMaster = 1.50m,
+                DegreeDoctorate = 2.00m,
+                DegreeAssocProf = 2.50m,
+                DegreeProfessor = 3.00m,
+                MultiplierMonday = 1.00m,
+                MultiplierTuesday = 1.00m,
+                MultiplierWednesday = 1.00m,
+                MultiplierThursday = 1.00m,
+                MultiplierFriday = 1.00m,
+                MultiplierSaturday = 1.20m,
+                MultiplierSunday = 1.50m,
+                UpdatedAt = new DateTime(2026, 1, 1)
+            });
         }
     }
 }
