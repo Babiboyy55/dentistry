@@ -20,6 +20,7 @@ namespace Nhakhoa.Data
         public DbSet<RolePermission> RolePermissions { get; set; }
         public DbSet<Specialty> Specialties { get; set; }
         public DbSet<Clinic> Clinics { get; set; }
+        public DbSet<DentalChair> DentalChairs { get; set; }
         public DbSet<DoctorSpecialty> DoctorSpecialties { get; set; }
         public DbSet<Shift> Shifts { get; set; }
         public DbSet<Patient> Patients { get; set; }
@@ -35,7 +36,15 @@ namespace Nhakhoa.Data
         public DbSet<MedicineInventory> MedicineInventories { get; set; }
         public DbSet<DentalWarranty> DentalWarranties { get; set; }
         public DbSet<DraftInvoice> DraftInvoices { get; set; }
+        public DbSet<PaymentMethod> PaymentMethods { get; set; }
+        public DbSet<Invoice> Invoices { get; set; }
         public DbSet<DoctorSalaryConfig> DoctorSalaryConfigs { get; set; }
+        public DbSet<InvoiceDetail> InvoiceDetails { get; set; }
+        public DbSet<Payment> Payments { get; set; }
+        public DbSet<Refund> Refunds { get; set; }
+        public DbSet<RefundApproval> RefundApprovals { get; set; }
+        public DbSet<DailyReconciliation> DailyReconciliations { get; set; }
+        public DbSet<ReconciliationDetail> ReconciliationDetails { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -85,6 +94,13 @@ namespace Nhakhoa.Data
                 .HasForeignKey(c => c.DefaultSpecialtyId)
                 .OnDelete(DeleteBehavior.SetNull);
 
+            // Clinic - DentalChairs One-to-Many
+            modelBuilder.Entity<DentalChair>()
+                .HasOne(dc => dc.Clinic)
+                .WithMany(c => c.DentalChairs)
+                .HasForeignKey(dc => dc.ClinicId)
+                .OnDelete(DeleteBehavior.Cascade);
+
             // Shift relationships
             modelBuilder.Entity<Shift>()
                 .HasOne(s => s.Clinic)
@@ -97,6 +113,12 @@ namespace Nhakhoa.Data
                 .WithMany()
                 .HasForeignKey(s => s.StaffProfileId)
                 .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<Shift>()
+                .HasOne(s => s.DentalChair)
+                .WithMany()
+                .HasForeignKey(s => s.DentalChairId)
+                .OnDelete(DeleteBehavior.Restrict);
 
             // MedicalService - Specialty
             modelBuilder.Entity<MedicalService>()
@@ -132,6 +154,12 @@ namespace Nhakhoa.Data
                 .WithMany()
                 .HasForeignKey(a => a.SpecialtyId)
                 .OnDelete(DeleteBehavior.SetNull);
+
+            modelBuilder.Entity<Appointment>()
+                .HasOne(a => a.DentalChair)
+                .WithMany()
+                .HasForeignKey(a => a.DentalChairId)
+                .OnDelete(DeleteBehavior.Restrict);
 
             modelBuilder.Entity<Appointment>()
                 .HasIndex(a => new { a.StaffProfileId, a.AppointmentDate, a.TimeSlot })
@@ -296,37 +324,38 @@ namespace Nhakhoa.Data
             modelBuilder.Entity<StaffProfile>().HasData(
                 new StaffProfile 
                 { 
-                    Id = 201, UserId = 201, StaffCode = "DOC-102", PositionTitle = "Y học cổ truyền", Department = "Nội tổng quát", 
-                    Gender = "Nam", Address = "Hà Nội", JoinDate = new DateTime(2022, 5, 10), PrimaryClinic = "Phòng khám A1",
+                    Id = 201, UserId = 201, StaffCode = "DOC-102", PositionTitle = "Nha sĩ Tổng quát", Department = "Khoa khám bệnh", 
+                    Gender = "Nam", Address = "Hà Nội", JoinDate = new DateTime(2022, 5, 10), PrimaryClinic = "Phòng khám Nha khoa tổng quát A1",
                     DateOfBirth = new DateTime(1980, 5, 12), Cccd = "123456789012", CchnNumber = "CCHN-002341",
                     CchnIssueDate = new DateTime(2015, 6, 1), CchnExpiryDate = new DateTime(2035, 6, 1), CchnProvider = "Sở Y tế Hà Nội",
                     AcademicRank = "Không", AcademicDegree = "Bác sĩ thường", JobRank = "Bác sĩ", ExperienceYears = 8
                 },
                 new StaffProfile 
                 { 
-                    Id = 202, UserId = 202, StaffCode = "DOC-205", PositionTitle = "Chẩn đoán hình ảnh", Department = "Chẩn đoán hình ảnh", 
-                    Gender = "Nữ", Address = "Đà Nẵng", JoinDate = new DateTime(2021, 8, 15), PrimaryClinic = "Phòng B2",
+                    Id = 202, UserId = 202, StaffCode = "DOC-205", PositionTitle = "Chuyên gia Phục hình răng", Department = "Khoa thẩm mỹ", 
+                    Gender = "Nữ", Address = "Đà Nẵng", JoinDate = new DateTime(2021, 8, 15), PrimaryClinic = "Phòng khám Thẩm mỹ & Chỉnh nha B2",
                     DateOfBirth = new DateTime(1985, 10, 20), Cccd = "234567890123", CchnNumber = "CCHN-009842",
                     CchnIssueDate = new DateTime(2018, 9, 15), CchnExpiryDate = new DateTime(2038, 9, 15), CchnProvider = "Sở Y tế Đà Nẵng",
                     AcademicRank = "Không", AcademicDegree = "Bác sĩ chuyên khoa I", JobRank = "Bác sĩ", ExperienceYears = 5
                 },
                 new StaffProfile 
                 { 
-                    Id = 203, UserId = 203, StaffCode = "DOC-098", PositionTitle = "Thần kinh học", Department = "Thần kinh", 
-                    Gender = "Nam", Address = "Hồ Chí Minh", JoinDate = new DateTime(2023, 1, 20), PrimaryClinic = "Phòng C1",
+                    Id = 203, UserId = 203, StaffCode = "DOC-098", PositionTitle = "Chuyên gia Chỉnh nha", Department = "Khoa chỉnh nha", 
+                    Gender = "Nam", Address = "Hồ Chí Minh", JoinDate = new DateTime(2023, 1, 20), PrimaryClinic = "Phòng khám Thẩm mỹ & Chỉnh nha B2",
                     DateOfBirth = new DateTime(1978, 12, 1), Cccd = "345678901234", CchnNumber = "CCHN-005612",
                     CchnIssueDate = new DateTime(2012, 4, 10), CchnExpiryDate = new DateTime(2032, 4, 10), CchnProvider = "Bộ Y tế",
                     AcademicRank = "Không", AcademicDegree = "Bác sĩ thường", JobRank = "Bác sĩ chính", ExperienceYears = 12
                 },
                 new StaffProfile 
                 { 
-                    Id = 204, UserId = 204, StaffCode = "DOC-110", PositionTitle = "Chuyên gia Tim mạch", Department = "Tim mạch", 
-                    Gender = "Nữ", Address = "Hà Nội", JoinDate = new DateTime(2023, 4, 1), PrimaryClinic = "Phòng khám A1",
+                    Id = 204, UserId = 204, StaffCode = "DOC-110", PositionTitle = "Chuyên gia Cấy ghép Implant", Department = "Khoa cấy ghép", 
+                    Gender = "Nữ", Address = "Hà Nội", JoinDate = new DateTime(2023, 4, 1), PrimaryClinic = "Phòng khám Cấy ghép Implant C1",
                     DateOfBirth = new DateTime(1988, 3, 15), Cccd = "001085002931", CchnNumber = "CCHN-007788",
                     CchnIssueDate = new DateTime(2016, 6, 8), CchnExpiryDate = new DateTime(2026, 6, 8), CchnProvider = "Sở Y tế Hà Nội",
                     AcademicRank = "Không", AcademicDegree = "Bác sĩ chuyên khoa II", JobRank = "Bác sĩ cao cấp", ExperienceYears = 15
                 }
             );
+
 
             // Seed StaffSalaryInfos
             modelBuilder.Entity<StaffSalaryInfo>().HasData(
@@ -394,25 +423,25 @@ namespace Nhakhoa.Data
 
             // Seed Specialties
             modelBuilder.Entity<Specialty>().HasData(
-                new Specialty { Id = 1, Name = "Tim mạch", Code = "CARD-001", Description = "Chuyên chẩn đoán và điều trị các bệnh lý tim mạch và mạch máu.", UpdatedAt = new DateTime(2023, 10, 10) },
-                new Specialty { Id = 2, Name = "Thần kinh", Code = "NEUR-002", Description = "Điều trị các bệnh lý liên quan đến hệ thần kinh trung ương và ngoại biên.", UpdatedAt = new DateTime(2023, 10, 12) },
-                new Specialty { Id = 3, Name = "Nhi khoa", Code = "PEDI-003", Description = "Chăm sóc sức khỏe toàn diện, sàng lọc phát triển thể chất ở trẻ em.", UpdatedAt = new DateTime(2023, 10, 15) },
-                new Specialty { Id = 4, Name = "Răng Hàm Mặt", Code = "DENT-004", Description = "Điều trị và phục hình răng hàm mặt thẩm mỹ, công nghệ cao.", UpdatedAt = new DateTime(2023, 10, 18) }
+                new Specialty { Id = 1, Name = "Nha khoa tổng quát", Code = "NKTQ", Description = "Khám răng tổng quát, nhổ răng, chữa tủy và điều trị các bệnh lý răng miệng cơ bản.", UpdatedAt = new DateTime(2023, 10, 10) },
+                new Specialty { Id = 2, Name = "Răng sứ thẩm mỹ", Code = "RSTM", Description = "Phục hình răng sứ thẩm mỹ, dán sứ Veneer siêu mỏng và tẩy trắng răng.", UpdatedAt = new DateTime(2023, 10, 12) },
+                new Specialty { Id = 3, Name = "Chỉnh nha - Niềng răng", Code = "CNNR", Description = "Nắn chỉnh răng lệch lạc, răng thưa, hô, móm bằng khay trong suốt hoặc mắc cài.", UpdatedAt = new DateTime(2023, 10, 15) },
+                new Specialty { Id = 4, Name = "Cấy ghép Implant", Code = "IMPL", Description = "Phục hình răng đã mất bằng chân răng nhân tạo Implant công nghệ hiện đại.", UpdatedAt = new DateTime(2023, 10, 18) }
             );
 
             // Seed DoctorSpecialty
             modelBuilder.Entity<DoctorSpecialty>().HasData(
-                new DoctorSpecialty { StaffProfileId = 204, SpecialtyId = 1 }, // Sarah Johnson in Cardiovascular
-                new DoctorSpecialty { StaffProfileId = 203, SpecialtyId = 2 }  // Le Anh Tuan in Neurology
+                new DoctorSpecialty { StaffProfileId = 204, SpecialtyId = 4 }, // Sarah Johnson in Implantology
+                new DoctorSpecialty { StaffProfileId = 203, SpecialtyId = 3 }  // Le Anh Tuan in Orthodontics
             );
 
             // Seed Medical Services (updated with SpecialtyId)
             modelBuilder.Entity<MedicalService>().HasData(
-                new MedicalService { Id = 1, Name = "Khám nội tổng quát", Description = "Khám sàng lọc và tư vấn sức khỏe cơ bản", Price = 500000m, Department = "Nội tổng quát", IsActive = true, SpecialtyId = 1, DefaultWarrantyMonths = null, UpdatedAt = new DateTime(2023, 10, 12) },
-                new MedicalService { Id = 2, Name = "Xét nghiệm công thức máu (24 chỉ số)", Description = "Phân tích huyết học tự động công nghệ cao", Price = 150000m, Department = "Xét nghiệm", IsActive = true, SpecialtyId = 3, DefaultWarrantyMonths = null, UpdatedAt = new DateTime(2023, 10, 8) },
-                new MedicalService { Id = 3, Name = "Siêu âm bụng tổng quát", Description = "Siêu âm 4D ổ bụng và các cơ quan nội tạng", Price = 350000m, Department = "Chẩn đoán hình ảnh", IsActive = false, SpecialtyId = 2, DefaultWarrantyMonths = null, UpdatedAt = new DateTime(2023, 10, 5) },
-                new MedicalService { Id = 4, Name = "Nhổ răng khôn", Description = "Nhổ răng khôn mọc lệch, mọc ngầm sử dụng sóng siêu âm Piezotome", Price = 1200000m, Department = "Nha khoa tổng quát", IsActive = true, SpecialtyId = 4, DefaultWarrantyMonths = 6, UpdatedAt = new DateTime(2023, 10, 10) },
-                new MedicalService { Id = 5, Name = "Tẩy trắng răng Laser", Description = "Tẩy trắng răng công nghệ Laser Whitening nhanh chóng, không ê buốt", Price = 2500000m, Department = "Nha khoa thẩm mỹ", IsActive = true, SpecialtyId = 4, DefaultWarrantyMonths = 12, UpdatedAt = new DateTime(2023, 10, 15) }
+                new MedicalService { Id = 1, Name = "Khám & Tư vấn răng miệng", Description = "Khám răng tổng quát, chụp phim X-quang răng và lên phác đồ điều trị.", Price = 100000m, Department = "Khám bệnh", IsActive = true, SpecialtyId = 1, DefaultWarrantyMonths = null, UpdatedAt = new DateTime(2023, 10, 12) },
+                new MedicalService { Id = 2, Name = "Niềng răng mắc cài kim loại", Description = "Điều chỉnh khớp cắn bằng hệ thống mắc cài kim loại cao cấp.", Price = 25000000m, Department = "Chỉnh nha", IsActive = true, SpecialtyId = 3, DefaultWarrantyMonths = null, UpdatedAt = new DateTime(2023, 10, 8) },
+                new MedicalService { Id = 3, Name = "Răng sứ Cercon HT", Description = "Phục hình răng sứt mẻ, ố vàng bằng răng toàn sứ Cercon nhập khẩu Đức.", Price = 5000000m, Department = "Nha khoa thẩm mỹ", IsActive = true, SpecialtyId = 2, DefaultWarrantyMonths = null, UpdatedAt = new DateTime(2023, 10, 5) },
+                new MedicalService { Id = 4, Name = "Nhổ răng khôn Piezotome", Description = "Nhổ răng khôn mọc ngầm, lệch bằng máy siêu âm Piezotome không đau, mau lành.", Price = 1500000m, Department = "Tiểu phẫu", IsActive = true, SpecialtyId = 1, DefaultWarrantyMonths = 6, UpdatedAt = new DateTime(2023, 10, 10) },
+                new MedicalService { Id = 5, Name = "Cấy ghép Implant Dentium", Description = "Phục hình răng đã mất bằng chân răng nhân tạo Implant Dentium.", Price = 18000000m, Department = "Cấy ghép răng", IsActive = true, SpecialtyId = 4, DefaultWarrantyMonths = 120, UpdatedAt = new DateTime(2023, 10, 15) }
             );
 
             // Seed MedicineInventory
@@ -427,10 +456,11 @@ namespace Nhakhoa.Data
 
             // Seed Clinics
             modelBuilder.Entity<Clinic>().HasData(
-                new Clinic { Id = 1, Name = "Phòng khám Tim mạch A1", Location = "Tầng 1 - Khu A", DefaultSpecialtyId = 1, Capacity = 15, IsActive = true, UpdatedAt = new DateTime(2023, 10, 10) },
-                new Clinic { Id = 2, Name = "Phòng khám Thần kinh B2", Location = "Tầng 2 - Khu B", DefaultSpecialtyId = 2, Capacity = 10, IsActive = true, UpdatedAt = new DateTime(2023, 10, 12) },
-                new Clinic { Id = 3, Name = "Phòng khám Răng Hàm Mặt C1", Location = "Tầng 1 - Khu C", DefaultSpecialtyId = 4, Capacity = 20, IsActive = true, UpdatedAt = new DateTime(2023, 10, 15) }
+                new Clinic { Id = 1, Name = "Phòng khám Nha khoa tổng quát A1", Location = "Tầng 1 - Khu A", DefaultSpecialtyId = 1, Capacity = 15, IsActive = true, UpdatedAt = new DateTime(2023, 10, 10) },
+                new Clinic { Id = 2, Name = "Phòng khám Thẩm mỹ & Chỉnh nha B2", Location = "Tầng 2 - Khu B", DefaultSpecialtyId = 2, Capacity = 10, IsActive = true, UpdatedAt = new DateTime(2023, 10, 12) },
+                new Clinic { Id = 3, Name = "Phòng khám Cấy ghép Implant C1", Location = "Tầng 1 - Khu C", DefaultSpecialtyId = 4, Capacity = 20, IsActive = true, UpdatedAt = new DateTime(2023, 10, 15) }
             );
+
 
             // Seed Shifts (Clinic 1 has a future shift with StaffProfileId 204)
             modelBuilder.Entity<Shift>().HasData(
@@ -507,6 +537,79 @@ namespace Nhakhoa.Data
                 MultiplierSunday = 1.50m,
                 UpdatedAt = new DateTime(2026, 1, 1)
             });
+
+            // Invoice configurations
+            modelBuilder.Entity<Invoice>()
+                .HasOne(i => i.Patient)
+                .WithMany()
+                .HasForeignKey(i => i.PatientId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<Invoice>()
+                .HasOne(i => i.ExaminationSession)
+                .WithMany()
+                .HasForeignKey(i => i.ExaminationSessionId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // InvoiceDetail relationships
+            modelBuilder.Entity<InvoiceDetail>()
+                .HasOne(id => id.Invoice)
+                .WithMany(i => i.InvoiceDetails)
+                .HasForeignKey(id => id.InvoiceId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<InvoiceDetail>()
+                .HasOne(id => id.MedicalService)
+                .WithMany()
+                .HasForeignKey(id => id.MedicalServiceId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // Payment relationships
+            modelBuilder.Entity<Payment>()
+                .HasOne(p => p.Invoice)
+                .WithMany(i => i.Payments)
+                .HasForeignKey(p => p.InvoiceId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // Refund relationships
+            modelBuilder.Entity<Refund>()
+                .HasOne(r => r.Invoice)
+                .WithMany(i => i.Refunds)
+                .HasForeignKey(r => r.InvoiceId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // RefundApproval relationships
+            modelBuilder.Entity<RefundApproval>()
+                .HasOne(ra => ra.Refund)
+                .WithMany(r => r.ApprovalHistory)
+                .HasForeignKey(ra => ra.RefundId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // DailyReconciliation configurations
+            modelBuilder.Entity<DailyReconciliation>()
+                .HasIndex(dr => dr.ReconciliationDate)
+                .IsUnique();
+
+            // ReconciliationDetail relationships
+            modelBuilder.Entity<ReconciliationDetail>()
+                .HasOne(rd => rd.DailyReconciliation)
+                .WithMany(dr => dr.Details)
+                .HasForeignKey(rd => rd.DailyReconciliationId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // Seed default PaymentMethods
+            modelBuilder.Entity<PaymentMethod>().HasData(
+                new PaymentMethod { Id = 1, Name = "Tiền mặt", Code = "CASH", IsEnabled = true, IsDigitalGateway = false, UpdatedAt = new DateTime(2026, 1, 1) },
+                new PaymentMethod { Id = 2, Name = "Chuyển khoản", Code = "BANK", IsEnabled = true, IsDigitalGateway = false, UpdatedAt = new DateTime(2026, 1, 1) },
+                new PaymentMethod { Id = 3, Name = "VNPay", Code = "VNPAY", IsEnabled = false, IsDigitalGateway = true, Environment = "Sandbox", EndpointUrl = "https://sandbox.vnpayment.vn/paymentv2/vpcpay.html", UpdatedAt = new DateTime(2026, 1, 1) },
+                new PaymentMethod { Id = 4, Name = "MoMo", Code = "MOMO", IsEnabled = false, IsDigitalGateway = true, Environment = "Sandbox", EndpointUrl = "https://test-payment.momo.vn/v2/gateway/api/create", UpdatedAt = new DateTime(2026, 1, 1) },
+                new PaymentMethod { Id = 5, Name = "Bảo hiểm y tế", Code = "INSURANCE", IsEnabled = true, IsDigitalGateway = false, UpdatedAt = new DateTime(2026, 1, 1) }
+            );
+
+            // Seed a pending cash invoice to test cash toggle constraint (EX-5.1.3)
+            modelBuilder.Entity<Invoice>().HasData(
+                new Invoice { Id = 1, InvoiceCode = "HD-CASH-TEST", PatientId = null, SubTotal = 0m, VATPercent = 10m, VATAmount = 0m, DiscountAmount = 0m, TotalAmount = 500000m, PaymentMethodCode = "CASH", Status = "Chờ thanh toán", Notes = "Hóa đơn thử nghiệm tiền mặt", CreatedBy = "admin", IssuedAt = new DateTime(2026, 1, 1) }
+            );
         }
     }
 }

@@ -1,0 +1,682 @@
+@{
+    ViewData["Title"] = "Quản lý hóa đơn & Thanh toán";
+    Layout = "_AdminLayout";
+    var drafts = ViewBag.DraftInvoices as List<Nhakhoa.Models.DraftInvoice> ?? new List<Nhakhoa.Models.DraftInvoice>();
+    var invoices = ViewBag.Invoices as List<Nhakhoa.Models.Invoice> ?? new List<Nhakhoa.Models.Invoice>();
+    var refunds = ViewBag.Refunds as List<Nhakhoa.Models.Refund> ?? new List<Nhakhoa.Models.Refund>();
+    var reconciliations = ViewBag.Reconciliations as List<Nhakhoa.Models.DailyReconciliation> ?? new List<Nhakhoa.Models.DailyReconciliation>();
+    var isAdmin = User.IsInRole("Admin");
+}
+
+<div class="container-fluid py-4">
+    <!-- Header Page -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-1 text-dark fw-bold" style="font-family: 'Inter', sans-serif;">Hóa đơn & Thanh toán</h1>
+            <p class="text-muted mb-0 small">Quản lý toàn bộ chu trình tài chính của phòng khám nha khoa.</p>
+        </div>
+        <div class="d-flex gap-2">
+            <button class="btn btn-primary btn-sm rounded-pill px-3 fw-semibold shadow-sm" data-bs-toggle="modal" data-bs-target="#reconcileModal">
+                <i class="bi bi-calendar-check me-1"></i> Đối soát doanh thu
+            </button>
+        </div>
+    </div>
+
+    <!-- Stats Overview -->
+    <div class="row g-3 mb-4">
+        <div class="col-12 col-md-6 col-lg-3">
+            <div class="card border-0 shadow-sm rounded-4 p-3 bg-white transition-hover">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="rounded-3 bg-primary-subtle text-primary p-2 fs-4 d-grid place-items-center" style="width: 45px; height: 45px;">
+                        <i class="bi bi-clock-history"></i>
+                    </div>
+                    <div>
+                        <span class="text-muted text-xs d-block">Hóa đơn nháp chờ lập</span>
+                        <h3 class="h4 mb-0 fw-bold">@drafts.Count</h3>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-12 col-md-6 col-lg-3">
+            <div class="card border-0 shadow-sm rounded-4 p-3 bg-white transition-hover">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="rounded-3 bg-success-subtle text-success p-2 fs-4 d-grid place-items-center" style="width: 45px; height: 45px;">
+                        <i class="bi bi-wallet2"></i>
+                    </div>
+                    <div>
+                        <span class="text-muted text-xs d-block">Đã thu hôm nay</span>
+                        <h3 class="h4 mb-0 fw-bold">
+                            @invoices.Where(i => i.PaidAt.HasValue && i.PaidAt.Value.Date == DateTime.Today && i.Status == "Đã thanh toán").Sum(i => i.TotalAmount).ToString("N0") <small class="text-xs text-muted">đ</small>
+                        </h3>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-12 col-md-6 col-lg-3">
+            <div class="card border-0 shadow-sm rounded-4 p-3 bg-white transition-hover">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="rounded-3 bg-warning-subtle text-warning-emphasis p-2 fs-4 d-grid place-items-center" style="width: 45px; height: 45px;">
+                        <i class="bi bi-arrow-counterclockwise"></i>
+                    </div>
+                    <div>
+                        <span class="text-muted text-xs d-block">Yêu cầu hoàn tiền</span>
+                        <h3 class="h4 mb-0 fw-bold">@refunds.Count(r => r.Status == "Chờ duyệt") <small class="text-xs text-muted">chờ duyệt</small></h3>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-12 col-md-6 col-lg-3">
+            <div class="card border-0 shadow-sm rounded-4 p-3 bg-white transition-hover">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="rounded-3 bg-info-subtle text-info-emphasis p-2 fs-4 d-grid place-items-center" style="width: 45px; height: 45px;">
+                        <i class="bi bi-check2-all"></i>
+                    </div>
+                    <div>
+                        <span class="text-muted text-xs d-block">Doanh thu tháng này</span>
+                        <h3 class="h4 mb-0 fw-bold">
+                            @invoices.Where(i => i.PaidAt.HasValue && i.PaidAt.Value.Month == DateTime.Today.Month && i.Status == "Đã thanh toán").Sum(i => i.TotalAmount).ToString("N0") <small class="text-xs text-muted">đ</small>
+                        </h3>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Navigation Tabs -->
+    <div class="card border-0 shadow-sm rounded-4 bg-white overflow-hidden">
+        <div class="card-header bg-white border-bottom py-3 px-4">
+            <ul class="nav nav-pills card-header-tabs gap-2" id="financeTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active rounded-pill px-4 fw-semibold text-sm shadow-none" id="drafts-tab" data-bs-toggle="tab" data-bs-target="#drafts" type="button" role="tab">
+                        <i class="bi bi-journal-check me-1"></i> Ca khám đã xong (@drafts.Count)
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link rounded-pill px-4 fw-semibold text-sm shadow-none" id="invoices-tab" data-bs-toggle="tab" data-bs-target="#invoices" type="button" role="tab">
+                        <i class="bi bi-receipt me-1"></i> Danh sách hóa đơn
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link rounded-pill px-4 fw-semibold text-sm shadow-none" id="refunds-tab" data-bs-toggle="tab" data-bs-target="#refunds" type="button" role="tab">
+                        <i class="bi bi-arrow-left-right me-1"></i> Đơn hoàn tiền
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link rounded-pill px-4 fw-semibold text-sm shadow-none" id="reconcile-tab" data-bs-toggle="tab" data-bs-target="#reconcile" type="button" role="tab">
+                        <i class="bi bi-sliders me-1"></i> Lịch sử đối soát
+                    </button>
+                </li>
+            </ul>
+        </div>
+        <div class="card-body p-4 tab-content">
+            
+            <!-- TAB 1: DRAFTS -->
+            <div class="tab-pane fade show active" id="drafts" role="tabpanel">
+                @if (!drafts.Any())
+                {
+                    <div class="text-center py-5 text-muted">
+                        <i class="bi bi-clipboard2-x display-3 mb-3 text-secondary opacity-50"></i>
+                        <p class="mb-0 fw-semibold">Không có ca khám nào đang chờ lập hóa đơn.</p>
+                        <small>Các ca khám được bác sĩ kết thúc ở EMR sẽ tự động xuất hiện tại đây.</small>
+                    </div>
+                }
+                else
+                {
+                    <div class="table-responsive">
+                        <table class="table align-middle table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th class="ps-3">Bệnh nhân</th>
+                                    <th>Bác sĩ</th>
+                                    <th>Chẩn đoán</th>
+                                    <th>Thời gian khám</th>
+                                    <th>Tạm tính</th>
+                                    <th class="text-end pe-3">Thao tác</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var d in drafts)
+                                {
+                                    <tr>
+                                        <td class="ps-3">
+                                            <div class="fw-bold text-dark">@d.Patient?.FullName</div>
+                                            <small class="text-muted font-monospace text-xs">@d.Patient?.PatientCode - @d.Patient?.PhoneNumber</small>
+                                        </td>
+                                        <td>
+                                            <div class="fw-semibold">@d.ExaminationSession?.Doctor?.User?.FullName</div>
+                                            <small class="text-muted text-xs">@d.ExaminationSession?.Doctor?.PositionTitle</small>
+                                        </td>
+                                        <td class="text-truncate" style="max-width: 250px;" title="@d.ExaminationSession?.Diagnosis">
+                                            @d.ExaminationSession?.Diagnosis
+                                        </td>
+                                        <td class="text-muted text-sm">
+                                            @d.CreatedAt.ToString("dd/MM/yyyy HH:mm")
+                                        </td>
+                                        <td class="fw-bold text-primary">
+                                            @d.TotalAmount.ToString("N0") <small class="text-xs">đ</small>
+                                        </td>
+                                        <td class="text-end pe-3">
+                                            <a asp-action="Create" asp-route-draftId="@d.Id" class="btn btn-outline-primary btn-sm rounded-pill fw-semibold px-3 shadow-none border-1">
+                                                <i class="bi bi-file-earmark-plus me-1"></i> Lập hóa đơn
+                                            </a>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            </div>
+
+            <!-- TAB 2: INVOICES -->
+            <div class="tab-pane fade" id="invoices" role="tabpanel">
+                <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center mb-3">
+                    <div class="topbar-search border rounded-pill px-3 py-1 d-flex align-items-center gap-2" style="width: 320px;">
+                        <i class="bi bi-search text-muted"></i>
+                        <input type="text" id="invoiceSearchInput" onkeyup="filterInvoicesTable()" class="border-0 bg-transparent outline-none w-100 text-sm" placeholder="Tìm tên, SĐT, mã HĐ..." style="outline: none;"/>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <select id="invoiceStatusFilter" onchange="filterInvoicesTable()" class="form-select form-select-sm rounded-pill px-3 shadow-none text-sm border-secondary-subtle">
+                            <option value="">Tất cả trạng thái</option>
+                            <option value="Chờ thanh toán">Chờ thanh toán</option>
+                            <option value="Đã thanh toán">Đã thanh toán</option>
+                            <option value="Đã hoàn tiền">Đã hoàn tiền</option>
+                            <option value="Đã hủy">Đã hủy</option>
+                        </select>
+                    </div>
+                </div>
+
+                @if (!invoices.Any())
+                {
+                    <div class="text-center py-5 text-muted">
+                        <i class="bi bi-receipt display-3 mb-3 text-secondary opacity-50"></i>
+                        <p class="mb-0 fw-semibold">Hệ thống chưa ghi nhận hóa đơn nào.</p>
+                    </div>
+                }
+                else
+                {
+                    <div class="table-responsive">
+                        <table class="table align-middle table-hover mb-0" id="invoicesTable">
+                            <thead class="table-light">
+                                <tr>
+                                    <th class="ps-3">Mã Hóa Đơn</th>
+                                    <th>Bệnh nhân</th>
+                                    <th>Thời gian lập</th>
+                                    <th>Phương thức</th>
+                                    <th>Tổng tiền</th>
+                                    <th>Trạng thái</th>
+                                    <th class="text-end pe-3">Thao tác</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var i in invoices)
+                                {
+                                    <tr class="invoice-row" data-status="@i.Status">
+                                        <td class="ps-3 fw-bold text-dark font-monospace invoice-code-cell">@i.InvoiceCode</td>
+                                        <td class="invoice-patient-cell">
+                                            @if (i.Patient != null)
+                                            {
+                                                <div class="fw-semibold">@i.Patient.FullName</div>
+                                                <small class="text-muted font-monospace text-xs">@i.Patient.PatientCode - @i.Patient.PhoneNumber</small>
+                                            }
+                                            else
+                                            {
+                                                <span class="text-muted">Không có hồ sơ</span>
+                                            }
+                                        </td>
+                                        <td class="text-muted text-sm">@i.IssuedAt.ToString("dd/MM/yyyy HH:mm")</td>
+                                        <td>
+                                            <span class="badge bg-secondary-subtle text-secondary-emphasis rounded-pill px-2 py-0.5 text-xs">@i.PaymentMethodCode</span>
+                                        </td>
+                                        <td class="fw-bold">@i.TotalAmount.ToString("N0") <small class="text-xs">đ</small></td>
+                                        <td>
+                                            @{
+                                                var badgeBg = i.Status == "Đã thanh toán" ? "bg-success-subtle text-success" :
+                                                              i.Status == "Chờ thanh toán" ? "bg-warning-subtle text-warning-emphasis" :
+                                                              i.Status == "Đã hoàn tiền" ? "bg-info-subtle text-info-emphasis" :
+                                                              "bg-danger-subtle text-danger";
+                                            }
+                                            <span class="badge @badgeBg rounded-pill px-3 py-1 small fw-semibold">@i.Status</span>
+                                        </td>
+                                        <td class="text-end pe-3">
+                                            <div class="d-inline-flex gap-1">
+                                                <a asp-action="Detail" asp-route-id="@i.Id" class="btn btn-light btn-sm rounded-circle shadow-none" title="Chi tiết / Thanh toán">
+                                                    <i class="bi bi-eye"></i>
+                                                </a>
+                                                <a asp-action="PrintInvoice" asp-route-id="@i.Id" target="_blank" class="btn btn-light btn-sm rounded-circle shadow-none" title="In hóa đơn">
+                                                    <i class="bi bi-printer"></i>
+                                                </a>
+                                                @if (i.Status == "Đã thanh toán")
+                                                {
+                                                    <button onclick="openRefundModal(@i.Id, '@i.InvoiceCode', @i.TotalAmount)" class="btn btn-outline-warning btn-sm rounded-pill fw-semibold px-2 py-0.5 text-xs" title="Hoàn tiền">
+                                                        <i class="bi bi-arrow-left-right"></i> Hoàn tiền
+                                                    </button>
+                                                }
+                                            </div>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            </div>
+
+            <!-- TAB 3: REFUNDS -->
+            <div class="tab-pane fade" id="refunds" role="tabpanel">
+                @if (!refunds.Any())
+                {
+                    <div class="text-center py-5 text-muted">
+                        <i class="bi bi-arrow-left-right display-3 mb-3 text-secondary opacity-50"></i>
+                        <p class="mb-0 fw-semibold">Không có yêu cầu hoàn tiền nào.</p>
+                    </div>
+                }
+                else
+                {
+                    <div class="table-responsive">
+                        <table class="table align-middle table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th class="ps-3">Mã Hóa Đơn</th>
+                                    <th>Bệnh nhân</th>
+                                    <th>Số tiền hoàn</th>
+                                    <th>Lý do</th>
+                                    <th>Thời gian gửi</th>
+                                    <th>Trạng thái</th>
+                                    @if (isAdmin)
+                                    {
+                                        <th class="text-end pe-3">Phê duyệt (SOD)</th>
+                                    }
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var r in refunds)
+                                {
+                                    <tr>
+                                        <td class="ps-3 fw-bold font-monospace">@r.Invoice?.InvoiceCode</td>
+                                        <td>
+                                            <div class="fw-semibold">@r.Invoice?.Patient?.FullName</div>
+                                            <small class="text-muted text-xs font-monospace">@r.Invoice?.Patient?.PatientCode</small>
+                                        </td>
+                                        <td class="fw-bold text-danger">@r.Amount.ToString("N0") <small class="text-xs">đ</small></td>
+                                        <td class="text-sm">
+                                            @r.Reason
+                                            @if (!string.IsNullOrEmpty(r.RejectionReason))
+                                            {
+                                                <div class="text-danger text-xs mt-1"><strong>Từ chối:</strong> @r.RejectionReason</div>
+                                            }
+                                        </td>
+                                        <td class="text-muted text-sm">@r.CreatedAt.ToString("dd/MM/yyyy HH:mm") <br/> <small>bởi @r.CreatedBy</small></td>
+                                        <td>
+                                            @{
+                                                var rBadge = r.Status == "Đã duyệt" ? "bg-success-subtle text-success" :
+                                                          r.Status == "Chờ duyệt" ? "bg-warning-subtle text-warning-emphasis" :
+                                                          "bg-danger-subtle text-danger";
+                                            }
+                                            <span class="badge @rBadge rounded-pill px-3 py-1 small fw-semibold">@r.Status</span>
+                                        </td>
+                                        @if (isAdmin)
+                                        {
+                                            <td class="text-end pe-3">
+                                                @if (r.Status == "Chờ duyệt")
+                                                {
+                                                    <div class="d-inline-flex gap-1">
+                                                        <button onclick="approveRefund(@r.Id)" class="btn btn-success btn-xs rounded-pill px-3 fw-semibold">
+                                                            Duyệt
+                                                        </button>
+                                                        <button onclick="rejectRefundPrompt(@r.Id)" class="btn btn-danger btn-xs rounded-pill px-3 fw-semibold">
+                                                            Từ chối
+                                                        </button>
+                                                    </div>
+                                                }
+                                                else
+                                                {
+                                                    <small class="text-muted text-xs">Xử lý ngày @r.ApprovedAt?.ToString("dd/MM/yyyy") <br/>bởi @r.ApprovedBy</small>
+                                                }
+                                            </td>
+                                        }
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            </div>
+
+            <!-- TAB 4: RECONCILIATIONS -->
+            <div class="tab-pane fade" id="reconcile" role="tabpanel">
+                @if (!reconciliations.Any())
+                {
+                    <div class="text-center py-5 text-muted">
+                        <i class="bi bi-sliders display-3 mb-3 text-secondary opacity-50"></i>
+                        <p class="mb-0 fw-semibold">Chưa thực hiện báo cáo đối soát doanh thu nào.</p>
+                    </div>
+                }
+                else
+                {
+                    <div class="table-responsive">
+                        <table class="table align-middle table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th class="ps-3">Ngày đối soát</th>
+                                    <th>Doanh thu hệ thống</th>
+                                    <th>Khai báo thực tế</th>
+                                    <th>Chênh lệch</th>
+                                    <th>Trạng thái</th>
+                                    <th>Ghi chú chênh lệch</th>
+                                    <th class="text-end pe-3">Thời gian chốt</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var rc in reconciliations)
+                                {
+                                    <tr>
+                                        <td class="ps-3 fw-bold text-dark">@rc.ReconciliationDate.ToString("dd/MM/yyyy")</td>
+                                        <td>@rc.TotalInvoiceAmount.ToString("N0") đ</td>
+                                        <td class="fw-semibold">@rc.TotalCollectedAmount.ToString("N0") đ</td>
+                                        <td class="@(rc.DifferenceAmount == 0 ? "text-success" : "text-danger fw-bold")">
+                                            @rc.DifferenceAmount.ToString("N0") đ
+                                        </td>
+                                        <td>
+                                            <span class="badge @(rc.Status == "Khớp" ? "bg-success-subtle text-success" : "bg-danger-subtle text-danger") rounded-pill px-3 py-1 fw-semibold">
+                                                @rc.Status
+                                            </span>
+                                        </td>
+                                        <td class="text-sm text-secondary" style="max-width: 250px;">
+                                            @rc.DifferenceNotes
+                                        </td>
+                                        <td class="text-muted text-sm text-end pe-3">
+                                            @rc.CreatedAt.ToString("dd/MM/yyyy HH:mm") <br/> <small>bởi @rc.CreatedBy</small>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<!-- MODAL: YÊU CẦU HOÀN TIỀN -->
+<div class="modal fade" id="refundModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4 border-0 shadow">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold text-dark" id="refundModalLabel">Yêu cầu hoàn tiền</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body py-3">
+                <input type="hidden" id="refundInvoiceId" />
+                <div class="mb-3">
+                    <label class="form-label text-sm fw-bold">Mã Hóa đơn</label>
+                    <input type="text" id="refundInvoiceCode" class="form-control rounded-3 bg-light border-0 fw-bold" readonly />
+                </div>
+                <div class="mb-3">
+                    <label class="form-label text-sm fw-bold">Tổng tiền hóa đơn</label>
+                    <div class="input-group">
+                        <input type="text" id="refundInvoiceAmountText" class="form-control rounded-3 bg-light border-0 fw-bold" readonly />
+                        <span class="input-group-text bg-light border-0 text-xs">VND</span>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label text-sm fw-bold">Số tiền hoàn lại</label>
+                    <div class="input-group">
+                        <input type="number" id="refundAmount" class="form-control rounded-3 border-secondary-subtle fw-bold" min="1" step="50000" />
+                        <span class="input-group-text border-secondary-subtle text-xs">VND</span>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label text-sm fw-bold">Hình thức hoàn tiền</label>
+                    <select id="refundMethodCode" class="form-select rounded-3 border-secondary-subtle">
+                        <option value="CASH">Tiền mặt</option>
+                        <option value="BANK">Chuyển khoản ngân hàng</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label text-sm fw-bold">Lý do hoàn tiền <span class="text-danger">*</span></label>
+                    <textarea id="refundReason" class="form-control rounded-3 border-secondary-subtle" rows="3" placeholder="Nhập lý do hoàn trả chi tiết (được duyệt bởi Admin)"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer border-0 pt-0">
+                <button type="button" class="btn btn-light rounded-pill px-4 fw-semibold" data-bs-dismiss="modal">Hủy bỏ</button>
+                <button type="button" onclick="submitRefundRequest()" class="btn btn-warning rounded-pill px-4 fw-semibold shadow-sm">Gửi yêu cầu</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL: ĐỐI SOÁT DOANH THU CUỐI NGÀY -->
+<div class="modal fade" id="reconcileModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4 border-0 shadow">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold text-dark">Đối soát doanh thu cuối ngày</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body py-3">
+                <div class="mb-3">
+                    <label class="form-label text-sm fw-bold">Ngày đối soát</label>
+                    <input type="date" id="reconcileDate" class="form-control rounded-3 border-secondary-subtle" value="@DateTime.Today.ToString("yyyy-MM-dd")" onchange="fetchReconcileExpected()" />
+                </div>
+                <div class="mb-3 p-3 bg-light rounded-4">
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="text-secondary text-sm">Doanh thu hệ thống dự kiến:</span>
+                        <span class="fw-bold text-dark text-sm"><span id="lblReconcileExpected">0</span> đ</span>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="text-secondary text-sm fw-semibold">Khai báo thu thực tế:</span>
+                        <div class="input-group" style="width: 180px;">
+                            <input type="number" id="reconcileCollected" class="form-control form-control-sm rounded-3 fw-bold border-secondary" placeholder="Nhập số tiền..." oninput="calculateReconcileDiff()"/>
+                        </div>
+                    </div>
+                    <hr class="my-2 border-secondary-subtle" />
+                    <div class="d-flex justify-content-between text-sm">
+                        <span>Chênh lệch (Thực tế - Hệ thống):</span>
+                        <span id="lblReconcileDiff" class="fw-bold">0 đ</span>
+                    </div>
+                </div>
+                <div class="mb-3 d-none" id="divReconcileReason">
+                    <label class="form-label text-sm fw-bold text-danger"><i class="bi bi-exclamation-triangle-fill"></i> Lý do chênh lệch (Bắt buộc)</label>
+                    <textarea id="reconcileNotes" class="form-control rounded-3 border-danger" rows="3" placeholder="Nhập lý do chênh lệch (thiếu tiền, hóa đơn bị đúp, chuyển khoản chậm...)"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer border-0 pt-0">
+                <button type="button" class="btn btn-light rounded-pill px-4 fw-semibold" data-bs-dismiss="modal">Hủy</button>
+                <button type="button" onclick="submitDailyReconcile()" class="btn btn-primary rounded-pill px-4 fw-semibold shadow-sm">Chốt đối soát</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        fetchReconcileExpected();
+    });
+
+    // Filtering Invoices
+    function filterInvoicesTable() {
+        const query = document.getElementById("invoiceSearchInput").value.toLowerCase();
+        const status = document.getElementById("invoiceStatusFilter").value;
+        const rows = document.querySelectorAll(".invoice-row");
+
+        rows.forEach(row => {
+            const code = row.querySelector(".invoice-code-cell").innerText.toLowerCase();
+            const patient = row.querySelector(".invoice-patient-cell").innerText.toLowerCase();
+            const rowStatus = row.getAttribute("data-status");
+
+            const matchesSearch = code.includes(query) || patient.includes(query);
+            const matchesStatus = !status || rowStatus === status;
+
+            if (matchesSearch && matchesStatus) {
+                row.classList.remove("d-none");
+            } else {
+                row.classList.add("d-none");
+            }
+        });
+    }
+
+    // Refund Modal Trigger
+    function openRefundModal(id, code, amount) {
+        document.getElementById("refundInvoiceId").value = id;
+        document.getElementById("refundInvoiceCode").value = code;
+        document.getElementById("refundInvoiceAmountText").value = amount.toLocaleString("vi-VN");
+        document.getElementById("refundAmount").value = amount;
+        document.getElementById("refundAmount").max = amount;
+        document.getElementById("refundReason").value = "";
+
+        const modal = new bootstrap.Modal(document.getElementById("refundModal"));
+        modal.show();
+    }
+
+    function submitRefundRequest() {
+        const id = document.getElementById("refundInvoiceId").value;
+        const amount = parseFloat(document.getElementById("refundAmount").value);
+        const method = document.getElementById("refundMethodCode").value;
+        const reason = document.getElementById("refundReason").value.trim();
+
+        if (!reason) {
+            alert("Lý do hoàn tiền bắt buộc phải điền.");
+            return;
+        }
+
+        fetch('/Invoice/RequestRefund', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: `invoiceId=${id}&amount=${amount}&reason=${encodeURIComponent(reason)}&refundMethodCode=${method}`
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                alert(data.message);
+                location.reload();
+            } else {
+                alert("Lỗi: " + data.message);
+            }
+        });
+    }
+
+    // Admin Refund Actions (SOD Flow)
+    function approveRefund(id) {
+        if (!confirm("Bạn có chắc chắn muốn duyệt hoàn trả số tiền này không?")) return;
+        const comment = prompt("Nhập ghi chú duyệt hoàn tiền (tùy chọn):") || "";
+
+        fetch('/Invoice/ApproveRefund', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: `refundId=${id}&comment=${encodeURIComponent(comment)}`
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                alert(data.message);
+                location.reload();
+            } else {
+                alert("Lỗi: " + data.message);
+            }
+        });
+    }
+
+    function rejectRefundPrompt(id) {
+        const reason = prompt("Lập lý do từ chối hoàn tiền (Bắt buộc):");
+        if (!reason || !reason.trim()) {
+            alert("Lý do từ chối là bắt buộc.");
+            return;
+        }
+
+        fetch('/Invoice/RejectRefund', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: `refundId=${id}&rejectionReason=${encodeURIComponent(reason)}`
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                alert(data.message);
+                location.reload();
+            } else {
+                alert("Lỗi: " + data.message);
+            }
+        });
+    }
+
+    // Daily Reconciliation Logic
+    let expectedAmount = 0;
+
+    function fetchReconcileExpected() {
+        const date = document.getElementById("reconcileDate").value;
+        if (!date) return;
+
+        // Extract invoices paid on target date
+        let targetExpected = 0;
+        document.querySelectorAll(".invoice-row").forEach(row => {
+            const rowStatus = row.getAttribute("data-status");
+            const dateCellText = row.cells[2].innerText; // Text date
+            
+            // Format check dd/mm/yyyy
+            const parts = dateCellText.split(" ")[0].split("/");
+            if (parts.length === 3) {
+                const rowDate = `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+                if (rowDate === date && rowStatus === "Đã thanh toán") {
+                    const priceText = row.cells[4].innerText.replace(/[^0-9]/g, "");
+                    targetExpected += parseFloat(priceText) || 0;
+                }
+            }
+        });
+
+        expectedAmount = targetExpected;
+        document.getElementById("lblReconcileExpected").innerText = expectedAmount.toLocaleString("vi-VN");
+        calculateReconcileDiff();
+    }
+
+    function calculateReconcileDiff() {
+        const collected = parseFloat(document.getElementById("reconcileCollected").value) || 0;
+        const diff = collected - expectedAmount;
+
+        const lbl = document.getElementById("lblReconcileDiff");
+        lbl.innerText = `${diff.toLocaleString("vi-VN")} đ`;
+
+        const reasonDiv = document.getElementById("divReconcileReason");
+        if (diff !== 0) {
+            lbl.className = "fw-bold text-danger";
+            reasonDiv.classList.remove("d-none");
+        } else {
+            lbl.className = "fw-bold text-success";
+            reasonDiv.classList.add("d-none");
+            document.getElementById("reconcileNotes").value = "";
+        }
+    }
+
+    function submitDailyReconcile() {
+        const date = document.getElementById("reconcileDate").value;
+        const collected = parseFloat(document.getElementById("reconcileCollected").value) || 0;
+        const notes = document.getElementById("reconcileNotes").value.trim();
+        const diff = collected - expectedAmount;
+
+        if (diff !== 0 && !notes) {
+            alert("Số tiền chênh lệch chưa khớp. Vui lòng ghi chi tiết lý do chênh lệch.");
+            return;
+        }
+
+        fetch('/Invoice/DailyReconcile', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: `date=${date}&totalCollectedAmount=${collected}&differenceNotes=${encodeURIComponent(notes)}`
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                alert(data.message);
+                location.reload();
+            } else if (data.mismatch) {
+                alert(data.message);
+            } else {
+                alert("Lỗi: " + data.message);
+            }
+        });
+    }
+</script>
+}

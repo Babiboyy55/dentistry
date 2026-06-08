@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Nhakhoa.Data;
 
@@ -11,9 +12,11 @@ using Nhakhoa.Data;
 namespace Nhakhoa.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260607134642_AddDentalChairs")]
+    partial class AddDentalChairs
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -205,57 +208,6 @@ namespace Nhakhoa.Migrations
                             Name = "Phòng khám Cấy ghép Implant C1",
                             UpdatedAt = new DateTime(2023, 10, 15, 0, 0, 0, 0, DateTimeKind.Unspecified)
                         });
-                });
-
-            modelBuilder.Entity("Nhakhoa.Models.DailyReconciliation", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<DateTime?>("ApprovedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("ApprovedBy")
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("CreatedBy")
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<decimal>("DifferenceAmount")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<string>("DifferenceNotes")
-                        .HasMaxLength(1000)
-                        .HasColumnType("nvarchar(1000)");
-
-                    b.Property<DateTime>("ReconciliationDate")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasMaxLength(30)
-                        .HasColumnType("nvarchar(30)");
-
-                    b.Property<decimal>("TotalCollectedAmount")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<decimal>("TotalInvoiceAmount")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ReconciliationDate")
-                        .IsUnique();
-
-                    b.ToTable("DailyReconciliations");
                 });
 
             modelBuilder.Entity("Nhakhoa.Models.DentalChair", b =>
@@ -584,7 +536,7 @@ namespace Nhakhoa.Migrations
                         new
                         {
                             Id = 1,
-                            CreatedAt = new DateTime(2026, 6, 7, 22, 40, 48, 849, DateTimeKind.Local).AddTicks(8830),
+                            CreatedAt = new DateTime(2026, 6, 7, 20, 46, 41, 432, DateTimeKind.Local).AddTicks(6619),
                             CreatedBy = "Hệ thống",
                             Date = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
                             HolidayType = "Cố định",
@@ -595,7 +547,7 @@ namespace Nhakhoa.Migrations
                         new
                         {
                             Id = 2,
-                            CreatedAt = new DateTime(2026, 6, 7, 22, 40, 48, 849, DateTimeKind.Local).AddTicks(9878),
+                            CreatedAt = new DateTime(2026, 6, 7, 20, 46, 41, 432, DateTimeKind.Local).AddTicks(7563),
                             CreatedBy = "Hệ thống",
                             Date = new DateTime(2026, 4, 30, 0, 0, 0, 0, DateTimeKind.Unspecified),
                             HolidayType = "Cố định",
@@ -606,7 +558,7 @@ namespace Nhakhoa.Migrations
                         new
                         {
                             Id = 3,
-                            CreatedAt = new DateTime(2026, 6, 7, 22, 40, 48, 849, DateTimeKind.Local).AddTicks(9881),
+                            CreatedAt = new DateTime(2026, 6, 7, 20, 46, 41, 432, DateTimeKind.Local).AddTicks(7565),
                             CreatedBy = "Hệ thống",
                             Date = new DateTime(2026, 5, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
                             HolidayType = "Cố định",
@@ -617,7 +569,7 @@ namespace Nhakhoa.Migrations
                         new
                         {
                             Id = 4,
-                            CreatedAt = new DateTime(2026, 6, 7, 22, 40, 48, 849, DateTimeKind.Local).AddTicks(9883),
+                            CreatedAt = new DateTime(2026, 6, 7, 20, 46, 41, 432, DateTimeKind.Local).AddTicks(7581),
                             CreatedBy = "Hệ thống",
                             Date = new DateTime(2026, 9, 2, 0, 0, 0, 0, DateTimeKind.Unspecified),
                             HolidayType = "Cố định",
@@ -625,136 +577,6 @@ namespace Nhakhoa.Migrations
                             Notes = "Ngày Quốc Khánh Việt Nam 2/9",
                             RepeatYearly = true
                         });
-                });
-
-            modelBuilder.Entity("Nhakhoa.Models.Invoice", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<DateTime?>("ApprovedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("ApprovedBy")
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<string>("CreatedBy")
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<decimal>("DiscountAmount")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<int?>("ExaminationSessionId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("InvoiceCode")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
-                    b.Property<DateTime>("IssuedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("Notes")
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
-
-                    b.Property<DateTime?>("PaidAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int?>("PatientId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("PaymentMethodCode")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasMaxLength(30)
-                        .HasColumnType("nvarchar(30)");
-
-                    b.Property<decimal>("SubTotal")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<decimal>("TotalAmount")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<decimal>("VATAmount")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<decimal>("VATPercent")
-                        .HasColumnType("decimal(5,2)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ExaminationSessionId");
-
-                    b.HasIndex("PatientId");
-
-                    b.ToTable("Invoices");
-
-                    b.HasData(
-                        new
-                        {
-                            Id = 1,
-                            CreatedBy = "admin",
-                            DiscountAmount = 0m,
-                            InvoiceCode = "HD-CASH-TEST",
-                            IssuedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
-                            Notes = "Hóa đơn thử nghiệm tiền mặt",
-                            PaymentMethodCode = "CASH",
-                            Status = "Chờ thanh toán",
-                            SubTotal = 0m,
-                            TotalAmount = 500000m,
-                            VATAmount = 0m,
-                            VATPercent = 10m
-                        });
-                });
-
-            modelBuilder.Entity("Nhakhoa.Models.InvoiceDetail", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<decimal>("Amount")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("Description")
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
-
-                    b.Property<int>("InvoiceId")
-                        .HasColumnType("int");
-
-                    b.Property<int>("MedicalServiceId")
-                        .HasColumnType("int");
-
-                    b.Property<int>("Quantity")
-                        .HasColumnType("int");
-
-                    b.Property<decimal>("UnitPrice")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("InvoiceId");
-
-                    b.HasIndex("MedicalServiceId");
-
-                    b.ToTable("InvoiceDetails");
                 });
 
             modelBuilder.Entity("Nhakhoa.Models.MedicalService", b =>
@@ -1048,161 +870,6 @@ namespace Nhakhoa.Migrations
                     b.ToTable("PatientToothRecords");
                 });
 
-            modelBuilder.Entity("Nhakhoa.Models.Payment", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<decimal>("Amount")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("CreatedBy")
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<string>("ErrorMessage")
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
-
-                    b.Property<int>("InvoiceId")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime?>("PaidAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("PaymentMethodCode")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasMaxLength(30)
-                        .HasColumnType("nvarchar(30)");
-
-                    b.Property<string>("TransactionCode")
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<string>("TransactionReference")
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("InvoiceId");
-
-                    b.ToTable("Payments");
-                });
-
-            modelBuilder.Entity("Nhakhoa.Models.PaymentMethod", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("Code")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
-                    b.Property<string>("EndpointUrl")
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
-
-                    b.Property<string>("Environment")
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
-                    b.Property<bool>("IsDigitalGateway")
-                        .HasColumnType("bit");
-
-                    b.Property<bool>("IsEnabled")
-                        .HasColumnType("bit");
-
-                    b.Property<string>("MerchantId")
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<string>("SecretKey")
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
-
-                    b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("PaymentMethods");
-
-                    b.HasData(
-                        new
-                        {
-                            Id = 1,
-                            Code = "CASH",
-                            IsDigitalGateway = false,
-                            IsEnabled = true,
-                            Name = "Tiền mặt",
-                            UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified)
-                        },
-                        new
-                        {
-                            Id = 2,
-                            Code = "BANK",
-                            IsDigitalGateway = false,
-                            IsEnabled = true,
-                            Name = "Chuyển khoản",
-                            UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified)
-                        },
-                        new
-                        {
-                            Id = 3,
-                            Code = "VNPAY",
-                            EndpointUrl = "https://sandbox.vnpayment.vn/paymentv2/vpcpay.html",
-                            Environment = "Sandbox",
-                            IsDigitalGateway = true,
-                            IsEnabled = false,
-                            Name = "VNPay",
-                            UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified)
-                        },
-                        new
-                        {
-                            Id = 4,
-                            Code = "MOMO",
-                            EndpointUrl = "https://test-payment.momo.vn/v2/gateway/api/create",
-                            Environment = "Sandbox",
-                            IsDigitalGateway = true,
-                            IsEnabled = false,
-                            Name = "MoMo",
-                            UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified)
-                        },
-                        new
-                        {
-                            Id = 5,
-                            Code = "INSURANCE",
-                            IsDigitalGateway = false,
-                            IsEnabled = true,
-                            Name = "Bảo hiểm y tế",
-                            UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified)
-                        });
-                });
-
             modelBuilder.Entity("Nhakhoa.Models.Prescription", b =>
                 {
                     b.Property<int>("Id")
@@ -1278,143 +945,6 @@ namespace Nhakhoa.Migrations
                     b.HasIndex("PrescriptionId");
 
                     b.ToTable("PrescriptionItems");
-                });
-
-            modelBuilder.Entity("Nhakhoa.Models.ReconciliationDetail", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int>("DailyReconciliationId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("PaymentMethodCode")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
-                    b.Property<string>("PaymentMethodName")
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<decimal>("TotalAmount")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<int>("TransactionCount")
-                        .HasColumnType("int");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("DailyReconciliationId");
-
-                    b.ToTable("ReconciliationDetails");
-                });
-
-            modelBuilder.Entity("Nhakhoa.Models.Refund", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<decimal>("Amount")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<DateTime?>("ApprovedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("ApprovedBy")
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("CreatedBy")
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<int>("InvoiceId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Reason")
-                        .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
-
-                    b.Property<string>("RefundBy")
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<string>("RefundMethodCode")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
-                    b.Property<DateTime?>("RefundedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("RejectionReason")
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasMaxLength(30)
-                        .HasColumnType("nvarchar(30)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("InvoiceId");
-
-                    b.ToTable("Refunds");
-                });
-
-            modelBuilder.Entity("Nhakhoa.Models.RefundApproval", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<int>("ApprovalLevel")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime?>("ApprovedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("ApprovedBy")
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<string>("Comment")
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int>("RefundId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasMaxLength(30)
-                        .HasColumnType("nvarchar(30)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("RefundId");
-
-                    b.ToTable("RefundApprovals");
                 });
 
             modelBuilder.Entity("Nhakhoa.Models.RolePermission", b =>
@@ -1838,7 +1368,7 @@ namespace Nhakhoa.Migrations
                         {
                             Id = 1,
                             ClinicId = 1,
-                            CreatedAt = new DateTime(2026, 6, 7, 22, 40, 48, 849, DateTimeKind.Local).AddTicks(7488),
+                            CreatedAt = new DateTime(2026, 6, 7, 20, 46, 41, 432, DateTimeKind.Local).AddTicks(5458),
                             IsActive = true,
                             ShiftDate = new DateTime(2026, 12, 10, 0, 0, 0, 0, DateTimeKind.Unspecified),
                             ShiftType = "Sáng",
@@ -2682,42 +2212,6 @@ namespace Nhakhoa.Migrations
                     b.Navigation("Patient");
                 });
 
-            modelBuilder.Entity("Nhakhoa.Models.Invoice", b =>
-                {
-                    b.HasOne("Nhakhoa.Models.ExaminationSession", "ExaminationSession")
-                        .WithMany()
-                        .HasForeignKey("ExaminationSessionId")
-                        .OnDelete(DeleteBehavior.Restrict);
-
-                    b.HasOne("Nhakhoa.Models.Patient", "Patient")
-                        .WithMany()
-                        .HasForeignKey("PatientId")
-                        .OnDelete(DeleteBehavior.Restrict);
-
-                    b.Navigation("ExaminationSession");
-
-                    b.Navigation("Patient");
-                });
-
-            modelBuilder.Entity("Nhakhoa.Models.InvoiceDetail", b =>
-                {
-                    b.HasOne("Nhakhoa.Models.Invoice", "Invoice")
-                        .WithMany("InvoiceDetails")
-                        .HasForeignKey("InvoiceId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("Nhakhoa.Models.MedicalService", "MedicalService")
-                        .WithMany()
-                        .HasForeignKey("MedicalServiceId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("Invoice");
-
-                    b.Navigation("MedicalService");
-                });
-
             modelBuilder.Entity("Nhakhoa.Models.MedicalService", b =>
                 {
                     b.HasOne("Nhakhoa.Models.Specialty", "Specialty")
@@ -2764,17 +2258,6 @@ namespace Nhakhoa.Migrations
                     b.Navigation("Patient");
                 });
 
-            modelBuilder.Entity("Nhakhoa.Models.Payment", b =>
-                {
-                    b.HasOne("Nhakhoa.Models.Invoice", "Invoice")
-                        .WithMany("Payments")
-                        .HasForeignKey("InvoiceId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Invoice");
-                });
-
             modelBuilder.Entity("Nhakhoa.Models.Prescription", b =>
                 {
                     b.HasOne("Nhakhoa.Models.StaffProfile", "Doctor")
@@ -2818,39 +2301,6 @@ namespace Nhakhoa.Migrations
                     b.Navigation("Medicine");
 
                     b.Navigation("Prescription");
-                });
-
-            modelBuilder.Entity("Nhakhoa.Models.ReconciliationDetail", b =>
-                {
-                    b.HasOne("Nhakhoa.Models.DailyReconciliation", "DailyReconciliation")
-                        .WithMany("Details")
-                        .HasForeignKey("DailyReconciliationId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("DailyReconciliation");
-                });
-
-            modelBuilder.Entity("Nhakhoa.Models.Refund", b =>
-                {
-                    b.HasOne("Nhakhoa.Models.Invoice", "Invoice")
-                        .WithMany("Refunds")
-                        .HasForeignKey("InvoiceId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Invoice");
-                });
-
-            modelBuilder.Entity("Nhakhoa.Models.RefundApproval", b =>
-                {
-                    b.HasOne("Nhakhoa.Models.Refund", "Refund")
-                        .WithMany("ApprovalHistory")
-                        .HasForeignKey("RefundId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Refund");
                 });
 
             modelBuilder.Entity("Nhakhoa.Models.Shift", b =>
@@ -2964,20 +2414,6 @@ namespace Nhakhoa.Migrations
                     b.Navigation("Shifts");
                 });
 
-            modelBuilder.Entity("Nhakhoa.Models.DailyReconciliation", b =>
-                {
-                    b.Navigation("Details");
-                });
-
-            modelBuilder.Entity("Nhakhoa.Models.Invoice", b =>
-                {
-                    b.Navigation("InvoiceDetails");
-
-                    b.Navigation("Payments");
-
-                    b.Navigation("Refunds");
-                });
-
             modelBuilder.Entity("Nhakhoa.Models.Patient", b =>
                 {
                     b.Navigation("Appointments");
@@ -2988,11 +2424,6 @@ namespace Nhakhoa.Migrations
             modelBuilder.Entity("Nhakhoa.Models.Prescription", b =>
                 {
                     b.Navigation("Items");
-                });
-
-            modelBuilder.Entity("Nhakhoa.Models.Refund", b =>
-                {
-                    b.Navigation("ApprovalHistory");
                 });
 
             modelBuilder.Entity("Nhakhoa.Models.Specialty", b =>

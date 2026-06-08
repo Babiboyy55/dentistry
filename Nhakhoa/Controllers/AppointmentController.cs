@@ -476,7 +476,7 @@ namespace Nhakhoa.Controllers
         public async Task<IActionResult> AvailableSlots(int staffProfileId, string date, string session)
         {
             if (!DateTime.TryParse(date, out var parsedDate))
-                return BadRequest();
+                return BadRequest("Invalid date format: " + date);
 
             var bookedSlots = await _db.Appointments
                 .Where(a => a.StaffProfileId == staffProfileId &&
@@ -495,9 +495,12 @@ namespace Nhakhoa.Controllers
                 return Json(fallbackSlots.Where(s => !bookedSlots.Contains(s)).ToArray());
             }
 
-            if (!TimeSpan.TryParse(setting.StartTime, out var startTime) || !TimeSpan.TryParse(setting.EndTime, out var endTime))
+            var startTimeStr = setting.StartTime?.Replace("h", ":").Replace("H", ":") ?? "";
+            var endTimeStr = setting.EndTime?.Replace("h", ":").Replace("H", ":") ?? "";
+
+            if (!TimeSpan.TryParse(startTimeStr, out var startTime) || !TimeSpan.TryParse(endTimeStr, out var endTime))
             {
-                return BadRequest();
+                return BadRequest($"Invalid shift setting time format. StartTime: '{setting.StartTime}' (parsed: '{startTimeStr}'), EndTime: '{setting.EndTime}' (parsed: '{endTimeStr}')");
             }
 
             var slotsList = new List<string>();

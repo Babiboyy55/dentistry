@@ -1,5 +1,6 @@
 using System;
 using System.ComponentModel.DataAnnotations;
+using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
 
 namespace Nhakhoa.Models
 {
@@ -10,16 +11,24 @@ namespace Nhakhoa.Models
 
         [Required]
         public int PatientId { get; set; }
-        public Patient Patient { get; set; } = null!;
+        [ValidateNever]
+        public Patient? Patient { get; set; }
 
         [Required]
         public int StaffProfileId { get; set; }
-        public StaffProfile StaffProfile { get; set; } = null!;
+        [ValidateNever]
+        public StaffProfile? StaffProfile { get; set; }
 
         public int? ClinicId { get; set; }
+        [ValidateNever]
         public Clinic? Clinic { get; set; }
 
+        public int? DentalChairId { get; set; }
+        [ValidateNever]
+        public DentalChair? DentalChair { get; set; }
+
         public int? SpecialtyId { get; set; }
+        [ValidateNever]
         public Specialty? Specialty { get; set; }
 
         [Required]

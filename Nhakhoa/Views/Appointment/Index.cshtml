@@ -119,7 +119,7 @@
                     <option value="">Tất cả trạng thái</option>
                     @foreach (var s in new[] { "Đã xác nhận", "Đang chờ", "Đang khám", "Đã khám xong", "Đã hủy", "Vắng mặt" })
                     {
-                        <!option value="@s" @(ViewBag.Status == s ? "selected" : "")>@s</!option>
+                        <option value="@s" selected="@(ViewBag.Status == s ? "selected" : null)">@s</option>
                     }
                 </select>
             </div>

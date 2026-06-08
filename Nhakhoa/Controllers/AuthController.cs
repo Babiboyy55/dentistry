@@ -40,6 +40,16 @@ namespace Nhakhoa.Controllers
                 {
                     if (!user.IsActive)
                     {
+                        // Ghi nhận đăng nhập thất bại do tài khoản bị khóa
+                        var failLog = new ActivityLog
+                        {
+                            Username = model.Username ?? "Unknown",
+                            Action = "Đăng nhập thất bại",
+                            Details = $"Đăng nhập thất bại: Tài khoản '{model.Username}' đang bị khóa."
+                        };
+                        _context.ActivityLogs.Add(failLog);
+                        await _context.SaveChangesAsync();
+
                         ModelState.AddModelError(string.Empty, "Tài khoản bị khóa.");
                         return View(model);
                     }
@@ -82,6 +92,16 @@ namespace Nhakhoa.Controllers
 
                     return Redirect("/Home/Index?clear=1");
                 }
+
+                // Ghi nhận đăng nhập thất bại do sai mật khẩu hoặc tên đăng nhập
+                var failedCredsLog = new ActivityLog
+                {
+                    Username = model.Username ?? "Unknown",
+                    Action = "Đăng nhập thất bại",
+                    Details = $"Đăng nhập thất bại cho tài khoản '{model.Username}'."
+                };
+                _context.ActivityLogs.Add(failedCredsLog);
+                await _context.SaveChangesAsync();
 
                 ModelState.AddModelError(string.Empty, "Tên đăng nhập hoặc mật khẩu không đúng.");
             }

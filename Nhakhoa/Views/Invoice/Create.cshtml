@@ -1,0 +1,173 @@
+@model Nhakhoa.Models.DraftInvoice
+
+@{
+    ViewData["Title"] = "Lập hóa đơn";
+    Layout = "_AdminLayout";
+    var paymentMethods = ViewBag.PaymentMethods as List<Nhakhoa.Models.PaymentMethod> ?? new List<Nhakhoa.Models.PaymentMethod>();
+    var medicalServices = ViewBag.MedicalServices as List<Nhakhoa.Models.MedicalService> ?? new List<Nhakhoa.Models.MedicalService>();
+    var warrantyServices = ViewBag.WarrantyServices as List<Nhakhoa.Models.MedicalService> ?? new List<Nhakhoa.Models.MedicalService>();
+    var warrantyServiceIds = warrantyServices.Select(s => s.Id).ToList();
+}
+
+<div class="container-fluid py-4" style="max-width: 1000px;">
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb" class="mb-3">
+        <ol class="breadcrumb mb-0">
+            <li class="breadcrumb-item"><a asp-action="Index" class="text-decoration-none">Hóa đơn & Thanh toán</a></li>
+            <li class="breadcrumb-item active" aria-current="page">Lập hóa đơn</li>
+        </ol>
+    </nav>
+
+    <!-- Header Page -->
+    <div class="mb-4">
+        <h1 class="h3 text-dark fw-bold" style="font-family: 'Inter', sans-serif;">Lập hóa đơn thanh toán</h1>
+        <p class="text-muted small mb-0">Khách hàng: <strong>@Model.Patient?.FullName</strong> (@Model.Patient?.PatientCode)</p>
+    </div>
+
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <div class="alert alert-danger border-0 rounded-4 shadow-sm mb-4" role="alert">
+            <i class="bi bi-exclamation-octagon me-2"></i> @TempData["ErrorMessage"]
+        </div>
+    }
+
+    <form asp-action="Create" method="post" id="invoiceForm">
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="draftInvoiceId" value="@Model.Id" />
+        <input type="hidden" name="patientId" value="@Model.PatientId" />
+
+        <div class="row g-4">
+            <!-- Left Column: Services checklist -->
+            <div class="col-12 col-lg-7">
+                <div class="card border-0 shadow-sm rounded-4 bg-white p-4">
+                    <h5 class="fw-bold mb-3 text-dark border-bottom pb-2">
+                        <i class="bi bi-heart-pulse me-1 text-primary"></i> Dịch vụ đã thực hiện
+                    </h5>
+                    <p class="text-muted text-xs mb-3">Hệ thống đã tự động tích chọn các dịch vụ ghi nhận trong bệnh án của ca khám. Lễ tân có thể điều chỉnh nếu cần.</p>
+
+                    <div class="services-list" style="max-height: 400px; overflow-y: auto; padding-right: 5px;">
+                        @foreach (var svc in medicalServices)
+                        {
+                            var isChecked = warrantyServiceIds.Contains(svc.Id) || (medicalServices.Count == 1) || (warrantyServiceIds.Count == 0 && Model.TotalAmount == svc.Price);
+                            <div class="d-flex align-items-center justify-content-between p-3 mb-2 bg-light rounded-4 border border-light transition-hover">
+                                <div class="form-check m-0 d-flex align-items-center gap-2">
+                                    <input class="form-check-input service-checkbox shadow-none border-secondary-subtle" 
+                                           type="checkbox" 
+                                           name="serviceIds" 
+                                           value="@svc.Id" 
+                                           id="svc-@svc.Id" 
+                                           data-price="@svc.Price"
+                                           @(isChecked ? "checked" : "")
+                                           onchange="updateInvoiceSummary()" />
+                                    <label class="form-check-label fw-semibold text-dark text-sm cursor-pointer" for="svc-@svc.Id">
+                                        @svc.Name
+                                        @if (warrantyServiceIds.Contains(svc.Id))
+                                        {
+                                            <span class="badge bg-primary-subtle text-primary rounded-pill text-xxs ms-1">Từ bệnh án</span>
+                                        }
+                                    </label>
+                                </div>
+                                <span class="fw-bold text-secondary text-sm">@svc.Price.ToString("N0") đ</span>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Column: Final summary & payment selection -->
+            <div class="col-12 col-lg-5">
+                <div class="card border-0 shadow-sm rounded-4 bg-white p-4">
+                    <h5 class="fw-bold mb-3 text-dark border-bottom pb-2">
+                        <i class="bi bi-wallet2 me-1 text-success"></i> Chi tiết thanh toán
+                    </h5>
+
+                    <!-- Calculation details -->
+                    <div class="p-3 bg-light rounded-4 mb-3">
+                        <div class="d-flex justify-content-between mb-2 text-sm">
+                            <span class="text-secondary">Tạm tính dịch vụ:</span>
+                            <span class="fw-semibold text-dark"><span id="lblSubTotal">0</span> đ</span>
+                        </div>
+                        <div class="d-flex justify-content-between mb-2 text-sm">
+                            <span class="text-secondary">Thuế VAT (10%):</span>
+                            <span class="fw-semibold text-dark"><span id="lblVAT">0</span> đ</span>
+                        </div>
+                        <div class="d-flex align-items-center justify-content-between mb-3 text-sm">
+                            <span class="text-secondary">Giảm giá chiết khấu:</span>
+                            <div class="input-group" style="width: 140px;">
+                                <input type="number" name="discountAmount" id="txtDiscount" class="form-control form-control-sm text-end fw-bold rounded-3 border-secondary-subtle" value="0" min="0" oninput="updateInvoiceSummary()" />
+                                <span class="input-group-text border-secondary-subtle bg-white text-xxs">đ</span>
+                            </div>
+                        </div>
+                        <hr class="my-2 border-secondary-subtle" />
+                        <div class="d-flex justify-content-between text-dark">
+                            <span class="fw-bold">Tổng thanh toán:</span>
+                            <span class="fw-bold text-primary fs-5"><span id="lblTotal">0</span> đ</span>
+                        </div>
+                    </div>
+
+                    <!-- Payment methods selection -->
+                    <div class="mb-3">
+                        <label class="form-label text-sm fw-bold">Phương thức thanh toán <span class="text-danger">*</span></label>
+                        <select name="paymentMethodCode" id="selectPaymentMethod" class="form-select rounded-3 border-secondary-subtle shadow-none">
+                            @foreach (var pm in paymentMethods)
+                            {
+                                <option value="@pm.Code" data-digital="@(pm.IsDigitalGateway ? "true" : "false")">@pm.Name</option>
+                            }
+                        </select>
+                    </div>
+
+                    <!-- Invoice notes -->
+                    <div class="mb-4">
+                        <label class="form-label text-sm fw-bold">Ghi chú hóa đơn</label>
+                        <textarea name="notes" class="form-control rounded-3 border-secondary-subtle" rows="2" placeholder="Ghi chú thêm về giảm giá hoặc giao dịch..."></textarea>
+                    </div>
+
+                    <button type="submit" class="btn btn-success w-100 py-2.5 rounded-pill fw-bold shadow-sm">
+                        <i class="bi bi-file-earmark-check me-1"></i> Xác nhận và Tạo hóa đơn
+                    </button>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        updateInvoiceSummary();
+    });
+
+    function updateInvoiceSummary() {
+        const checkboxes = document.querySelectorAll(".service-checkbox:checked");
+        let subTotal = 0;
+        checkboxes.forEach(cb => {
+            subTotal += parseFloat(cb.getAttribute("data-price")) || 0;
+        });
+
+        const vatPercent = 10.0;
+        const vatAmount = Math.round(subTotal * (vatPercent / 100));
+        
+        let discount = parseFloat(document.getElementById("txtDiscount").value) || 0;
+        if (discount < 0) {
+            discount = 0;
+            document.getElementById("txtDiscount").value = 0;
+        }
+
+        let total = subTotal + vatAmount - discount;
+        if (total < 0) total = 0;
+
+        document.getElementById("lblSubTotal").innerText = subTotal.toLocaleString("vi-VN");
+        document.getElementById("lblVAT").innerText = vatAmount.toLocaleString("vi-VN");
+        document.getElementById("lblTotal").innerText = total.toLocaleString("vi-VN");
+    }
+
+    // Client-side block form if no check
+    document.getElementById("invoiceForm").addEventListener("submit", function(e) {
+        const checked = document.querySelectorAll(".service-checkbox:checked").length;
+        if (checked === 0) {
+            e.preventDefault();
+            alert("Vui lòng chọn ít nhất một dịch vụ nha khoa để lập hóa đơn.");
+        }
+    });
+</script>
+}

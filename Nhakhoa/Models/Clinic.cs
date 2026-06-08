@@ -28,5 +28,8 @@ namespace Nhakhoa.Models
 
         // Shifts assigned to this clinic
         public ICollection<Shift> Shifts { get; set; } = new List<Shift>();
+
+        // Dental chairs inside this clinic
+        public ICollection<DentalChair> DentalChairs { get; set; } = new List<DentalChair>();
     }
 }

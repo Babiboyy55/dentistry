@@ -25,7 +25,8 @@
     // Holidays in current week
     var holidaySet = allHolidays
         .Where(h => h.Date >= wStart && h.Date <= wEnd)
-        .ToDictionary(h => h.Date.Date, h => h.Name);
+        .GroupBy(h => h.Date.Date)
+        .ToDictionary(g => g.Key, g => g.First().Name);
 }
 
 <style>

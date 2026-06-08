@@ -58,6 +58,27 @@ namespace Nhakhoa.Controllers
             return View(logs);
         }
 
+        // GET: /RolePermission/SecurityAlerts
+        public async Task<IActionResult> SecurityAlerts()
+        {
+            if (!User.Identity?.IsAuthenticated == true)
+                return RedirectToAction("Login", "Auth");
+
+            var role = User.FindFirst(ClaimTypes.Role)?.Value;
+            if (role != "Admin")
+                return StatusCode(403);
+
+            var logs = await _context.ActivityLogs
+                .Where(l => l.Action.Contains("quyền") || l.Action.Contains("Khóa") || l.Action.Contains("mật khẩu") || l.Action.Contains("thất bại") || l.Action.Contains("Cảnh báo"))
+                .OrderByDescending(l => l.Timestamp)
+                .ToListAsync();
+
+            var lockedCount = await _context.Users.CountAsync(u => !u.IsActive);
+            ViewBag.LockedCount = lockedCount;
+
+            return View(logs);
+        }
+
         // POST: /RolePermission/Save
         [HttpPost]
         public async Task<IActionResult> Save([FromBody] SavePermissionsRequest request)

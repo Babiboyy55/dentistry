@@ -26,6 +26,7 @@ namespace Nhakhoa.Controllers
             var query = _context.Clinics
                 .Include(c => c.DefaultSpecialty)
                 .Include(c => c.Shifts)
+                .Include(c => c.DentalChairs)
                 .AsQueryable();
 
             if (!string.IsNullOrEmpty(search))
@@ -206,7 +207,6 @@ namespace Nhakhoa.Controllers
         public async Task<IActionResult> GetDeleteConstraints(int id)
         {
             var clinic = await _context.Clinics
-                .Include(c => c.Shifts)
                 .FirstOrDefaultAsync(c => c.Id == id);
 
             if (clinic == null)
@@ -214,15 +214,20 @@ namespace Nhakhoa.Controllers
                 return NotFound();
             }
 
-            // Filter upcoming shifts in the future (shift date is today or later)
             var today = DateTime.Today;
-            var futureShiftsCount = clinic.Shifts.Count(s => s.ShiftDate >= today && s.IsActive);
+            var futureShiftsCount = await _context.Shifts
+                .CountAsync(s => s.ClinicId == id && s.ShiftDate >= today && s.IsActive);
+
+            var incompleteApptsCount = await _context.Appointments
+                .CountAsync(a => (a.ClinicId == id || (a.DentalChair != null && a.DentalChair.ClinicId == id)) && 
+                                 a.Status != "Đã khám xong" && a.Status != "Đã hủy");
 
             return Json(new
             {
-                hasConstraints = futureShiftsCount > 0,
+                hasConstraints = (futureShiftsCount > 0 || incompleteApptsCount > 0),
                 clinicName = clinic.Name,
-                futureShifts = futureShiftsCount
+                futureShifts = futureShiftsCount,
+                incompleteAppointments = incompleteApptsCount
             });
         }
 
@@ -233,7 +238,6 @@ namespace Nhakhoa.Controllers
         public async Task<IActionResult> Delete(int id)
         {
             var clinic = await _context.Clinics
-                .Include(c => c.Shifts)
                 .FirstOrDefaultAsync(c => c.Id == id);
 
             if (clinic == null)
@@ -241,17 +245,39 @@ namespace Nhakhoa.Controllers
                 return NotFound();
             }
 
-            // Check upcoming future shifts (ALT-5)
             var today = DateTime.Today;
-            var futureShiftsCount = clinic.Shifts.Count(s => s.ShiftDate >= today && s.IsActive);
 
-            if (futureShiftsCount > 0)
+            // Check ALT-2: Incomplete appointments
+            var incompleteApptsCount = await _context.Appointments
+                .CountAsync(a => (a.ClinicId == id || (a.DentalChair != null && a.DentalChair.ClinicId == id)) && 
+                                 a.Status != "Đã khám xong" && a.Status != "Đã hủy");
+
+            if (incompleteApptsCount > 0)
             {
-                TempData["ErrorMessage"] = $"Phòng khám có {futureShiftsCount} ca trực trong tương lai. Vui lòng hủy hoặc chuyển ca trực trước khi xóa phòng.";
+                TempData["ErrorMessage"] = $"Phòng khám còn {incompleteApptsCount} lịch hẹn chưa hoàn thành. Vui lòng hủy hoặc chuyển lịch hẹn trước khi xóa.";
                 return RedirectToAction(nameof(Index));
             }
 
-            // No constraints - delete physical room and any historical completed shifts
+            // Check ALT-3: Future shifts
+            var futureShiftsCount = await _context.Shifts
+                .CountAsync(s => s.ClinicId == id && s.ShiftDate >= today && s.IsActive);
+
+            if (futureShiftsCount > 0)
+            {
+                TempData["ErrorMessage"] = $"Phòng khám có {futureShiftsCount} ca làm việc trong tương lai. Vui lòng hủy hoặc chuyển ca trước khi xóa.";
+                return RedirectToAction(nameof(Index));
+            }
+
+            // Nullify references in historical shifts & appointments for this clinic's chairs to avoid Restrict FK errors
+            var clinicChairs = await _context.DentalChairs.Where(dc => dc.ClinicId == id).Select(dc => dc.Id).ToListAsync();
+            
+            var chairShifts = await _context.Shifts.Where(s => s.DentalChairId != null && clinicChairs.Contains(s.DentalChairId.Value)).ToListAsync();
+            foreach (var s in chairShifts) s.DentalChairId = null;
+
+            var chairAppts = await _context.Appointments.Where(a => a.DentalChairId != null && clinicChairs.Contains(a.DentalChairId.Value)).ToListAsync();
+            foreach (var a in chairAppts) a.DentalChairId = null;
+
+            // Delete clinic (cascades to DentalChairs)
             _context.Clinics.Remove(clinic);
 
             // Log activity
@@ -267,6 +293,215 @@ namespace Nhakhoa.Controllers
 
             TempData["SuccessMessage"] = "Xóa phòng khám thành công";
             return RedirectToAction(nameof(Index));
+        }
+
+        // GET: Clinic/GetChairsJson
+        [HttpGet]
+        public async Task<IActionResult> GetChairsJson(int clinicId)
+        {
+            var chairs = await _context.DentalChairs
+                .Where(dc => dc.ClinicId == clinicId)
+                .OrderBy(dc => dc.ChairCode)
+                .ToListAsync();
+
+            var today = DateTime.Today;
+            var result = new List<object>();
+
+            foreach (var chair in chairs)
+            {
+                var futureShifts = await _context.Shifts
+                    .CountAsync(s => s.DentalChairId == chair.Id && s.ShiftDate >= today && s.IsActive);
+
+                var incompleteAppts = await _context.Appointments
+                    .CountAsync(a => a.DentalChairId == chair.Id && a.Status != "Đã khám xong" && a.Status != "Đã hủy");
+
+                result.Add(new
+                {
+                    id = chair.Id,
+                    clinicId = chair.ClinicId,
+                    chairCode = chair.ChairCode,
+                    name = chair.Name,
+                    status = chair.Status,
+                    updatedAt = chair.UpdatedAt.ToString("dd/MM/yyyy HH:mm"),
+                    futureShifts = futureShifts,
+                    incompleteAppointments = incompleteAppts
+                });
+            }
+
+            return Json(result);
+        }
+
+        // POST: Clinic/SaveChair
+        [HttpPost]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> SaveChair(int id, int clinicId, string chairCode, string name, string status, bool bypassWarning = false)
+        {
+            if (string.IsNullOrWhiteSpace(chairCode))
+            {
+                return Json(new { success = false, message = "Mã ghế không được để trống." });
+            }
+            if (string.IsNullOrWhiteSpace(name))
+            {
+                return Json(new { success = false, message = "Tên ghế không được để trống." });
+            }
+
+            chairCode = chairCode.Trim();
+            name = name.Trim();
+
+            // Check duplicate code or name in the same clinic (ALT-5)
+            if (id == 0) // New
+            {
+                var duplicateCode = await _context.DentalChairs
+                    .AnyAsync(dc => dc.ClinicId == clinicId && dc.ChairCode.ToLower() == chairCode.ToLower());
+                var duplicateName = await _context.DentalChairs
+                    .AnyAsync(dc => dc.ClinicId == clinicId && dc.Name.ToLower() == name.ToLower());
+
+                if (duplicateCode || duplicateName)
+                {
+                    return Json(new { success = false, message = "Mã/Tên ghế đã tồn tại trong phòng này." });
+                }
+            }
+            else // Edit
+            {
+                var duplicateName = await _context.DentalChairs
+                    .AnyAsync(dc => dc.ClinicId == clinicId && dc.Id != id && dc.Name.ToLower() == name.ToLower());
+
+                if (duplicateName)
+                {
+                    return Json(new { success = false, message = "Mã/Tên ghế đã tồn tại trong phòng này." });
+                }
+            }
+
+            // Check ALT-8: warning when changing status to "Bảo trì" with future appointments
+            if (status == "Bảo trì" && id > 0 && !bypassWarning)
+            {
+                var today = DateTime.Today;
+                var futureAppts = await _context.Appointments
+                    .CountAsync(a => a.DentalChairId == id && a.Status != "Đã khám xong" && a.Status != "Đã hủy" && a.AppointmentDate.Date >= today);
+
+                if (futureAppts > 0)
+                {
+                    return Json(new
+                    {
+                        success = false,
+                        requireConfirm = true,
+                        message = $"Ghế nha có {futureAppts} lịch hẹn trong tương lai. Bạn có chắc muốn chuyển sang trạng thái Bảo trì không?"
+                    });
+                }
+            }
+
+            var clinic = await _context.Clinics.FindAsync(clinicId);
+            if (clinic == null)
+            {
+                return Json(new { success = false, message = "Phòng khám không tồn tại." });
+            }
+
+            var currentUser = User.Identity?.Name ?? "Admin System";
+            string details;
+
+            if (id == 0)
+            {
+                var chair = new DentalChair
+                {
+                    ClinicId = clinicId,
+                    ChairCode = chairCode,
+                    Name = name,
+                    Status = status,
+                    UpdatedAt = DateTime.Now
+                };
+                _context.DentalChairs.Add(chair);
+                details = $"Thêm mới ghế nha: {name} (Mã: {chairCode}, Trạng thái: {status}) thuộc phòng {clinic.Name}";
+            }
+            else
+            {
+                var chair = await _context.DentalChairs.FindAsync(id);
+                if (chair == null)
+                {
+                    return NotFound();
+                }
+
+                var oldName = chair.Name;
+                var oldStatus = chair.Status;
+
+                chair.Name = name;
+                chair.Status = status;
+                chair.UpdatedAt = DateTime.Now;
+                _context.DentalChairs.Update(chair);
+
+                details = $"Cập nhật ghế nha: {name} (Mã: {chair.ChairCode}) thuộc phòng {clinic.Name}.";
+                if (oldName != name) details += $" Đổi tên: {oldName} -> {name}.";
+                if (oldStatus != status) details += $" Đổi trạng thái: {oldStatus} -> {status}.";
+            }
+
+            await _context.SaveChangesAsync();
+
+            // Log activity
+            _context.ActivityLogs.Add(new ActivityLog
+            {
+                Username = currentUser,
+                Action = id == 0 ? "Thêm ghế nha" : "Cập nhật ghế nha",
+                Details = details
+            });
+            await _context.SaveChangesAsync();
+
+            return Json(new { success = true, message = id == 0 ? "Thêm ghế nha thành công" : "Cập nhật ghế nha thành công" });
+        }
+
+        // POST: Clinic/DeleteChair
+        [HttpPost]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> DeleteChair(int id)
+        {
+            var chair = await _context.DentalChairs
+                .Include(dc => dc.Clinic)
+                .FirstOrDefaultAsync(dc => dc.Id == id);
+
+            if (chair == null)
+            {
+                return NotFound();
+            }
+
+            var today = DateTime.Today;
+
+            // Check ALT-6: Future shifts
+            var futureShifts = await _context.Shifts
+                .CountAsync(s => s.DentalChairId == id && s.ShiftDate.Date >= today && s.IsActive);
+
+            if (futureShifts > 0)
+            {
+                return Json(new { success = false, message = $"Ghế nha có {futureShifts} ca làm việc trong tương lai. Vui lòng hủy phân công trước khi xóa." });
+            }
+
+            // Check ALT-7: Incomplete appointments
+            var incompleteAppts = await _context.Appointments
+                .CountAsync(a => a.DentalChairId == id && a.Status != "Đã khám xong" && a.Status != "Đã hủy");
+
+            if (incompleteAppts > 0)
+            {
+                return Json(new { success = false, message = $"Ghế nha còn {incompleteAppts} lịch hẹn chưa hoàn thành. Vui lòng hủy hoặc chuyển lịch hẹn trước khi xóa." });
+            }
+
+            // Nullify references in historical shifts & appointments for this chair
+            var historicalShifts = await _context.Shifts.Where(s => s.DentalChairId == id).ToListAsync();
+            foreach (var s in historicalShifts) s.DentalChairId = null;
+
+            var historicalAppts = await _context.Appointments.Where(a => a.DentalChairId == id).ToListAsync();
+            foreach (var a in historicalAppts) a.DentalChairId = null;
+
+            _context.DentalChairs.Remove(chair);
+
+            // Log activity
+            var currentUser = User.Identity?.Name ?? "Admin System";
+            _context.ActivityLogs.Add(new ActivityLog
+            {
+                Username = currentUser,
+                Action = "Xóa ghế nha",
+                Details = $"Đã xóa ghế nha: {chair.Name} (Mã: {chair.ChairCode}) thuộc phòng {chair.Clinic?.Name ?? "N/A"}"
+            });
+
+            await _context.SaveChangesAsync();
+
+            return Json(new { success = true, message = "Xóa ghế nha thành công" });
         }
     }
 }

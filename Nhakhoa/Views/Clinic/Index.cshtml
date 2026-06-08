@@ -174,16 +174,22 @@
                         <hr class="my-3 text-light-subtle" />
 
                         <div class="row g-2">
-                            <div class="col-6">
-                                <div class="p-2 bg-light rounded-3 text-center">
-                                    <span class="text-secondary small d-block" style="font-size:0.75rem;">Sức chứa</span>
-                                    <strong class="text-dark fs-6">@clinic.Capacity người</strong>
+                            <div class="col-4">
+                                <div class="p-2 bg-light rounded-3 text-center h-100 d-flex flex-column justify-content-center" style="min-height: 58px;">
+                                    <span class="text-secondary small d-block" style="font-size:0.68rem; line-height: 1.1;">Sức chứa</span>
+                                    <strong class="text-dark mt-1" style="font-size: 0.85rem;">@clinic.Capacity người</strong>
                                 </div>
                             </div>
-                            <div class="col-6">
-                                <div class="p-2 bg-light rounded-3 text-center">
-                                    <span class="text-secondary small d-block" style="font-size:0.75rem;">Ca trực lên lịch</span>
-                                    <strong class="text-primary fs-6">@clinic.Shifts.Count ca</strong>
+                            <div class="col-4">
+                                <div class="p-2 bg-light rounded-3 text-center h-100 d-flex flex-column justify-content-center" style="min-height: 58px;">
+                                    <span class="text-secondary small d-block" style="font-size:0.68rem; line-height: 1.1;">Ghế nha khoa</span>
+                                    <strong class="text-success mt-1" style="font-size: 0.85rem;">@clinic.DentalChairs.Count ghế</strong>
+                                </div>
+                            </div>
+                            <div class="col-4">
+                                <div class="p-2 bg-light rounded-3 text-center h-100 d-flex flex-column justify-content-center" style="min-height: 58px;">
+                                    <span class="text-secondary small d-block" style="font-size:0.68rem; line-height: 1.1;">Ca trực</span>
+                                    <strong class="text-primary mt-1" style="font-size: 0.85rem;">@clinic.Shifts.Count ca</strong>
                                 </div>
                             </div>
                         </div>
@@ -354,7 +360,7 @@
     </div>
 </div>
 
-<!-- Modal: Constraint Error Modal (Không thể xóa phòng khám - ALT-5) -->
+<!-- Modal: Constraint Error Modal (Không thể xóa phòng khám - ALT-2 & ALT-3) -->
 <div class="modal fade" id="constraintModal" tabindex="-1" aria-labelledby="constraintModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-custom">
         <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
@@ -366,18 +372,32 @@
                     </div>
                     <div>
                         <h4 class="fw-bold text-dark mb-1">Không thể xóa phòng khám</h4>
-                        <p class="text-secondary mb-0 mt-0.5">Phòng khám <strong class="text-dark" id="constraintClinicName">"Phòng khám Tim mạch A1"</strong> hiện đang có lịch làm việc trong tương lai.</p>
+                        <p class="text-secondary mb-0 mt-0.5">Phòng khám <strong class="text-dark" id="constraintClinicName">-</strong> còn các ràng buộc dữ liệu hoạt động sau:</p>
                     </div>
                 </div>
 
                 <!-- Constraint Details Cards -->
-                <div class="mt-4 border border-warning-subtle bg-warning-subtle bg-opacity-10 rounded-4 p-3">
-                    <span class="text-warning-emphasis fw-bold text-uppercase small tracking-wider">Lịch làm việc tương lai</span>
-                    <div class="row g-3 mt-1.5 justify-content-center">
-                        <div class="col-8">
-                            <div class="bg-white rounded-3 p-3 border border-light-subtle shadow-xs text-center">
-                                <span class="text-secondary small d-block">Số ca trực bị ràng buộc</span>
-                                <span class="h3 fw-bold text-dark d-block mt-1" id="countShifts">0</span>
+                <div class="mt-4 d-flex flex-column gap-3">
+                    <!-- Appointments constraint -->
+                    <div id="constraintApptsContainer" class="border border-danger-subtle bg-danger-subtle bg-opacity-10 rounded-4 p-3 d-none">
+                        <span class="text-danger-emphasis fw-bold text-uppercase small tracking-wider">Lịch hẹn chưa hoàn thành</span>
+                        <div class="d-flex align-items-center gap-2.5 mt-1">
+                            <i class="bi bi-calendar-x-fill text-danger fs-4"></i>
+                            <div>
+                                <span class="h5 fw-bold text-dark mb-0 d-inline-block" id="countAppts">0</span> lịch hẹn chưa hoàn thành.
+                                <span class="text-secondary small d-block">Vui lòng hủy hoặc chuyển lịch hẹn trước khi xóa.</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Shifts constraint -->
+                    <div id="constraintShiftsContainer" class="border border-warning-subtle bg-warning-subtle bg-opacity-10 rounded-4 p-3 d-none">
+                        <span class="text-warning-emphasis fw-bold text-uppercase small tracking-wider">Lịch làm việc tương lai</span>
+                        <div class="d-flex align-items-center gap-2.5 mt-1">
+                            <i class="bi bi-clock-fill text-warning fs-4"></i>
+                            <div>
+                                <span class="h5 fw-bold text-dark mb-0 d-inline-block" id="countShifts">0</span> ca trực trong tương lai.
+                                <span class="text-secondary small d-block">Vui lòng hủy hoặc chuyển ca trực trước khi xóa.</span>
                             </div>
                         </div>
                     </div>
@@ -387,7 +407,7 @@
                 <div class="mt-4 p-3 bg-light rounded-4 small text-secondary-emphasis d-flex gap-2">
                     <i class="bi bi-lightbulb text-warning fs-5 flex-shrink-0"></i>
                     <div>
-                        <strong>Giải pháp:</strong> Bạn vui lòng hủy hoặc chuyển tất cả các ca trực tương lai thuộc phòng khám này sang không gian thực tế khác trước khi thực hiện xóa vĩnh viễn phòng.
+                        <strong>Lưu ý:</strong> Việc xóa phòng khám sẽ xóa vĩnh viễn tất cả ghế nha thuộc phòng khám này. Hãy đảm bảo tất cả lịch làm việc và lịch hẹn đã được dọn dẹp hoặc chuyển đổi.
                     </div>
                 </div>
 
@@ -430,43 +450,148 @@
     </div>
 </div>
 
-<!-- Modal: View Details Modal -->
+<!-- Modal: View Details Modal with Tabs for Dental Chair Management -->
 <div class="modal fade" id="viewDetailsModal" tabindex="-1" aria-labelledby="viewDetailsModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content border-0 shadow-lg rounded-4">
-            <div class="modal-header border-bottom py-3.5 px-4">
-                <h5 class="modal-title fw-bold text-dark" id="viewDetailsModalLabel">Chi tiết phòng khám</h5>
+            <div class="modal-header border-bottom py-3 px-4">
+                <div>
+                    <h5 class="modal-title fw-bold text-dark" id="viewDetailsModalLabel">Chi tiết phòng khám</h5>
+                    <span class="text-muted small mt-0.5 d-block" id="detailClinicSubtitle">Thiết lập & Ghế nha khoa</span>
+                </div>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <div class="modal-body p-4">
-                <div class="mb-3.5">
-                    <span class="text-secondary small fw-bold text-uppercase tracking-wider">Tên phòng khám</span>
-                    <h5 class="text-dark fw-bold mt-1" id="detailName">-</h5>
-                </div>
-                <div class="row g-3 mb-3.5">
-                    <div class="col-6">
-                        <span class="text-secondary small fw-bold text-uppercase tracking-wider">Vị trí vật lý</span>
-                        <div class="text-dark mt-1 fs-6" id="detailLocation">-</div>
+            <div class="modal-body p-0">
+                <!-- Navigation Tabs -->
+                <ul class="nav nav-tabs px-4 pt-2 border-bottom" id="clinicDetailTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active fw-bold text-secondary px-3 py-2.5 border-0" style="border-bottom: 2px solid transparent !important;" id="general-tab" data-bs-toggle="tab" data-bs-target="#general-panel" type="button" role="tab" aria-controls="general-panel" aria-selected="true">
+                            <i class="bi bi-info-circle me-1.5"></i> Thông tin chung
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link fw-bold text-secondary px-3 py-2.5 border-0" style="border-bottom: 2px solid transparent !important;" id="chairs-tab" data-bs-toggle="tab" data-bs-target="#chairs-panel" type="button" role="tab" aria-controls="chairs-panel" aria-selected="false">
+                            <i class="bi bi-person-workspace me-1.5"></i> Danh sách ghế nha khoa <span class="badge bg-secondary-subtle text-secondary ms-1 small" id="chairsCountBadge">0</span>
+                        </button>
+                    </li>
+                </ul>
+
+                <!-- Tab Content -->
+                <div class="tab-content p-4" id="clinicDetailTabsContent">
+                    <!-- General Panel -->
+                    <div class="tab-pane fade show active" id="general-panel" role="tabpanel" aria-labelledby="general-tab">
+                        <div class="mb-3.5">
+                            <span class="text-secondary small fw-bold text-uppercase tracking-wider">Tên phòng khám</span>
+                            <h5 class="text-dark fw-bold mt-1" id="detailName">-</h5>
+                        </div>
+                        <div class="row g-3 mb-3.5">
+                            <div class="col-6">
+                                <span class="text-secondary small fw-bold text-uppercase tracking-wider">Vị trí vật lý</span>
+                                <div class="text-dark mt-1 fs-6" id="detailLocation">-</div>
+                            </div>
+                            <div class="col-6">
+                                <span class="text-secondary small fw-bold text-uppercase tracking-wider">Chuyên khoa mặc định</span>
+                                <div><span class="badge bg-primary-subtle text-primary px-2 py-1.5 fw-semibold mt-1" id="detailSpecialty">-</span></div>
+                            </div>
+                        </div>
+                        <div class="row g-3">
+                            <div class="col-6">
+                                <span class="text-secondary small fw-bold text-uppercase tracking-wider">Sức chứa tối đa</span>
+                                <h5 class="text-dark fw-bold mt-1" id="detailCapacity">-</h5>
+                            </div>
+                            <div class="col-6">
+                                <span class="text-secondary small fw-bold text-uppercase tracking-wider">Cập nhật lần cuối</span>
+                                <div class="text-dark mt-1 small" id="detailUpdatedAt">-</div>
+                            </div>
+                        </div>
                     </div>
-                    <div class="col-6">
-                        <span class="text-secondary small fw-bold text-uppercase tracking-wider">Chuyên khoa mặc định</span>
-                        <div><span class="badge bg-primary-subtle text-primary px-2 py-1.5 fw-semibold mt-1" id="detailSpecialty">-</span></div>
-                    </div>
-                </div>
-                <div class="row g-3">
-                    <div class="col-6">
-                        <span class="text-secondary small fw-bold text-uppercase tracking-wider">Sức chứa tối đa</span>
-                        <h5 class="text-dark fw-bold mt-1" id="detailCapacity">-</h5>
-                    </div>
-                    <div class="col-6">
-                        <span class="text-secondary small fw-bold text-uppercase tracking-wider">Cập nhật lần cuối</span>
-                        <div class="text-dark mt-1 small" id="detailUpdatedAt">-</div>
+
+                    <!-- Chairs Panel -->
+                    <div class="tab-pane fade" id="chairs-panel" role="tabpanel" aria-labelledby="chairs-tab">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <div>
+                                <h6 class="fw-bold text-dark mb-0">Quản lý ghế nha khoa</h6>
+                                <span class="text-secondary small">Đơn vị phân bác sĩ trực và nhận lịch bệnh nhân</span>
+                            </div>
+                            @if (User.IsInRole("Admin"))
+                            {
+                                <button class="btn btn-primary btn-sm px-3 py-2 fw-semibold d-flex align-items-center gap-1.5 rounded-3" onclick="openCreateChairForm()">
+                                    <i class="bi bi-plus-lg"></i> Thêm ghế nha mới
+                                </button>
+                            }
+                        </div>
+
+                        <!-- Error Alert inside Tab -->
+                        <div id="chairErrorAlert" class="alert alert-danger border-0 rounded-3 p-2.5 mb-3 d-none small">
+                            <i class="bi bi-exclamation-circle-fill me-1"></i> <span id="chairErrorText"></span>
+                        </div>
+
+                        <!-- Chairs Table -->
+                        <div class="table-responsive rounded-3 border">
+                            <table class="table table-hover align-middle mb-0" id="chairsTable">
+                                <thead class="bg-light">
+                                    <tr>
+                                        <th class="small fw-bold text-dark px-3 py-2.5" style="width: 15%">Mã ghế</th>
+                                        <th class="small fw-bold text-dark px-3 py-2.5" style="width: 35%">Tên ghế nha</th>
+                                        <th class="small fw-bold text-dark px-3 py-2.5" style="width: 25%">Trạng thái</th>
+                                        <th class="small fw-bold text-dark px-3 py-2.5 text-end" style="width: 25%">Hành động</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="chairsTableBody">
+                                    <!-- Dynamic content via JS -->
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
             </div>
             <div class="modal-footer border-top py-3 px-4">
                 <button type="button" class="btn btn-secondary px-4 py-2 fw-semibold rounded-3" data-bs-dismiss="modal">Đóng</button>
             </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Add / Edit Dental Chair Form Modal -->
+<div class="modal fade" id="chairFormModal" tabindex="-1" aria-labelledby="chairFormModalLabel" aria-hidden="true" style="z-index: 1060;">
+    <div class="modal-dialog modal-dialog-centered modal-custom">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <div class="modal-header border-bottom py-3 px-4">
+                <h5 class="modal-title fw-bold text-dark" id="chairFormTitle">Thêm ghế nha mới</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="chairForm">
+                <div class="modal-body p-4">
+                    <input type="hidden" id="chairId" value="0" />
+                    <input type="hidden" id="chairClinicId" value="0" />
+
+                    <!-- Code -->
+                    <div class="mb-3">
+                        <label for="chairCode" class="form-label small fw-bold text-dark">Mã ghế nha</label>
+                        <input type="text" class="form-control border-light-subtle rounded-3" id="chairCode" required placeholder="Ví dụ: G01" />
+                        <span class="text-secondary small mt-0.5 d-block" style="font-size:0.75rem;">Mã ghế là duy nhất trong phòng khám và không thể sửa sau khi tạo.</span>
+                    </div>
+
+                    <!-- Name -->
+                    <div class="mb-3">
+                        <label for="chairName" class="form-label small fw-bold text-dark">Tên ghế nha</label>
+                        <input type="text" class="form-control border-light-subtle rounded-3" id="chairName" required placeholder="Ví dụ: Ghế khám tổng quát 1" />
+                    </div>
+
+                    <!-- Status -->
+                    <div class="mb-2">
+                        <label for="chairStatus" class="form-label small fw-bold text-dark">Trạng thái hoạt động</label>
+                        <select class="form-select border-light-subtle rounded-3" id="chairStatus">
+                            <option value="Hoạt động">Hoạt động</option>
+                            <option value="Bảo trì">Bảo trì</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer border-top py-3 px-4">
+                    <button type="button" class="btn btn-light border px-3.5 py-2 fw-semibold rounded-3" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-primary px-4 py-2 fw-semibold rounded-3 shadow-sm">Lưu ghế nha</button>
+                </div>
+            </form>
         </div>
     </div>
 </div>
@@ -539,12 +664,28 @@
         var constraintModalInstance;
         var deleteConfirmModalInstance;
         var viewDetailsModalInstance;
+        var chairFormModalInstance;
+        var currentSelectedClinicId = 0;
 
         $(document).ready(function () {
             offcanvasInstance = new bootstrap.Offcanvas(document.getElementById('clinicEditOffcanvas'));
             constraintModalInstance = new bootstrap.Modal(document.getElementById('constraintModal'));
             deleteConfirmModalInstance = new bootstrap.Modal(document.getElementById('deleteConfirmModal'));
             viewDetailsModalInstance = new bootstrap.Modal(document.getElementById('viewDetailsModal'));
+            chairFormModalInstance = new bootstrap.Modal(document.getElementById('chairFormModal'));
+
+            // Set up AJAX submission for Chair Form
+            $('#chairForm').on('submit', function (e) {
+                e.preventDefault();
+                saveDentalChair(false);
+            });
+
+            // Reset tab to General when details modal is closed
+            $('#viewDetailsModal').on('hidden.bs.modal', function () {
+                var firstTabEl = document.querySelector('#clinicDetailTabs li:first-child button');
+                var tab = new bootstrap.Tab(firstTabEl);
+                tab.show();
+            });
         });
 
         function openCreatePanel() {
@@ -577,6 +718,7 @@
         }
 
         function viewDetails(id) {
+            currentSelectedClinicId = id;
             $.get('/Clinic/DetailsJson/' + id, function (data) {
                 $('#detailName').text(data.name);
                 $('#detailLocation').text(data.location);
@@ -586,18 +728,143 @@
                 $('#detailCapacity').text(data.capacity + ' người tối đa');
                 $('#detailUpdatedAt').text(data.updatedAt);
                 
+                loadDentalChairs(id);
+                
                 viewDetailsModalInstance.show();
             }).fail(function() {
                 alert('Có lỗi xảy ra khi lấy thông tin phòng khám.');
             });
         }
 
+        function loadDentalChairs(clinicId) {
+            $('#chairErrorAlert').addClass('d-none');
+            $('#chairsTableBody').html('<tr><td colspan="4" class="text-center py-3 text-secondary"><div class="spinner-border spinner-border-sm me-2 text-primary" role="status"></div> Đang tải danh sách...</td></tr>');
+            
+            $.get('/Clinic/GetChairsJson?clinicId=' + clinicId, function (data) {
+                $('#chairsCountBadge').text(data.length);
+                if (data.length === 0) {
+                    $('#chairsTableBody').html('<tr><td colspan="4" class="text-center py-4 text-secondary"><i class="bi bi-info-circle me-1"></i> Chưa có ghế nha khoa nào trong phòng này.</td></tr>');
+                    return;
+                }
+
+                var html = '';
+                $.each(data, function (index, chair) {
+                    var statusBadge = chair.status === 'Hoạt động' 
+                        ? '<span class="badge bg-success-subtle text-success px-2.5 py-1.5 rounded-pill fw-semibold small d-inline-flex align-items-center gap-1"><span class="bg-success" style="width:6px; height:6px; border-radius:50%; display:inline-block;"></span> Hoạt động</span>'
+                        : '<span class="badge bg-warning-subtle text-warning px-2.5 py-1.5 rounded-pill fw-semibold small d-inline-flex align-items-center gap-1"><span class="bg-warning" style="width:6px; height:6px; border-radius:50%; display:inline-block;"></span> Bảo trì</span>';
+                    
+                    var actions = '@(User.IsInRole("Admin") ? "true" : "false")' === 'true'
+                        ? '<div class="d-inline-flex gap-1.5">' +
+                          '<button class="btn btn-icon btn-white border rounded-circle" onclick="openEditChairForm(' + chair.id + ', \'' + chair.chairCode + '\', \'' + chair.name + '\', \'' + chair.status + '\')" title="Sửa">' +
+                          '<i class="bi bi-pencil text-warning"></i></button>' +
+                          '<button class="btn btn-icon btn-white border rounded-circle" onclick="deleteDentalChair(' + chair.id + ', \'' + chair.name + '\')" title="Xóa">' +
+                          '<i class="bi bi-trash text-danger"></i></button>' +
+                          '</div>'
+                        : '<span class="text-muted small">Không có quyền</span>';
+
+                    html += '<tr>' +
+                            '<td class="px-3 py-2.5 fw-semibold text-dark">' + chair.chairCode + '</td>' +
+                            '<td class="px-3 py-2.5 text-secondary">' + chair.name + '</td>' +
+                            '<td class="px-3 py-2.5">' + statusBadge + '</td>' +
+                            '<td class="px-3 py-2.5 text-end">' + actions + '</td>' +
+                            '</tr>';
+                });
+                $('#chairsTableBody').html(html);
+            }).fail(function() {
+                $('#chairsTableBody').html('<tr><td colspan="4" class="text-center py-3 text-danger"><i class="bi bi-exclamation-circle me-1"></i> Không thể tải danh sách ghế nha.</td></tr>');
+            });
+        }
+
+        function openCreateChairForm() {
+            $('#chairFormTitle').text('Thêm ghế nha mới');
+            $('#chairId').val(0);
+            $('#chairClinicId').val(currentSelectedClinicId);
+            $('#chairCode').val('').prop('disabled', false).prop('readonly', false);
+            $('#chairName').val('');
+            $('#chairStatus').val('Hoạt động');
+            $('#chairErrorAlert').addClass('d-none');
+            
+            chairFormModalInstance.show();
+        }
+
+        function openEditChairForm(id, code, name, status) {
+            $('#chairFormTitle').text('Chỉnh sửa ghế nha');
+            $('#chairId').val(id);
+            $('#chairClinicId').val(currentSelectedClinicId);
+            $('#chairCode').val(code).prop('disabled', true).prop('readonly', true);
+            $('#chairName').val(name);
+            $('#chairStatus').val(status);
+            $('#chairErrorAlert').addClass('d-none');
+
+            chairFormModalInstance.show();
+        }
+
+        function saveDentalChair(bypassWarning) {
+            var id = $('#chairId').val();
+            var clinicId = $('#chairClinicId').val();
+            var code = $('#chairCode').val();
+            var name = $('#chairName').val();
+            var status = $('#chairStatus').val();
+
+            $.post('/Clinic/SaveChair', {
+                id: id,
+                clinicId: clinicId,
+                chairCode: code,
+                name: name,
+                status: status,
+                bypassWarning: bypassWarning
+            }, function (res) {
+                if (res.success) {
+                    chairFormModalInstance.hide();
+                    loadDentalChairs(currentSelectedClinicId);
+                } else {
+                    if (res.requireConfirm) {
+                        if (confirm(res.message)) {
+                            saveDentalChair(true);
+                        }
+                    } else {
+                        alert(res.message);
+                    }
+                }
+            }).fail(function () {
+                alert('Có lỗi xảy ra khi lưu thông tin ghế nha.');
+            });
+        }
+
+        function deleteDentalChair(id, name) {
+            if (confirm('Bạn có chắc chắn muốn xóa vĩnh viễn ghế nha "' + name + '"?')) {
+                $.post('/Clinic/DeleteChair', { id: id }, function (res) {
+                    if (res.success) {
+                        loadDentalChairs(currentSelectedClinicId);
+                    } else {
+                        alert(res.message);
+                    }
+                }).fail(function () {
+                    alert('Có lỗi xảy ra khi xóa ghế nha.');
+                });
+            }
+        }
+
         function confirmDelete(id) {
             $.get('/Clinic/GetDeleteConstraints/' + id, function (data) {
                 if (data.hasConstraints) {
-                    // Show blocker modal for future shifts
                     $('#constraintClinicName').text('"' + data.clinicName + '"');
-                    $('#countShifts').text(String(data.futureShifts).padStart(2, '0'));
+                    
+                    // Display appointments constraint (ALT-2)
+                    if (data.incompleteAppointments > 0) {
+                        $('#countAppts').text(data.incompleteAppointments);
+                        $('#constraintApptsContainer').removeClass('d-none');
+                    } else {
+                        $('#constraintApptsContainer').addClass('d-none');
+                    }
+
+                    // Display shifts constraint (ALT-3)
+                    if (data.futureShifts > 0) {
+                        $('#countShifts').text(data.futureShifts);
+                        $('#constraintShiftsContainer').removeClass('d-none');
+                    } else {
+                        $('#constraintShiftsContainer').addClass('d-none');
+                    }
                     
                     constraintModalInstance.show();
                 } else {
@@ -608,7 +875,7 @@
                     deleteConfirmModalInstance.show();
                 }
             }).fail(function() {
-                alert('Có lỗi xảy ra khi kiểm tra ca trực.');
+                alert('Có lỗi xảy ra khi kiểm tra ràng buộc.');
             });
         }
     </script>

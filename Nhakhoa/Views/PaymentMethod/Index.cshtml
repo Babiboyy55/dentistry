@@ -1,0 +1,535 @@
+@model IEnumerable<Nhakhoa.Models.PaymentMethod>
+@{
+    ViewData["Title"] = "Cấu hình thanh toán";
+    Layout = "~/Views/Shared/_AdminLayout.cshtml";
+}
+
+<div class="container-fluid px-0">
+    <!-- Header Section -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h2 fw-bold text-dark mb-1">Cấu hình thanh toán</h1>
+            <p class="text-secondary mb-0">Thiết lập phương thức thanh toán và tích hợp cổng thanh toán trực tuyến cho hệ thống tài chính</p>
+        </div>
+    </div>
+
+    <!-- Alert Message Banner -->
+    <div id="statusAlert" class="alert alert-success border-0 rounded-4 p-3 mb-4 d-flex align-items-center gap-3 d-none">
+        <div class="alert-icon bg-success text-white rounded-circle d-grid place-items-center flex-shrink-0" style="width: 32px; height: 32px;">
+            <i class="bi bi-check-lg fs-5"></i>
+        </div>
+        <div>
+            <span class="fw-semibold text-success-emphasis" id="statusAlertTitle">Thành công!</span>
+            <span class="text-secondary-emphasis small mt-0.5 d-block" id="statusAlertMessage"></span>
+        </div>
+    </div>
+
+    <div class="row g-4 mb-5">
+        <!-- Left Column: Payment Methods List -->
+        <div class="col-12 col-lg-7">
+            <div class="card border-0 shadow-sm rounded-4 p-4 bg-white h-100">
+                <h5 class="fw-bold text-dark mb-4 d-flex align-items-center gap-2">
+                    <i class="bi bi-wallet2 text-primary"></i> Danh sách phương thức thanh toán
+                </h5>
+
+                <div class="d-flex flex-column gap-3.5">
+                    @foreach (var method in Model)
+                    {
+                        var iconClass = "bi-cash text-success bg-success-subtle";
+                        if (method.Code == "BANK") iconClass = "bi-bank text-primary bg-primary-subtle";
+                        else if (method.Code == "VNPAY") iconClass = "bi-credit-card text-info bg-info-subtle";
+                        else if (method.Code == "MOMO") iconClass = "bi-phone text-danger bg-danger-subtle";
+                        else if (method.Code == "INSURANCE") iconClass = "bi-shield-check text-warning bg-warning-subtle";
+
+                        <div class="payment-method-row border rounded-4 p-3.5 d-flex flex-column flex-sm-row justify-content-between align-sm-items-center gap-3 bg-white" style="transition: all 0.2s;">
+                            <!-- Info Section -->
+                            <div class="d-flex align-items-center gap-3.5">
+                                <div class="payment-icon rounded-circle d-grid place-items-center flex-shrink-0" style="width: 46px; height: 46px; font-size: 1.3rem;">
+                                    <i class="bi @iconClass.Split(' ')[0] @iconClass.Split(' ')[1]"></i>
+                                </div>
+                                <div>
+                                    <div class="d-flex align-items-center gap-2">
+                                        <strong class="text-dark">@method.Name</strong>
+                                        <span class="badge bg-light text-secondary border small rounded-pill">@method.Code</span>
+                                    </div>
+                                    <div class="text-secondary small mt-0.5" style="font-size: 0.78rem;">
+                                        @if (method.IsDigitalGateway)
+                                        {
+                                            <span>Môi trường: <strong>@(method.Environment ?? "Chưa cấu hình")</strong> • Endpoint: <span class="text-truncate d-inline-block align-bottom" style="max-width: 180px;" title="@method.EndpointUrl">@method.EndpointUrl</span></span>
+                                        }
+                                        else
+                                        {
+                                            <span>Xử lý trực tiếp tại lễ tân / quầy thanh toán</span>
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Controls Section -->
+                            <div class="d-flex align-items-center gap-3 justify-content-between justify-content-sm-end">
+                                <!-- Status Toggle switch -->
+                                <div class="form-check form-switch ps-0 mb-0 d-flex align-items-center gap-2">
+                                    <input class="form-check-input form-switch-lg cursor-pointer m-0" type="checkbox" role="switch" 
+                                           id="toggle-@method.Id" @(method.IsEnabled ? "checked" : "") onchange="toggleMethod(@method.Id)" />
+                                    <label class="form-check-label small fw-semibold text-secondary cursor-pointer" for="toggle-@method.Id">
+                                        @(method.IsEnabled ? "Bật" : "Tắt")
+                                    </label>
+                                </div>
+
+                                @if (method.IsDigitalGateway)
+                                {
+                                    <div class="d-inline-flex gap-1.5 border-start ps-3 py-1">
+                                        <button class="btn btn-sm btn-outline-primary fw-semibold rounded-3" onclick="openConfigPanel(@method.Id, '@method.Name', '@method.MerchantId', '@method.SecretKey', '@method.Environment', '@method.EndpointUrl')">
+                                            <i class="bi bi-gear"></i> Cấu hình
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-secondary fw-semibold rounded-3" onclick="triggerEnvironmentSwitch(@method.Id, '@method.Name', '@method.Environment')">
+                                            <i class="bi bi-arrow-left-right"></i> Chuyển môi trường
+                                        </button>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Column: Settings Panel (VNPAY / MOMO) -->
+        <div class="col-12 col-lg-5" id="configCardContainer" style="display:none;">
+            <div class="card border-0 shadow-sm rounded-4 p-4 bg-white sticky-top" style="top: 84px; border: 1px solid #f0f2f5 !important;">
+                <div class="d-flex justify-content-between align-items-start mb-4">
+                    <div>
+                        <h5 class="fw-bold text-dark mb-0 d-flex align-items-center gap-2">
+                            <i class="bi bi-gear-wide-connected text-primary"></i> Thiết lập cổng: <span id="panelGatewayName">-</span>
+                        </h5>
+                        <p class="text-secondary small mb-0 mt-0.5">Nhập credentials và endpoint url của nhà cung cấp</p>
+                    </div>
+                    <button type="button" class="btn-close text-secondary" onclick="closeConfigPanel()"></button>
+                </div>
+
+                <form id="gatewayForm">
+                    <input type="hidden" id="configGatewayId" value="0" />
+
+                    <!-- Merchant ID -->
+                    <div class="mb-3">
+                        <label for="inputMerchantId" class="form-label small fw-bold text-dark">Merchant ID / Partner Code</label>
+                        <input type="text" class="form-control border-light-subtle fs-6 rounded-3" id="inputMerchantId" required placeholder="Nhập mã Merchant..." oninput="resetConnectionStatus()" />
+                    </div>
+
+                    <!-- Secret Key -->
+                    <div class="mb-3">
+                        <label for="inputSecretKey" class="form-label small fw-bold text-dark">Secret Key (AES-256)</label>
+                        <div class="input-group">
+                            <input type="password" class="form-control border-light-subtle fs-6 rounded-start-3" id="inputSecretKey" required placeholder="Nhập Secret Key..." oninput="resetConnectionStatus()" />
+                            <button class="btn btn-outline-secondary border-light-subtle rounded-end-3" type="button" onclick="togglePasswordVisibility()"><i class="bi bi-eye" id="togglePasswordIcon"></i></button>
+                        </div>
+                    </div>
+
+                    <!-- Environment radio selection -->
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-dark d-block">Môi trường hoạt động</label>
+                        <div class="d-flex gap-4">
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="configEnvironment" id="envSandbox" value="Sandbox" checked onchange="onEnvironmentFormChange('Sandbox')" />
+                                <label class="form-check-label small text-secondary fw-medium" for="envSandbox">
+                                    Sandbox (Thử nghiệm)
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="configEnvironment" id="envProduction" value="Production" onchange="onEnvironmentFormChange('Production')" />
+                                <label class="form-check-label small text-secondary fw-medium" for="envProduction">
+                                    Production (Giao dịch thực)
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Endpoint URL -->
+                    <div class="mb-3.5">
+                        <label for="inputEndpointUrl" class="form-label small fw-bold text-dark">Endpoint URL</label>
+                        <input type="url" class="form-control border-light-subtle fs-6 rounded-3" id="inputEndpointUrl" required placeholder="https://..." oninput="resetConnectionStatus()" />
+                    </div>
+
+                    <!-- Connection Testing Alert Section -->
+                    <div id="connectionStatusAlert" class="alert border-0 rounded-3 p-3 mb-4 d-none small">
+                        <div class="d-flex align-items-start gap-2.5">
+                            <i class="bi fs-5 flex-shrink-0" id="connectionAlertIcon"></i>
+                            <div>
+                                <strong id="connectionAlertTitle"></strong>
+                                <span class="d-block mt-0.5 text-secondary-emphasis" id="connectionAlertMessage"></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Action buttons -->
+                    <div class="d-flex gap-2.5 justify-content-end pt-2 border-top">
+                        <button type="button" class="btn btn-outline-primary px-3.5 py-2.5 fw-semibold rounded-3 d-flex align-items-center gap-1.5" onclick="testConnection()">
+                            <i class="bi bi-broadcast"></i> Kiểm tra kết nối
+                        </button>
+                        <button type="button" id="btnSaveConfig" disabled class="btn btn-primary px-4 py-2.5 fw-semibold rounded-3 shadow-sm d-flex align-items-center gap-1.5" onclick="saveConfiguration()">
+                            <i class="bi bi-save"></i> Lưu cấu hình
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Audit logs widget -->
+    <div class="card border-0 shadow-sm rounded-4 p-4 bg-white mb-4">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h5 class="fw-bold text-dark mb-0 d-flex align-items-center gap-2">
+                <i class="bi bi-clock-history text-primary"></i> Nhật ký hoạt động thanh toán
+            </h5>
+            <span class="text-muted small">Cập nhật thời gian thực</span>
+        </div>
+
+        <div class="timeline-wrapper">
+            @if (ViewBag.AuditLogs == null || !((List<Nhakhoa.Models.ActivityLog>)ViewBag.AuditLogs).Any())
+            {
+                <p class="text-secondary small py-2 mb-0">Không có nhật ký hoạt động nào gần đây về cấu hình thanh toán.</p>
+            }
+            else
+            {
+                <div class="position-relative ps-4 border-start border-light-subtle d-flex flex-column gap-4 py-2">
+                    @foreach (var log in (List<Nhakhoa.Models.ActivityLog>)ViewBag.AuditLogs)
+                    {
+                        var iconClass = "bi-gear-fill text-primary bg-primary-subtle";
+                        if (log.Action.Contains("Chuyển đổi"))
+                            iconClass = "bi-arrow-left-right text-info bg-info-subtle";
+                        else if (log.Action.Contains("Tắt"))
+                            iconClass = "bi-x-circle-fill text-danger bg-danger-subtle";
+                        else if (log.Action.Contains("Bật"))
+                            iconClass = "bi-check-circle-fill text-success bg-success-subtle";
+
+                        <div class="timeline-item position-relative">
+                            <div class="timeline-dot position-absolute @iconClass rounded-circle d-grid place-items-center" style="left: -33px; top: 0px; width: 26px; height: 26px; font-size: 0.8rem; border: 4px solid #fff; box-shadow: 0 0 0 1px #eef0f7;">
+                                <i class="bi @iconClass.Split(' ')[0]"></i>
+                            </div>
+                            
+                            <div>
+                                <div class="small fw-semibold text-dark">
+                                    Admin <span class="text-primary">@log.Username</span> @log.Details
+                                </div>
+                                <div class="text-secondary small mt-0.5" style="font-size: 0.75rem;">
+                                    @log.Timestamp.ToString("dd/MM/yyyy HH:mm") • Cấu hình tài chính
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Confirm Disable CASH (EX-5.1.3) -->
+<div class="modal fade" id="cashDisableConfirmModal" tabindex="-1" aria-labelledby="cashDisableConfirmModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-custom">
+        <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+            <div class="modal-body p-4.5">
+                <div class="d-flex align-items-start gap-3.5">
+                    <div class="modal-warning-icon bg-warning-subtle text-warning rounded-circle d-grid place-items-center flex-shrink-0" style="width: 50px; height: 50px;">
+                        <i class="bi bi-exclamation-triangle fs-4"></i>
+                    </div>
+                    <div>
+                        <h4 class="fw-bold text-dark mb-1">Ràng buộc phương thức tiền mặt</h4>
+                        <p class="text-secondary mb-0 mt-0.5" id="cashWarningMessage">-</p>
+                    </div>
+                </div>
+                <p class="text-danger small mt-3 mb-0">Hủy phương thức này sẽ chặn các hóa đơn chờ thanh toán bằng tiền mặt. Vui lòng xử lý hóa đơn trước hoặc xác nhận ghi đè.</p>
+                <div class="mt-4.5 d-flex gap-2.5 justify-content-end">
+                    <button type="button" class="btn btn-outline-secondary px-4 py-2.5 fw-semibold rounded-3" data-bs-dismiss="modal" onclick="resetCashToggleSwitch()">Hủy</button>
+                    <button type="button" class="btn btn-warning px-4 py-2.5 fw-semibold rounded-3 shadow-sm" onclick="confirmDisableCash()">
+                        Đồng ý tắt
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Confirm Environment Switch (Luồng 5.3) -->
+<div class="modal fade" id="envSwitchModal" tabindex="-1" aria-labelledby="envSwitchModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-custom">
+        <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+            <div class="modal-body p-4.5">
+                <div class="d-flex align-items-start gap-3.5">
+                    <div class="modal-warning-icon bg-danger-subtle text-danger rounded-circle d-grid place-items-center flex-shrink-0" style="width: 50px; height: 50px;">
+                        <i class="bi bi-exclamation-triangle-fill fs-4"></i>
+                    </div>
+                    <div>
+                        <h4 class="fw-bold text-dark mb-1">Cảnh báo: Chuyển môi trường</h4>
+                        <p class="text-secondary mb-0 mt-0.5">Bạn đang thực hiện chuyển đổi môi trường cho cổng <strong class="text-dark" id="envSwitchGatewayName">-</strong>.</p>
+                    </div>
+                </div>
+                <div class="alert border-0 rounded-3 bg-danger-subtle bg-opacity-10 text-danger-emphasis p-3 mt-3.5 small">
+                    <i class="bi bi-shield-fill-exclamation me-1.5"></i>
+                    <strong>Quan trọng:</strong> Chuyển sang môi trường <strong>Production</strong> sẽ thực hiện kết nối trực tiếp đến các endpoint thanh toán thương mại thực tế và phát sinh giao dịch tiền tệ thật.
+                </div>
+                <input type="hidden" id="envSwitchId" value="0" />
+                <input type="hidden" id="envTargetVal" value="" />
+                <div class="mt-4.5 d-flex gap-2.5 justify-content-end">
+                    <button type="button" class="btn btn-outline-secondary px-4 py-2.5 fw-semibold rounded-3" data-bs-dismiss="modal">Hủy</button>
+                    <button type="button" class="btn btn-danger px-4 py-2.5 fw-semibold rounded-3 shadow-sm" onclick="confirmEnvironmentSwitch()">
+                        Xác nhận chuyển
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .payment-method-row:hover {
+        border-color: var(--bs-primary) !important;
+        box-shadow: 0 4px 12px rgba(13, 110, 253, 0.05);
+    }
+    
+    .form-switch-lg {
+        width: 2.8em !important;
+        height: 1.5em !important;
+    }
+    .cursor-pointer {
+        cursor: pointer;
+    }
+</style>
+
+@section Scripts {
+    <script>
+        var cashModalInstance;
+        var envModalInstance;
+        var isConnectionTested = false;
+        var cashToggleId = 0;
+
+        $(document).ready(function () {
+            cashModalInstance = new bootstrap.Modal(document.getElementById('cashDisableConfirmModal'));
+            envModalInstance = new bootstrap.Modal(document.getElementById('envSwitchModal'));
+        });
+
+        // 1. Toggles Payment Method status
+        function toggleMethod(id, bypass) {
+            var inputToggle = $('#toggle-' + id);
+            var isChecked = inputToggle.prop('checked');
+            
+            // Revert state visually until backend confirms
+            inputToggle.prop('checked', !isChecked);
+
+            $.post('/PaymentMethod/ToggleStatus', { id: id, bypassWarning: bypass || false }, function (res) {
+                if (res.success) {
+                    inputToggle.prop('checked', res.isEnabled);
+                    inputToggle.siblings('label').text(res.isEnabled ? 'Bật' : 'Tắt');
+                    showToast(res.message, 'success');
+                } else {
+                    if (res.requireConfirm) {
+                        cashToggleId = id;
+                        $('#cashWarningMessage').text(res.message);
+                        cashModalInstance.show();
+                    } else {
+                        alert(res.message);
+                    }
+                }
+            }).fail(function () {
+                alert('Có lỗi xảy ra khi cập nhật trạng thái.');
+            });
+        }
+
+        function resetCashToggleSwitch() {
+            if (cashToggleId > 0) {
+                $('#toggle-' + cashToggleId).prop('checked', true);
+                $('#toggle-' + cashToggleId).siblings('label').text('Bật');
+                cashToggleId = 0;
+            }
+        }
+
+        function confirmDisableCash() {
+            cashModalInstance.hide();
+            if (cashToggleId > 0) {
+                toggleMethod(cashToggleId, true); // retry with bypassWarning = true
+                cashToggleId = 0;
+            }
+        }
+
+        // 2. Slide Config Panel
+        function openConfigPanel(id, name, merchantId, secretKey, env, url) {
+            $('#configGatewayId').val(id);
+            $('#panelGatewayName').text(name);
+            $('#inputMerchantId').val(merchantId || '');
+            $('#inputSecretKey').val(secretKey || '');
+            $('#inputEndpointUrl').val(url || '');
+
+            if (env === 'Production') {
+                $('#envProduction').prop('checked', true);
+            } else {
+                $('#envSandbox').prop('checked', true);
+            }
+
+            resetConnectionStatus();
+            $('#configCardContainer').slideDown();
+        }
+
+        function closeConfigPanel() {
+            $('#configCardContainer').slideUp();
+        }
+
+        function resetConnectionStatus() {
+            isConnectionTested = false;
+            $('#btnSaveConfig').prop('disabled', true);
+            $('#connectionStatusAlert').addClass('d-none');
+        }
+
+        function togglePasswordVisibility() {
+            var input = $('#inputSecretKey');
+            var icon = $('#togglePasswordIcon');
+            if (input.attr('type') === 'password') {
+                input.attr('type', 'text');
+                icon.removeClass('bi-eye').addClass('bi-eye-slash');
+            } else {
+                input.attr('type', 'password');
+                icon.removeClass('bi-eye-slash').addClass('bi-eye');
+            }
+        }
+
+        // 3. Connection Test (Sandbox / Production endpoint testing)
+        function testConnection() {
+            var endpoint = $('#inputEndpointUrl').val();
+            var merchantId = $('#inputMerchantId').val();
+            var secretKey = $('#inputSecretKey').val();
+
+            if (!endpoint || !merchantId || !secretKey) {
+                alert('Vui lòng nhập đầy đủ Merchant ID, Secret Key và Endpoint URL.');
+                return;
+            }
+
+            $('#connectionStatusAlert').removeClass('d-none alert-success alert-danger')
+                .addClass('alert-secondary')
+                .find('#connectionAlertTitle').text('Đang kết nối...');
+            $('#connectionStatusAlert').find('#connectionAlertMessage').text('Vui lòng đợi trong giây lát...');
+            $('#connectionAlertIcon').removeClass('bi-check-circle-fill bi-x-circle-fill text-success text-danger')
+                .addClass('bi-arrow-repeat spin text-secondary');
+
+            $.post('/PaymentMethod/TestConnection', {
+                endpointUrl: endpoint,
+                merchantId: merchantId,
+                secretKey: secretKey
+            }, function (res) {
+                $('#connectionStatusAlert').removeClass('alert-secondary');
+                $('#connectionAlertIcon').removeClass('bi-arrow-repeat spin text-secondary');
+
+                if (res.success) {
+                    isConnectionTested = true;
+                    $('#btnSaveConfig').prop('disabled', false); // ENABLE SAVE CONFIG (EX-5.1.1)
+
+                    $('#connectionStatusAlert').addClass('alert-success');
+                    $('#connectionAlertIcon').addClass('bi-check-circle-fill text-success');
+                    $('#connectionStatusAlert').find('#connectionAlertTitle').text('Kết nối thành công!');
+                    $('#connectionStatusAlert').find('#connectionAlertMessage').text(res.message);
+                } else {
+                    isConnectionTested = false;
+                    $('#btnSaveConfig').prop('disabled', true); // KEEP DISABLED (EX-5.1.2)
+
+                    $('#connectionStatusAlert').addClass('alert-danger');
+                    $('#connectionAlertIcon').addClass('bi-x-circle-fill text-danger');
+                    $('#connectionStatusAlert').find('#connectionAlertTitle').text('Kết nối thất bại');
+                    $('#connectionStatusAlert').find('#connectionAlertMessage').text(res.message);
+                }
+            }).fail(function () {
+                isConnectionTested = false;
+                $('#btnSaveConfig').prop('disabled', true);
+                $('#connectionStatusAlert').removeClass('alert-secondary').addClass('alert-danger');
+                $('#connectionAlertIcon').removeClass('bi-arrow-repeat spin').addClass('bi-x-circle-fill text-danger');
+                $('#connectionStatusAlert').find('#connectionAlertTitle').text('Lỗi hệ thống');
+                $('#connectionStatusAlert').find('#connectionAlertMessage').text('Không thể gửi request kết nối.');
+            });
+        }
+
+        // 4. Save Configuration
+        function saveConfiguration() {
+            if (!isConnectionTested) {
+                alert('Vui lòng kiểm tra kết nối sandbox thành công trước khi lưu.');
+                return;
+            }
+
+            var id = $('#configGatewayId').val();
+            var merchantId = $('#inputMerchantId').val();
+            var secretKey = $('#inputSecretKey').val();
+            var environment = $('input[name="configEnvironment"]:checked').val();
+            var endpoint = $('#inputEndpointUrl').val();
+
+            $.post('/PaymentMethod/SaveConfig', {
+                id: id,
+                merchantId: merchantId,
+                secretKey: secretKey,
+                environment: environment,
+                endpointUrl: endpoint
+            }, function (res) {
+                if (res.success) {
+                    showToast(res.message, 'success');
+                    setTimeout(function() {
+                        location.reload();
+                    }, 1000);
+                } else {
+                    alert(res.message);
+                }
+            }).fail(function () {
+                alert('Có lỗi xảy ra khi lưu cấu hình.');
+            });
+        }
+
+        // 5. Environment Swapper (Sandbox ↔ Production)
+        function triggerEnvironmentSwitch(id, name, currentEnv) {
+            var targetEnv = currentEnv === 'Sandbox' ? 'Production' : 'Sandbox';
+            $('#envSwitchId').val(id);
+            $('#envTargetVal').val(targetEnv);
+            $('#envSwitchGatewayName').text(name + ' (Chuyển sang: ' + targetEnv + ')');
+
+            envModalInstance.show();
+        }
+
+        function confirmEnvironmentSwitch() {
+            envModalInstance.hide();
+            var id = $('#envSwitchId').val();
+            var env = $('#envTargetVal').val();
+
+            $.post('/PaymentMethod/SwitchEnvironment', { id: id, environment: env }, function (res) {
+                if (res.success) {
+                    showToast(res.message, 'success');
+                    setTimeout(function() {
+                        location.reload();
+                    }, 1000);
+                } else {
+                    alert(res.message);
+                }
+            }).fail(function () {
+                alert('Có lỗi xảy ra khi chuyển môi trường.');
+            });
+        }
+
+        // 6. Handles Default URL Mapping when Radio Selection changes
+        function onEnvironmentFormChange(env) {
+            resetConnectionStatus();
+            var gatewayId = $('#configGatewayId').val();
+            var gatewayName = $('#panelGatewayName').text();
+            
+            // Map default endpoints automatically for convenience
+            if (gatewayName.includes('VNPay')) {
+                $('#inputEndpointUrl').val(env === 'Production' 
+                    ? 'https://pay.vnpay.vn/paymentv2/vpcpay.html' 
+                    : 'https://sandbox.vnpayment.vn/paymentv2/vpcpay.html');
+            } else if (gatewayName.includes('MoMo')) {
+                $('#inputEndpointUrl').val(env === 'Production' 
+                    ? 'https://payment.momo.vn/v2/gateway/api/create' 
+                    : 'https://test-payment.momo.vn/v2/gateway/api/create');
+            }
+        }
+
+        // Helpers: Toast Notification
+        function showToast(message, type) {
+            $('#statusAlertMessage').text(message);
+            $('#statusAlert').removeClass('d-none');
+            setTimeout(function() {
+                $('#statusAlert').addClass('d-none');
+            }, 4000);
+        }
+    </script>
+}

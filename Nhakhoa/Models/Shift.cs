@@ -1,5 +1,6 @@
 using System;
 using System.ComponentModel.DataAnnotations;
+using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
 
 namespace Nhakhoa.Models
 {
@@ -15,6 +16,10 @@ namespace Nhakhoa.Models
         [Required]
         public int StaffProfileId { get; set; }
         public StaffProfile StaffProfile { get; set; } = null!;
+
+        public int? DentalChairId { get; set; }
+        [ValidateNever]
+        public DentalChair? DentalChair { get; set; }
 
         [Required]
         public DateTime ShiftDate { get; set; }

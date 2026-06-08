@@ -20,6 +20,15 @@
     <div class="alert alert-danger border-0 rounded-4 py-2 px-3 mb-4">
         <i class="bi bi-exclamation-triangle-fill me-2"></i>
         Vui lòng sửa các lỗi bên dưới hoặc chọn một khung giờ khác.
+        <ul class="mb-0 mt-2 small">
+            @foreach (var state in ViewData.ModelState)
+            {
+                foreach (var err in state.Value.Errors)
+                {
+                    <li>@state.Key: @err.ErrorMessage</li>
+                }
+            }
+        </ul>
     </div>
 }
 
@@ -298,35 +307,44 @@
 
         if (!dr || !dt || !ss) return;
 
-        grid.innerHTML = '<div class="col-12 text-muted small">Đang tải các khung giờ trống...</div>';
+        grid.innerHTML = '<div class="col-12 text-muted small"><i class="bi bi-hourglass-split me-1"></i>Đang tải các khung giờ trống...</div>';
         timeSlotInput.value = '';
+        st.innerHTML = '';
 
-        const res = await fetch(`/Appointment/AvailableSlots?staffProfileId=${dr}&date=${dt}&session=${encodeURIComponent(ss)}`);
-        const slots = await res.json();
+        try {
+            const res = await fetch(`/Appointment/AvailableSlots?staffProfileId=${dr}&date=${dt}&session=${encodeURIComponent(ss)}`);
+            if (!res.ok) {
+                grid.innerHTML = '<div class="col-12"><div class="alert alert-danger border-0 rounded-3 py-2 small"><i class="bi bi-exclamation-triangle-fill me-2"></i>Không thể tải khung giờ. Ca trực hoặc dữ liệu không hợp lệ. Vui lòng chọn lại bác sĩ và ca làm việc.</div></div>';
+                return;
+            }
+            const slots = await res.json();
 
-        grid.innerHTML = '';
-        if (!slots.length) {
-            grid.innerHTML = '<div class="col-12 text-danger small">Hết khung giờ trống trong ca trực này. Vui lòng chọn ca trực hoặc bác sĩ khác.</div>';
-            st.innerHTML = '';
-        } else {
-            slots.forEach(s => {
-                const col = document.createElement('div');
-                col.className = 'col-6 col-sm-4 col-md-3';
-                col.innerHTML = `<button type="button" class="btn btn-outline-primary w-100 rounded-3 py-2 small text-nowrap slot-btn">${s}</button>`;
-                
-                const btn = col.querySelector('.slot-btn');
-                btn.onclick = () => {
-                    document.querySelectorAll('.slot-btn').forEach(b => b.classList.remove('active', 'btn-primary'));
-                    document.querySelectorAll('.slot-btn').forEach(b => b.classList.add('btn-outline-primary'));
+            grid.innerHTML = '';
+            if (!slots.length) {
+                grid.innerHTML = '<div class="col-12 text-danger small">Hết khung giờ trống trong ca trực này. Vui lòng chọn ca trực hoặc bác sĩ khác.</div>';
+                st.innerHTML = '';
+            } else {
+                slots.forEach(s => {
+                    const col = document.createElement('div');
+                    col.className = 'col-6 col-sm-4 col-md-3';
+                    col.innerHTML = `<button type="button" class="btn btn-outline-primary w-100 rounded-3 py-2 small text-nowrap slot-btn">${s}</button>`;
                     
-                    btn.classList.remove('btn-outline-primary');
-                    btn.classList.add('active', 'btn-primary');
-                    
-                    timeSlotInput.value = s;
-                };
-                grid.appendChild(col);
-            });
-            st.innerHTML = `<div class="text-success small"><i class="bi bi-clock-history me-1"></i>Còn lại ${slots.length} khung giờ trống.</div>`;
+                    const btn = col.querySelector('.slot-btn');
+                    btn.onclick = () => {
+                        document.querySelectorAll('.slot-btn').forEach(b => b.classList.remove('active', 'btn-primary'));
+                        document.querySelectorAll('.slot-btn').forEach(b => b.classList.add('btn-outline-primary'));
+                        
+                        btn.classList.remove('btn-outline-primary');
+                        btn.classList.add('active', 'btn-primary');
+                        
+                        timeSlotInput.value = s;
+                    };
+                    grid.appendChild(col);
+                });
+                st.innerHTML = `<div class="text-success small"><i class="bi bi-clock-history me-1"></i>Còn lại ${slots.length} khung giờ trống.</div>`;
+            }
+        } catch (err) {
+            grid.innerHTML = '<div class="col-12"><div class="alert alert-warning border-0 rounded-3 py-2 small"><i class="bi bi-wifi-off me-2"></i>Lỗi kết nối khi tải khung giờ. Vui lòng thử lại.</div></div>';
         }
     }
 
@@ -380,11 +398,14 @@
             btn.onclick = () => {
                 const doctorSelect = document.getElementById('doctorSelect');
                 const apptDate = document.getElementById('apptDate');
-                if (doctorSelect) doctorSelect.value = d.staffProfileId;
+                if (doctorSelect) {
+                    doctorSelect.value = d.staffProfileId;
+                    // Dispatch change event so loadDoctorShifts() picks it up
+                    doctorSelect.dispatchEvent(new Event('change'));
+                }
                 if (apptDate && doctorDate && apptDate.value !== doctorDate.value) {
                     apptDate.value = doctorDate.value;
                 }
-                loadDoctorShifts();
             };
 
             list.appendChild(col);

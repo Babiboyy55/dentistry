@@ -1,11 +1,12 @@
 @model List<Nhakhoa.Models.ActivityLog>
 @{
-    ViewData["Title"] = "Nhật ký hoạt động";
-    
+    ViewData["Title"] = "Cảnh báo bảo mật";
+    Layout = "~/Views/Shared/_AdminLayout.cshtml";
+
     // Stats calculation
-    var totalLogs = Model.Count;
-    var todayLogs = Model.Count(l => l.Timestamp.Date == DateTime.Today);
-    var securityLogs = Model.Count(l => l.Action.Contains("quyền") || l.Action.Contains("Khóa") || l.Action.Contains("Cấp lại mật khẩu"));
+    var totalAlerts = Model.Count;
+    var todayAlerts = Model.Count(l => l.Timestamp.Date == DateTime.Today);
+    var lockedCount = ViewBag.LockedCount ?? 0;
 }
 
 <style>
@@ -16,7 +17,7 @@
         display: flex;
         gap: 0;
         min-height: 100vh;
-        margin: -24px;
+        margin: -24px; /* offset main container padding to align sidebar */
     }
     
     .rbac-sidebar-nav {
@@ -80,9 +81,9 @@
         font-size: 1.25rem;
         flex-shrink: 0;
     }
-    .stat-icon.blue { background: #edf4ff; color: #0d6efd; }
-    .stat-icon.green { background: #d4edda; color: #155724; }
+    .stat-icon.red { background: #fde8e8; color: #dc3545; }
     .stat-icon.orange { background: #fff3cd; color: #856404; }
+    .stat-icon.dark { background: #e2e3e5; color: #383d41; }
     
     .stat-content h3 {
         font-size: 0.72rem;
@@ -209,12 +210,10 @@
         display: inline-block;
     }
     
-    .badge-success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
-    .badge-primary { background: #edf4ff; color: #0d6efd; border: 1px solid #b3d7ff; }
-    .badge-warning { background: #fff3cd; color: #856404; border: 1px solid #ffeeba; }
     .badge-danger { background: #fde8e8; color: #dc3545; border: 1px solid #f8b4b4; }
+    .badge-warning { background: #fff3cd; color: #856404; border: 1px solid #ffeeba; }
     .badge-secondary { background: #e2e3e5; color: #383d41; border: 1px solid #d6d8db; }
-    .badge-indigo { background: #ede7f6; color: #512da8; border: 1px solid #d1c4e9; }
+    .badge-success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
 
     .sidebar-link {
         display: flex;
@@ -239,10 +238,12 @@
     }
 
     @@media (max-width: 768px) {
-        .rbac-container { padding: 20px 16px; }
+        .rbac-page-wrapper { flex-direction: column; margin: 0; }
+        .rbac-sidebar-nav { width: 100%; border-right: none; border-bottom: 1px solid #dee2e6; }
+        .rbac-container { padding: 16px 12px; }
         .rbac-header-section { flex-direction: column; }
         .stats-grid { grid-template-columns: 1fr; }
-        .filter-bar { flex-direction: column; align-items: stretch; gap: 12px; }
+        .filter-bar { flex-direction: column; align-items: stretch; gap: 10px; }
         .filter-select { width: 100%; }
     }
 </style>
@@ -261,10 +262,10 @@
             <a href="/RolePermission" class="sidebar-link">
                 <i class="bi bi-shield-check"></i> Phân quyền
             </a>
-            <a href="/RolePermission/ActivityLog" class="sidebar-link active">
+            <a href="/RolePermission/ActivityLog" class="sidebar-link">
                 <i class="bi bi-clock-history"></i> Nhật ký hoạt động
             </a>
-            <a href="/RolePermission/SecurityAlerts" class="sidebar-link">
+            <a href="/RolePermission/SecurityAlerts" class="sidebar-link active">
                 <i class="bi bi-shield-exclamation"></i> Cảnh báo bảo mật
             </a>
         </nav>
@@ -272,116 +273,110 @@
 
     <!-- ========== MAIN CONTENT ========== -->
     <main class="rbac-main-content">
-        <div class="rbac-container">
-            <div class="rbac-header-section">
-                <div class="rbac-header-left">
-                    <h1><i class="bi bi-clock-history me-2 text-primary"></i>Nhật ký hoạt động</h1>
-                    <p>Theo dõi toàn bộ các thao tác đăng nhập, phân quyền, thay đổi thông tin nhân sự và cấu hình hệ thống.</p>
+        <div class="rbac-header-section">
+            <div class="rbac-header-left">
+                <h1><i class="bi bi-shield-exclamation me-2 text-danger"></i>Cảnh báo bảo mật</h1>
+                <p>Theo dõi các cảnh báo đăng nhập thất bại, yêu cầu đặt lại mật khẩu và thay đổi cấu hình bảo mật.</p>
+            </div>
+        </div>
+
+        <!-- ========== STATISTICS CARDS ========== -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-icon red">
+                    <i class="bi bi-exclamation-triangle"></i>
+                </div>
+                <div class="stat-content">
+                    <h3>Tổng số cảnh báo</h3>
+                    <div class="value" id="statTotal">@totalAlerts</div>
                 </div>
             </div>
-
-            <!-- ========== STATISTICS CARDS ========== -->
-            <div class="stats-grid">
-                <div class="stat-card">
-                    <div class="stat-icon blue">
-                        <i class="bi bi-list-check"></i>
-                    </div>
-                    <div class="stat-content">
-                        <h3>Tổng số hoạt động</h3>
-                        <div class="value" id="statTotal">@totalLogs</div>
-                    </div>
+            <div class="stat-card">
+                <div class="stat-icon orange">
+                    <i class="bi bi-bell"></i>
                 </div>
-                <div class="stat-card">
-                    <div class="stat-icon green">
-                        <i class="bi bi-calendar-check"></i>
-                    </div>
-                    <div class="stat-content">
-                        <h3>Hoạt động hôm nay</h3>
-                        <div class="value">@todayLogs</div>
-                    </div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-icon orange">
-                        <i class="bi bi-shield-exclamation"></i>
-                    </div>
-                    <div class="stat-content">
-                        <h3>Cảnh báo & Bảo mật</h3>
-                        <div class="value">@securityLogs</div>
-                    </div>
+                <div class="stat-content">
+                    <h3>Cảnh báo hôm nay</h3>
+                    <div class="value">@todayAlerts</div>
                 </div>
             </div>
-
-            <!-- ========== FILTER BAR ========== -->
-            <div class="filter-bar">
-                <div class="filter-input-wrapper">
-                    <i class="bi bi-search"></i>
-                    <input type="text" id="logSearch" placeholder="Tìm kiếm theo tài khoản hoặc chi tiết hoạt động..." />
+            <div class="stat-card">
+                <div class="stat-icon dark">
+                    <i class="bi bi-lock"></i>
                 </div>
-                <select id="actionFilter" class="filter-select">
-                    <option value="">Tất cả hành động</option>
-                    <option value="Đăng nhập">Đăng nhập</option>
-                    <option value="Cập nhật phân quyền">Cập nhật phân quyền</option>
-                    <option value="Khôi phục phân quyền mặc định">Khôi phục phân quyền</option>
-                    <option value="Tạo tài khoản">Tạo tài khoản</option>
-                    <option value="Cập nhật thông tin">Cập nhật thông tin</option>
-                    <option value="Khóa tài khoản">Khóa tài khoản</option>
-                    <option value="Mở khóa tài khoản">Mở khóa tài khoản</option>
-                    <option value="Cấp lại mật khẩu">Cấp lại mật khẩu</option>
-                    <option value="Đổi mật khẩu">Đổi mật khẩu</option>
-                </select>
+                <div class="stat-content">
+                    <h3>Tài khoản đang bị khóa</h3>
+                    <div class="value">@lockedCount</div>
+                </div>
             </div>
+        </div>
 
-            <!-- ========== LOGS DATAGRID ========== -->
-            <div class="rbac-main-card">
-                <div class="rbac-main-card-header">
-                    <h2><i class="bi bi-list-ul me-2" style="color: #1b75d0;"></i>Lịch sử hoạt động</h2>
-                </div>
-                <div class="perm-table-wrapper">
-                    <table class="perm-table" id="logsTable">
-                        <thead>
-                            <tr>
-                                <th style="width: 180px;">Thời gian</th>
-                                <th style="width: 200px;">Tài khoản thực hiện</th>
-                                <th style="width: 220px;">Hành động</th>
-                                <th>Chi tiết hoạt động</th>
+        <!-- ========== FILTER BAR ========== -->
+        <div class="filter-bar">
+            <div class="filter-input-wrapper">
+                <i class="bi bi-search"></i>
+                <input type="text" id="logSearch" placeholder="Tìm kiếm theo tài khoản hoặc nội dung cảnh báo..." />
+            </div>
+            <select id="riskFilter" class="filter-select">
+                <option value="">Tất cả mức độ nguy cơ</option>
+                <option value="Nguy cơ cao">Nguy cơ cao</option>
+                <option value="Nguy cơ trung bình">Nguy cơ trung bình</option>
+                <option value="Nguy cơ thấp">Nguy cơ thấp</option>
+            </select>
+        </div>
+
+        <!-- ========== LOGS DATAGRID ========== -->
+        <div class="rbac-main-card">
+            <div class="rbac-main-card-header">
+                <h2><i class="bi bi-shield-slash me-2 text-danger"></i>Nhật ký cảnh báo</h2>
+            </div>
+            <div class="perm-table-wrapper">
+                <table class="perm-table" id="logsTable">
+                    <thead>
+                        <tr>
+                            <th style="width: 170px;">Thời gian</th>
+                            <th style="width: 180px;">Tài khoản</th>
+                            <th style="width: 180px;">Hành vi</th>
+                            <th style="width: 180px;">Mức độ nguy cơ</th>
+                            <th>Chi tiết cảnh báo</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (Model.Count == 0)
+                        {
+                            <tr class="no-records">
+                                <td colspan="5" class="text-center text-muted py-4">Chưa có cảnh báo bảo mật nào được ghi nhận</td>
                             </tr>
-                        </thead>
-                        <tbody>
-                            @if (Model.Count == 0)
+                        }
+                        else
+                        {
+                            foreach (var log in Model)
                             {
-                                <tr class="no-records">
-                                    <td colspan="4" class="text-center text-muted py-4">Chưa có hoạt động nào được ghi nhận</td>
+                                // Dynamic Risk classification
+                                string riskLevel = "Nguy cơ thấp";
+                                string riskBadge = "badge-secondary";
+                                if (log.Action == "Đăng nhập thất bại" || log.Action == "Khóa tài khoản")
+                                {
+                                    riskLevel = "Nguy cơ cao";
+                                    riskBadge = "badge-danger";
+                                }
+                                else if (log.Action.Contains("quyền") || log.Action.Contains("mật khẩu"))
+                                {
+                                    riskLevel = "Nguy cơ trung bình";
+                                    riskBadge = "badge-warning";
+                                }
+
+                                <tr class="log-row" data-username="@log.Username.ToLower()" data-risk="@riskLevel" data-details="@log.Details.ToLower()">
+                                    <td class="text-muted">@log.Timestamp.ToString("dd/MM/yyyy HH:mm:ss")</td>
+                                    <td class="fw-semibold text-dark">@log.Username</td>
+                                    <td><span class="badge-wrap badge-secondary">@log.Action</span></td>
+                                    <td><span class="badge-wrap @riskBadge">@riskLevel</span></td>
+                                    <td class="text-secondary log-details">@log.Details</td>
                                 </tr>
                             }
-                            else
-                            {
-                                foreach (var log in Model)
-                                {
-                                    var actionBadge = log.Action switch
-                                    {
-                                        "Đăng nhập" => "badge-success",
-                                        "Mở khóa tài khoản" => "badge-success",
-                                        "Cập nhật phân quyền" => "badge-indigo",
-                                        "Khôi phục phân quyền mặc định" => "badge-indigo",
-                                        "Tạo tài khoản" => "badge-primary",
-                                        "Cập nhật thông tin" => "badge-primary",
-                                        "Khóa tài khoản" => "badge-danger",
-                                        "Cấp lại mật khẩu" => "badge-warning",
-                                        "Đổi mật khẩu" => "badge-warning",
-                                        _ => "badge-secondary"
-                                    };
-
-                                    <tr class="log-row" data-username="@log.Username.ToLower()" data-action="@log.Action">
-                                        <td class="text-muted">@log.Timestamp.ToString("dd/MM/yyyy HH:mm:ss")</td>
-                                        <td class="fw-semibold text-dark">@log.Username</td>
-                                        <td><span class="badge-wrap @actionBadge">@log.Action</span></td>
-                                        <td class="text-secondary log-details">@log.Details</td>
-                                    </tr>
-                                }
-                            }
-                        </tbody>
-                    </table>
-                </div>
+                        }
+                    </tbody>
+                </table>
             </div>
         </div>
     </main>
@@ -391,24 +386,24 @@
 <script>
     document.addEventListener("DOMContentLoaded", function () {
         const searchInput = document.getElementById("logSearch");
-        const actionFilter = document.getElementById("actionFilter");
+        const riskFilter = document.getElementById("riskFilter");
         const tableRows = document.querySelectorAll(".log-row");
         const statTotal = document.getElementById("statTotal");
 
         function filterLogs() {
             const searchText = searchInput.value.toLowerCase().trim();
-            const selectedAction = actionFilter.value;
+            const selectedRisk = riskFilter.value;
             let visibleCount = 0;
 
             tableRows.forEach(row => {
                 const username = row.dataset.username || "";
-                const action = row.dataset.action || "";
-                const details = row.querySelector(".log-details").textContent.toLowerCase();
+                const risk = row.dataset.risk || "";
+                const details = row.dataset.details || "";
 
                 const matchesSearch = username.includes(searchText) || details.includes(searchText);
-                const matchesAction = !selectedAction || action === selectedAction;
+                const matchesRisk = !selectedRisk || risk === selectedRisk;
 
-                if (matchesSearch && matchesAction) {
+                if (matchesSearch && matchesRisk) {
                     row.style.display = "";
                     visibleCount++;
                 } else {
@@ -422,7 +417,7 @@
                 if (!noRecordsRow) {
                     noRecordsRow = document.createElement("tr");
                     noRecordsRow.className = "no-records-filtered";
-                    noRecordsRow.innerHTML = `<td colspan="4" class="text-center text-muted py-4">Không tìm thấy nhật ký phù hợp</td>`;
+                    noRecordsRow.innerHTML = `<td colspan="5" class="text-center text-muted py-4">Không tìm thấy cảnh báo phù hợp</td>`;
                     document.querySelector("#logsTable tbody").appendChild(noRecordsRow);
                 }
             } else if (noRecordsRow) {
@@ -433,7 +428,7 @@
         }
 
         searchInput.addEventListener("input", filterLogs);
-        actionFilter.addEventListener("change", filterLogs);
+        riskFilter.addEventListener("change", filterLogs);
     });
 </script>
 }
