@@ -257,6 +257,7 @@
                 <a asp-controller="Specialty" asp-action="Index" class="@(controller == "Specialty" ? "active" : "")"><i class="bi bi-heart-pulse"></i> Chuyên khoa</a>
                 <a asp-controller="Clinic" asp-action="Index" class="@(controller == "Clinic" ? "active" : "")"><i class="bi bi-building"></i> Phòng khám</a>
                 <a asp-controller="Invoice" asp-action="Index" class="@(controller == "Invoice" ? "active" : "")"><i class="bi bi-receipt"></i> Thanh toán</a>
+                <a asp-controller="Medicine" asp-action="Index" class="@(controller == "Medicine" ? "active" : "")"><i class="bi bi-capsule"></i> Kho thuốc</a>
 
                 <div class="menu-category">Quản trị</div>
                 <a asp-controller="Staff" asp-action="Index" class="@(controller == "Staff" ? "active" : "")"><i class="bi bi-people"></i> Nhân sự</a>
@@ -348,6 +349,205 @@
     
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- =============================================
+         GLOBAL CONFIRM MODAL (SIMPLE / OUTLINE STYLE)
+         ============================================= -->
+    <div class="modal fade" id="globalConfirmModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+        <div class="modal-dialog modal-dialog-centered" style="max-width:420px;">
+            <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+                <!-- Header với icon -->
+                <div class="modal-header border-0 pb-0 pt-4 px-4 d-flex align-items-start gap-3">
+                    <div id="gcm-icon-wrap" class="flex-shrink-0">
+                        <i id="gcm-icon" class="bi bi-question-circle fs-3 text-secondary"></i>
+                    </div>
+                    <div class="flex-grow-1 pt-1">
+                        <h5 class="modal-title fw-bold text-dark mb-1" id="gcm-title">Xác nhận thao tác</h5>
+                        <p class="text-muted mb-0 small" id="gcm-message" style="line-height:1.5;"></p>
+                    </div>
+                </div>
+                <!-- Body (trống, message đã ở header) -->
+                <div class="modal-body px-4 pt-2 pb-0"></div>
+                <!-- Footer buttons -->
+                <div class="modal-footer border-0 px-4 pb-4 pt-2 gap-2 justify-content-end">
+                    <button type="button" class="btn btn-outline-secondary rounded-pill px-4 fw-semibold" id="gcm-cancel-btn">
+                        <i class="bi bi-x-lg me-1"></i>Hủy bỏ
+                    </button>
+                    <button type="button" class="btn rounded-pill px-4 fw-semibold" id="gcm-confirm-btn">
+                        <i class="bi bi-check-lg me-1" id="gcm-confirm-icon"></i>
+                        <span id="gcm-confirm-text">Xác nhận</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // =============================================
+        // Global Confirm Modal System
+        // =============================================
+        (function () {
+            const modal = new bootstrap.Modal(document.getElementById('globalConfirmModal'));
+            const icon = document.getElementById('gcm-icon');
+            const titleEl = document.getElementById('gcm-title');
+            const msgEl = document.getElementById('gcm-message');
+            const confirmBtn = document.getElementById('gcm-confirm-btn');
+            const confirmIcon = document.getElementById('gcm-confirm-icon');
+            const confirmText = document.getElementById('gcm-confirm-text');
+            const cancelBtn = document.getElementById('gcm-cancel-btn');
+
+            let resolveCallback = null;
+
+            // Styles theo loại (sử dụng icon đơn giản nhưng có màu sắc dịu nhẹ)
+            const themes = {
+                danger: {
+                    iconColor: '#dc3545',
+                    iconClass: 'bi-exclamation-circle',
+                    btnClass: 'btn-danger',
+                    confirmLabel: 'Xác nhận xóa',
+                    confirmIconClass: 'bi-trash'
+                },
+                warning: {
+                    iconColor: '#ffc107',
+                    iconClass: 'bi-exclamation-triangle',
+                    btnClass: 'btn-warning text-dark',
+                    confirmLabel: 'Tiếp tục',
+                    confirmIconClass: 'bi-check'
+                },
+                info: {
+                    iconColor: '#0d6efd',
+                    iconClass: 'bi-question-circle',
+                    btnClass: 'btn-primary',
+                    confirmLabel: 'Xác nhận',
+                    confirmIconClass: 'bi-check'
+                },
+                success: {
+                    iconColor: '#198754',
+                    iconClass: 'bi-check-circle',
+                    btnClass: 'btn-success',
+                    confirmLabel: 'Xác nhận',
+                    confirmIconClass: 'bi-check'
+                }
+            };
+
+            // Hàm phân loại ngữ cảnh từ message
+            function detectTheme(msg) {
+                const m = msg.toLowerCase();
+                if (m.includes('xóa') || m.includes('hủy') || m.includes('xoá') || m.includes('delete') || m.includes('remove')) return 'danger';
+                if (m.includes('cảnh báo') || m.includes('vắng') || m.includes('mặc định') || m.includes('cấp lại')) return 'warning';
+                if (m.includes('xuất') || m.includes('phát') || m.includes('duyệt')) return 'success';
+                return 'info';
+            }
+
+            // Core show function — returns a Promise
+            window.showConfirmModal = function (message, options = {}) {
+                const themeName = options.theme || detectTheme(message);
+                const t = themes[themeName] || themes.info;
+
+                // Apply theme
+                icon.style.color = t.iconColor;
+                icon.className = 'bi ' + t.iconClass + ' fs-3';
+                titleEl.textContent = options.title || 'Xác nhận thao tác';
+                msgEl.textContent = message;
+
+                // Format multiline (replace \n)
+                if (message.includes('\n')) {
+                    msgEl.innerHTML = '';
+                    message.split('\n').forEach((line, i) => {
+                        if (i > 0) msgEl.appendChild(document.createElement('br'));
+                        msgEl.appendChild(document.createTextNode(line));
+                    });
+                }
+
+                confirmBtn.className = 'btn rounded-pill px-4 fw-semibold ' + t.btnClass;
+                confirmIcon.className = 'bi ' + (options.confirmIcon || t.confirmIconClass) + ' me-1';
+                confirmText.textContent = options.confirmLabel || t.confirmLabel;
+                cancelBtn.textContent = options.cancelLabel || 'Hủy bỏ';
+
+                return new Promise((resolve) => {
+                    resolveCallback = resolve;
+                    modal.show();
+                });
+            };
+
+            // Confirm button handler
+            confirmBtn.addEventListener('click', function () {
+                modal.hide();
+                if (resolveCallback) resolveCallback(true);
+                resolveCallback = null;
+            });
+
+            // Cancel button handler
+            cancelBtn.addEventListener('click', function () {
+                modal.hide();
+                if (resolveCallback) resolveCallback(false);
+                resolveCallback = null;
+            });
+
+            // Close via X / backdrop also resolves false
+            document.getElementById('globalConfirmModal').addEventListener('hidden.bs.modal', function () {
+                if (resolveCallback) { resolveCallback(false); resolveCallback = null; }
+            });
+
+            // =============================================
+            // Intercept onsubmit="return confirm(...)" forms
+            // =============================================
+            document.addEventListener('submit', async function (e) {
+                const form = e.target;
+                const onSubmitAttr = form.getAttribute('onsubmit');
+                if (onSubmitAttr && onSubmitAttr.includes('confirm(')) {
+                    e.preventDefault();
+                    e.stopImmediatePropagation();
+
+                    const match = onSubmitAttr.match(/confirm\(['"`](.+?)['"`]\)/s);
+                    const msg = match ? match[1] : 'Bạn có chắc chắn muốn thực hiện thao tác này?';
+
+                    const ok = await window.showConfirmModal(msg);
+                    if (ok) {
+                        form.removeAttribute('onsubmit');
+                        form.submit();
+                    }
+                }
+            }, true);
+
+            // =============================================
+            // Override window.confirm globally
+            // =============================================
+            window._originalConfirm = window.confirm;
+            window.confirm = async function (message) {
+                return window._originalConfirm.call(window, message);
+            };
+
+            // Intercept onclick="return confirm(...)" on <a> and <button>
+            document.addEventListener('click', async function (e) {
+                const el = e.target.closest('[onclick]');
+                if (!el) return;
+
+                const onClickAttr = el.getAttribute('onclick');
+                if (!onClickAttr || !onClickAttr.includes('confirm(')) return;
+
+                const match = onClickAttr.match(/confirm\(['"`](.+?)['"`]\)/s);
+                if (!match) return;
+
+                e.preventDefault();
+                e.stopImmediatePropagation();
+
+                const msg = match[1];
+                const ok = await window.showConfirmModal(msg);
+                if (ok) {
+                    if (el.tagName === 'A' && el.href && el.href !== '#') {
+                        window.location.href = el.href;
+                    } else {
+                        const newOnClick = onClickAttr.replace(/return\s+confirm\([^)]+\);?/, 'true;');
+                        el.setAttribute('onclick', newOnClick);
+                        el.click();
+                        el.setAttribute('onclick', onClickAttr);
+                    }
+                }
+            }, true);
+        })();
+    </script>
+
     <script>
         (function () {
             var el = document.getElementById("topbarDateTime");

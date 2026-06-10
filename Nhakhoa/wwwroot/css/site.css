@@ -154,6 +154,8 @@ body {
   border: none;
   outline: none;
   flex: 1;
+  width: 100%;
+  min-width: 0;
   font-size: 0.9rem;
   color: #212529;
   background: transparent;

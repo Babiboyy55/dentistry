@@ -124,6 +124,38 @@ namespace Nhakhoa.Controllers
             if (conflict)
                 ModelState.AddModelError("TimeSlot", "Khung giờ này đã có lịch hẹn khác cho bác sĩ trong ngày đã chọn.");
 
+            // Validate: time is not in the past
+            var apptDateTime = model.AppointmentDate.Date;
+            if (TimeSpan.TryParse(model.TimeSlot, out var ts))
+            {
+                apptDateTime = apptDateTime.Add(ts);
+            }
+            if (apptDateTime < DateTime.Now)
+            {
+                ModelState.AddModelError("TimeSlot", "Thời gian hẹn không thể ở trong quá khứ. Vui lòng chọn khung giờ khác.");
+            }
+
+            // Check patient conflict
+            var patientConflict = await _db.Appointments.AnyAsync(a =>
+                a.PatientId == model.PatientId &&
+                a.AppointmentDate.Date == model.AppointmentDate.Date &&
+                a.TimeSlot == model.TimeSlot &&
+                a.Status != "Đã hủy");
+            if (patientConflict)
+                ModelState.AddModelError("TimeSlot", "Bệnh nhân này đã có một lịch hẹn khác vào khung giờ đã chọn.");
+
+            // Check dental chair conflict
+            if (model.DentalChairId.HasValue)
+            {
+                var chairConflict = await _db.Appointments.AnyAsync(a =>
+                    a.DentalChairId == model.DentalChairId &&
+                    a.AppointmentDate.Date == model.AppointmentDate.Date &&
+                    a.TimeSlot == model.TimeSlot &&
+                    a.Status != "Đã hủy");
+                if (chairConflict)
+                    ModelState.AddModelError("DentalChairId", "Ghế nha khoa này đã được phân công cho một ca khám khác vào khung giờ đã chọn.");
+            }
+
             if (!ModelState.IsValid)
             {
                 await LoadViewBagDropdowns();
@@ -241,6 +273,40 @@ namespace Nhakhoa.Controllers
                 a.Id != id);
             if (conflict)
                 ModelState.AddModelError("TimeSlot", "Khung giờ này đã có lịch hẹn khác.");
+
+            // Validate: time is not in the past
+            var apptDateTime = model.AppointmentDate.Date;
+            if (TimeSpan.TryParse(model.TimeSlot, out var ts))
+            {
+                apptDateTime = apptDateTime.Add(ts);
+            }
+            if (apptDateTime < DateTime.Now)
+            {
+                ModelState.AddModelError("TimeSlot", "Thời gian hẹn không thể ở trong quá khứ. Vui lòng chọn khung giờ khác.");
+            }
+
+            // Check patient conflict (excluding self)
+            var patientConflict = await _db.Appointments.AnyAsync(a =>
+                a.PatientId == model.PatientId &&
+                a.AppointmentDate.Date == model.AppointmentDate.Date &&
+                a.TimeSlot == model.TimeSlot &&
+                a.Status != "Đã hủy" &&
+                a.Id != id);
+            if (patientConflict)
+                ModelState.AddModelError("TimeSlot", "Bệnh nhân này đã có một lịch hẹn khác vào khung giờ đã chọn.");
+
+            // Check dental chair conflict (excluding self)
+            if (model.DentalChairId.HasValue)
+            {
+                var chairConflict = await _db.Appointments.AnyAsync(a =>
+                    a.DentalChairId == model.DentalChairId &&
+                    a.AppointmentDate.Date == model.AppointmentDate.Date &&
+                    a.TimeSlot == model.TimeSlot &&
+                    a.Status != "Đã hủy" &&
+                    a.Id != id);
+                if (chairConflict)
+                    ModelState.AddModelError("DentalChairId", "Ghế nha khoa này đã được phân công cho một ca khám khác vào khung giờ đã chọn.");
+            }
 
             if (!ModelState.IsValid)
             {
@@ -388,6 +454,38 @@ namespace Nhakhoa.Controllers
             return Ok(new { success = true, status });
         }
 
+        // POST: /Appointment/CheckIn/5
+        [HttpPost, ValidateAntiForgeryToken]
+        public async Task<IActionResult> CheckIn(int id)
+        {
+            var appt = await _db.Appointments
+                .Include(a => a.Patient)
+                .FirstOrDefaultAsync(a => a.Id == id);
+            if (appt == null) return NotFound();
+
+            string oldStatus = appt.Status;
+            appt.Status = "Đang chờ";
+            appt.UpdatedAt = DateTime.Now;
+            await _db.SaveChangesAsync();
+
+            // Activity Log
+            var log = new ActivityLog
+            {
+                Username = User.Identity?.Name ?? "System",
+                Action = "Tiếp nhận hẹn trước",
+                Details = $"Tiếp nhận lịch hẹn ID {id} từ '{oldStatus}' thành 'Đang chờ'. Bệnh nhân: {appt.Patient?.FullName}.",
+                Timestamp = DateTime.Now
+            };
+            _db.ActivityLogs.Add(log);
+            await _db.SaveChangesAsync();
+
+            // Broadcast updates
+            await _hubContext.Clients.All.SendAsync("QueueUpdated");
+
+            TempData["Success"] = $"Đã tiếp nhận bệnh nhân {appt.Patient?.FullName} vào hàng chờ khám!";
+            return RedirectToAction(nameof(Index));
+        }
+
         // GET: /Appointment/Queue?date=...
         public async Task<IActionResult> Queue(DateTime? date)
         {
@@ -492,7 +590,24 @@ namespace Nhakhoa.Controllers
                 var fallbackSlots = session == "Sáng"
                     ? new[] { "07:00", "07:30", "08:00", "08:30", "09:00", "09:30", "10:00", "10:30", "11:00", "11:30" }
                     : new[] { "13:00", "13:30", "14:00", "14:30", "15:00", "15:30", "16:00", "16:30" };
-                return Json(fallbackSlots.Where(s => !bookedSlots.Contains(s)).ToArray());
+                var availableFallback = fallbackSlots.Where(s => !bookedSlots.Contains(s)).ToList();
+                if (parsedDate.Date == DateTime.Today)
+                {
+                    var now = DateTime.Now;
+                    availableFallback = availableFallback.Where(s =>
+                    {
+                        if (TimeSpan.TryParse(s, out var ts))
+                        {
+                            return DateTime.Today.Add(ts) > now;
+                        }
+                        return true;
+                    }).ToList();
+                }
+                else if (parsedDate.Date < DateTime.Today)
+                {
+                    availableFallback.Clear();
+                }
+                return Json(availableFallback.ToArray());
             }
 
             var startTimeStr = setting.StartTime?.Replace("h", ":").Replace("H", ":") ?? "";
@@ -511,8 +626,25 @@ namespace Nhakhoa.Controllers
                 current = current.Add(TimeSpan.FromMinutes(30));
             }
 
-            var available = slotsList.Where(s => !bookedSlots.Contains(s)).ToArray();
-            return Json(available);
+            var available = slotsList.Where(s => !bookedSlots.Contains(s)).ToList();
+            if (parsedDate.Date == DateTime.Today)
+            {
+                var now = DateTime.Now;
+                available = available.Where(s =>
+                {
+                    if (TimeSpan.TryParse(s, out var ts))
+                    {
+                        return DateTime.Today.Add(ts) > now;
+                    }
+                    return true;
+                }).ToList();
+            }
+            else if (parsedDate.Date < DateTime.Today)
+            {
+                available.Clear();
+            }
+
+            return Json(available.ToArray());
         }
 
         // GET: /Appointment/GetDoctorShifts

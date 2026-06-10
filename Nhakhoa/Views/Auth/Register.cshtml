@@ -6,7 +6,7 @@
 }
 
 <div class="auth-page">
-    <div class="auth-shell" style="grid-template-columns: 0.9fr 1.1fr; width: min(1200px, 100%);">
+    <div class="auth-shell" style="max-width: 480px;">
         <section class="auth-hero">
             <div class="auth-hero__badge">CLINIC FLOW</div>
             <h1>Bắt đầu trải nghiệm của bạn</h1>
@@ -35,7 +35,7 @@
             </div>
         </section>
 
-        <section class="auth-form" style="padding: 24px 28px;">
+        <section class="auth-form">
             <div class="auth-brand">
                 <span class="auth-brand__icon">+</span>
                 MediClinic
@@ -43,85 +43,77 @@
             <h2 id="register-title">Tạo tài khoản mới</h2>
             <p id="register-desc">Điền các thông tin dưới đây để đăng ký hệ thống.</p>
 
-            <form id="register-form" class="auth-form__body" method="post" asp-controller="Auth" asp-action="Register" style="gap: 12px;">
+            <form id="register-form" class="auth-form__body" method="post" asp-controller="Auth" asp-action="Register">
                 <div asp-validation-summary="ModelOnly" class="text-danger small"></div>
 
-                <div class="row g-3">
-                    <div class="col-md-6">
-                        <label class="auth-label" asp-for="FullName">Họ và tên</label>
-                        <div class="auth-input">
-                            <span class="auth-input__icon">👤</span>
-                            <input asp-for="FullName" type="text" placeholder="Nguyễn Văn A" required />
-                        </div>
-                        <span asp-validation-for="FullName" class="text-danger small"></span>
+                <div>
+                    <label class="auth-label" asp-for="FullName">Họ và tên</label>
+                    <div class="auth-input">
+                        <span class="auth-input__icon">👤</span>
+                        <input asp-for="FullName" type="text" placeholder="Nguyễn Văn A" required />
                     </div>
-
-                    <div class="col-md-6" id="username-container">
-                        <label class="auth-label" asp-for="Username">Tên đăng nhập</label>
-                        <div class="auth-input">
-                            <span class="auth-input__icon">&#64;</span>
-                            <input asp-for="Username" id="register-username" type="text" placeholder="username123" />
-                        </div>
-                        <span asp-validation-for="Username" class="text-danger small"></span>
-                    </div>
+                    <span asp-validation-for="FullName" class="text-danger small"></span>
                 </div>
 
-                <div class="row g-3">
-                    <div class="col-md-6">
-                        <label class="auth-label" asp-for="Email">Email</label>
-                        <div class="auth-input">
-                            <span class="auth-input__icon">✉</span>
-                            <input asp-for="Email" type="email" placeholder="example@clinic.com" />
-                        </div>
-                        <span asp-validation-for="Email" class="text-danger small"></span>
+                <div id="username-container">
+                    <label class="auth-label" asp-for="Username">Tên đăng nhập</label>
+                    <div class="auth-input">
+                        <span class="auth-input__icon">&#64;</span>
+                        <input asp-for="Username" id="register-username" type="text" placeholder="username123" />
                     </div>
-
-                    <div class="col-md-6">
-                        <label class="auth-label" asp-for="PhoneNumber">Số điện thoại</label>
-                        <div class="auth-input">
-                            <span class="auth-input__icon">📞</span>
-                            <input asp-for="PhoneNumber" id="register-phone" type="tel" placeholder="0901234567" required />
-                        </div>
-                        <span asp-validation-for="PhoneNumber" class="text-danger small"></span>
-                    </div>
+                    <span asp-validation-for="Username" class="text-danger small"></span>
                 </div>
 
-                <div class="row g-3">
-                    <div class="col-12">
-                        <label class="auth-label" asp-for="Role">Vai trò mong muốn</label>
-                        <div class="auth-input" style="padding: 6px 12px;">
-                            <span class="auth-input__icon">🛡</span>
-                            <select asp-for="Role" id="register-role" class="form-select border-0 bg-transparent text-muted" style="outline: none; box-shadow: none; font-size: 0.98rem; padding: 4px 0;">
-                                <option value="Receptionist">Lễ tân (Receptionist)</option>
-                                <option value="Doctor">Bác sĩ (Doctor)</option>
-                                <option value="Admin">Quản trị viên (Admin)</option>
-                                <option value="Patient">Bệnh nhân (Patient)</option>
-                            </select>
-                        </div>
-                        <span asp-validation-for="Role" class="text-danger small"></span>
+                <div>
+                    <label class="auth-label" asp-for="Email">Email</label>
+                    <div class="auth-input">
+                        <span class="auth-input__icon">✉</span>
+                        <input asp-for="Email" type="email" placeholder="example@clinic.com" />
                     </div>
+                    <span asp-validation-for="Email" class="text-danger small"></span>
                 </div>
 
-                <div class="row g-3">
-                    <div class="col-md-6">
-                        <label class="auth-label" asp-for="Password">Mật khẩu</label>
-                        <div class="auth-input">
-                            <span class="auth-input__icon">🔑</span>
-                            <input asp-for="Password" type="password" id="register-password" placeholder="••••••••" required />
-                            <button type="button" class="auth-input__action toggle-password" data-target="register-password">Hiện</button>
-                        </div>
-                        <span asp-validation-for="Password" class="text-danger small"></span>
+                <div>
+                    <label class="auth-label" asp-for="PhoneNumber">Số điện thoại</label>
+                    <div class="auth-input">
+                        <span class="auth-input__icon">📞</span>
+                        <input asp-for="PhoneNumber" id="register-phone" type="tel" placeholder="0901234567" required />
                     </div>
+                    <span asp-validation-for="PhoneNumber" class="text-danger small"></span>
+                </div>
 
-                    <div class="col-md-6">
-                        <label class="auth-label" asp-for="ConfirmPassword">Xác thực mật khẩu</label>
-                        <div class="auth-input">
-                            <span class="auth-input__icon">🔒</span>
-                            <input asp-for="ConfirmPassword" type="password" id="register-confirm-password" placeholder="••••••••" required />
-                            <button type="button" class="auth-input__action toggle-password" data-target="register-confirm-password">Hiện</button>
-                        </div>
-                        <span asp-validation-for="ConfirmPassword" class="text-danger small"></span>
+                <div>
+                    <label class="auth-label" asp-for="Role">Vai trò mong muốn</label>
+                    <div class="auth-input" style="padding: 6px 12px;">
+                        <span class="auth-input__icon">🛡</span>
+                        <select asp-for="Role" id="register-role" class="form-select border-0 bg-transparent text-muted" style="outline: none; box-shadow: none; font-size: 0.98rem; padding: 4px 0;">
+                            <option value="Receptionist">Lễ tân (Receptionist)</option>
+                            <option value="Doctor">Bác sĩ (Doctor)</option>
+                            <option value="Admin">Quản trị viên (Admin)</option>
+                            <option value="Patient">Bệnh nhân (Patient)</option>
+                        </select>
                     </div>
+                    <span asp-validation-for="Role" class="text-danger small"></span>
+                </div>
+
+                <div>
+                    <label class="auth-label" asp-for="Password">Mật khẩu</label>
+                    <div class="auth-input">
+                        <span class="auth-input__icon">🔑</span>
+                        <input asp-for="Password" type="password" id="register-password" placeholder="••••••••" required />
+                        <button type="button" class="auth-input__action toggle-password" data-target="register-password">Hiện</button>
+                    </div>
+                    <span asp-validation-for="Password" class="text-danger small"></span>
+                </div>
+
+                <div>
+                    <label class="auth-label" asp-for="ConfirmPassword">Xác thực mật khẩu</label>
+                    <div class="auth-input">
+                        <span class="auth-input__icon">🔒</span>
+                        <input asp-for="ConfirmPassword" type="password" id="register-confirm-password" placeholder="••••••••" required />
+                        <button type="button" class="auth-input__action toggle-password" data-target="register-confirm-password">Hiện</button>
+                    </div>
+                    <span asp-validation-for="ConfirmPassword" class="text-danger small"></span>
                 </div>
 
                 <button type="submit" class="auth-submit mt-3">Đăng ký tài khoản</button>

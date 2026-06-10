@@ -1,0 +1,85 @@
+@model Nhakhoa.Models.MedicineInventory
+@{
+    Layout = "_AdminLayout";
+    ViewData["Title"] = "Chỉnh sửa thuốc";
+}
+
+<div class="mb-4">
+    <a asp-controller="Medicine" asp-action="Index" class="text-decoration-none text-muted small d-inline-flex align-items-center gap-1 hover-primary">
+        <i class="bi bi-arrow-left"></i> Quay lại danh sách kho
+    </a>
+    <h4 class="fw-bold mt-2 mb-0" style="color:#0b1f35">Chỉnh sửa thông tin thuốc</h4>
+    <div class="text-muted small mt-1">Cập nhật thông tin chi tiết của thuốc trong kho.</div>
+</div>
+
+<div class="row">
+    <div class="col-12 col-lg-8">
+        <div class="card border-0 shadow-sm rounded-4 bg-white">
+            <div class="card-body p-4">
+                <form asp-controller="Medicine" asp-action="Edit" method="post">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" asp-for="Id" />
+                    <div asp-validation-summary="ModelOnly" class="text-danger small mb-3"></div>
+
+                    <div class="mb-3">
+                        <label asp-for="MedicineName" class="form-label small fw-bold text-secondary">Tên thuốc <span class="text-danger">*</span></label>
+                        <input asp-for="MedicineName" class="form-control rounded-3" placeholder="Ví dụ: Paracetamol 500mg, Amoxicillin..." required />
+                        <span asp-validation-for="MedicineName" class="text-danger small"></span>
+                    </div>
+
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label asp-for="StockQuantity" class="form-label small fw-bold text-secondary">Số lượng tồn kho <span class="text-danger">*</span></label>
+                            <input asp-for="StockQuantity" type="number" min="0" class="form-control rounded-3" placeholder="Ví dụ: 100, 500..." required />
+                            <span asp-validation-for="StockQuantity" class="text-danger small"></span>
+                        </div>
+                        <div class="col-md-6">
+                            <label asp-for="Unit" class="form-label small fw-bold text-secondary">Đơn vị tính <span class="text-danger">*</span></label>
+                            <input asp-for="Unit" list="units-list" class="form-control rounded-3" placeholder="Ví dụ: Viên, Chai, Tuýp..." required />
+                            <datalist id="units-list">
+                                <option value="Viên"></option>
+                                <option value="Chai"></option>
+                                <option value="Tuýp"></option>
+                                <option value="Hộp"></option>
+                                <option value="Gói"></option>
+                                <option value="Ống"></option>
+                            </datalist>
+                            <span asp-validation-for="Unit" class="text-danger small"></span>
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label asp-for="PricePerUnit" class="form-label small fw-bold text-secondary">Đơn giá (đơn vị: VNĐ) <span class="text-danger">*</span></label>
+                        <div class="input-group">
+                            <input asp-for="PricePerUnit" type="number" min="0" class="form-control rounded-start-3" placeholder="Ví dụ: 2000, 45000..." required />
+                            <span class="input-group-text bg-light rounded-end-3">VNĐ</span>
+                        </div>
+                        <span asp-validation-for="PricePerUnit" class="text-danger small"></span>
+                    </div>
+
+                    <div class="d-flex justify-content-end gap-2 border-top pt-3">
+                        <a asp-controller="Medicine" asp-action="Index" class="btn btn-outline-secondary rounded-pill px-4">Hủy bỏ</a>
+                        <button type="submit" class="btn btn-primary rounded-pill px-4 fw-semibold" style="background:#1b75d0; border-color:#1b75d0;">
+                            <i class="bi bi-save me-1"></i> Cập nhật thuốc
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    <div class="col-12 col-lg-4">
+        <div class="card border-0 shadow-sm rounded-4 mb-4">
+            <div class="card-header bg-white border-0 pt-4 px-4 pb-0">
+                <h6 class="fw-bold mb-0 text-primary"><i class="bi bi-info-circle-fill me-1"></i>Hướng dẫn điền thông tin</h6>
+            </div>
+            <div class="card-body p-4 small text-secondary">
+                <ul class="ps-3 mb-0">
+                    <li class="mb-2"><strong>Tên thuốc:</strong> Tránh nhập các tên thuốc trùng lặp. Nên ghi kèm hàm lượng (ví dụ: 500mg, 650mg) để bác sĩ dễ phân biệt khi kê đơn.</li>
+                    <li class="mb-2"><strong>Số lượng tồn kho:</strong> Số lượng thuốc ban đầu nhập kho thực tế, không được nhỏ hơn 0.</li>
+                    <li class="mb-2"><strong>Đơn vị tính:</strong> Sử dụng các đơn vị chuẩn như Viên, Chai, Tuýp,... Dữ liệu này sẽ hiển thị trực quan trong đơn thuốc của bệnh nhân.</li>
+                    <li><strong>Đơn giá:</strong> Giá tiền bán ra cho 1 đơn vị thuốc nhỏ nhất (1 Viên, 1 Chai,...), dùng để tính tiền hóa đơn.</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>

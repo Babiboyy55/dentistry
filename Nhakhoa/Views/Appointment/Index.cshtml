@@ -162,7 +162,17 @@
                         {
                             <tr class="border-bottom">
                                 <td class="px-4 py-3">
-                                    <div class="fw-semibold text-dark">@appt.Patient?.FullName</div>
+                                    @if (appt.PatientId > 0)
+                                    {
+                                        <a href="/Patient/Details/@appt.PatientId" class="fw-semibold text-dark text-decoration-none patient-link" title="Xem hồ sơ bệnh nhân">
+                                            @appt.Patient?.FullName
+                                            <i class="bi bi-box-arrow-up-right ms-1 text-muted" style="font-size:0.75rem;"></i>
+                                        </a>
+                                    }
+                                    else
+                                    {
+                                        <div class="fw-semibold text-dark">@appt.Patient?.FullName</div>
+                                    }
                                     <div class="text-muted small">@appt.Patient?.PhoneNumber · <span class="badge bg-light text-dark">@appt.Patient?.PatientCode</span></div>
                                 </td>
                                 <td>
@@ -189,23 +199,49 @@
                                     }
                                 </td>
                                 <td class="text-center pe-4">
-                                    <div class="d-flex gap-2 justify-content-center">
-                                        @if (appt.Status == "Đã xác nhận" || appt.Status == "Đang chờ")
+                                    <div class="d-flex gap-1 justify-content-center flex-wrap">
+                                        @* Nút xem hồ sơ bệnh nhân - luôn hiển thị *@
+                                        @if (appt.PatientId > 0)
                                         {
+                                            <a href="/Patient/Details/@appt.PatientId"
+                                               class="btn btn-outline-info btn-sm rounded-pill px-3"
+                                               title="Xem hồ sơ & lịch sử bệnh nhân">
+                                                <i class="bi bi-person-lines-fill me-1"></i>Hồ sơ
+                                            </a>
+                                        }
+
+                                        @if (appt.Status == "Đã xác nhận")
+                                        {
+                                            @if (appt.AppointmentDate.Date == DateTime.Today)
+                                            {
+                                                <form action="/Appointment/CheckIn/@appt.Id" method="post" class="d-inline">
+                                                    @Html.AntiForgeryToken()
+                                                    <button class="btn btn-success btn-sm rounded-pill px-3" title="Tiếp nhận bệnh nhân">
+                                                        <i class="bi bi-check-circle-fill me-1"></i>Tiếp nhận
+                                                    </button>
+                                                </form>
+                                            }
                                             <a href="/Appointment/Edit/@appt.Id" class="btn btn-outline-primary btn-sm rounded-pill px-3" title="Dời lịch">
-                                                <i class="bi bi-clock-history"></i> Dời lịch
+                                                <i class="bi bi-clock-history"></i> Dời
                                             </a>
                                             <form action="/Appointment/Cancel/@appt.Id" method="post" class="d-inline"
                                                   onsubmit="return confirm('Bạn có chắc chắn muốn hủy lịch hẹn này?')">
                                                 @Html.AntiForgeryToken()
                                                 <button class="btn btn-outline-danger btn-sm rounded-pill px-3" title="Hủy lịch">
-                                                    <i class="bi bi-trash"></i> Hủy
+                                                    <i class="bi bi-trash"></i>
                                                 </button>
                                             </form>
                                         }
-                                        else
+                                        else if (appt.Status == "Đang chờ")
                                         {
-                                            <span class="text-muted small">—</span>
+                                            <span class="badge bg-warning-subtle text-warning rounded-pill px-2 py-1"><i class="bi bi-hourglass-split"></i> Chờ</span>
+                                            <form action="/Appointment/Cancel/@appt.Id" method="post" class="d-inline"
+                                                  onsubmit="return confirm('Bạn có chắc chắn muốn hủy lịch hẹn này?')">
+                                                @Html.AntiForgeryToken()
+                                                <button class="btn btn-outline-danger btn-sm rounded-pill px-3" title="Hủy lịch">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
+                                            </form>
                                         }
                                     </div>
                                 </td>
@@ -228,3 +264,15 @@
         }
     </div>
 </div>
+
+@section Scripts {
+<style>
+    .patient-link:hover {
+        color: #1b75d0 !important;
+        text-decoration: underline !important;
+    }
+    .patient-link:hover .bi-box-arrow-up-right {
+        color: #1b75d0 !important;
+    }
+</style>
+}

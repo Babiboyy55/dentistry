@@ -981,10 +981,24 @@ namespace Nhakhoa.Controllers
                 }
             }
 
-            // Subtract stock
+            // Subtract stock + ghi lịch sử xuất kho
             foreach (var item in prescription.Items)
             {
-                item.Medicine!.StockQuantity -= item.Quantity;
+                int before = item.Medicine!.StockQuantity;
+                item.Medicine.StockQuantity -= item.Quantity;
+
+                _db.MedicineTransactions.Add(new MedicineTransaction
+                {
+                    MedicineId = item.MedicineId,
+                    TransactionType = "Xuất kho",
+                    Quantity = item.Quantity,
+                    StockBefore = before,
+                    StockAfter = item.Medicine.StockQuantity,
+                    Note = $"Xuất theo đơn thuốc #{prescription.Id} - BN: {prescription.Patient?.FullName}",
+                    CreatedBy = User.Identity?.Name ?? "Unknown",
+                    CreatedAt = DateTime.Now,
+                    PrescriptionId = prescription.Id
+                });
             }
 
             prescription.Status = "Dispensed";

@@ -47,6 +47,7 @@ namespace Nhakhoa.Data
         public DbSet<DailyReconciliation> DailyReconciliations { get; set; }
         public DbSet<ReconciliationDetail> ReconciliationDetails { get; set; }
         public DbSet<DoctorRating> DoctorRatings { get; set; }
+        public DbSet<MedicineTransaction> MedicineTransactions { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -634,6 +635,13 @@ namespace Nhakhoa.Data
             modelBuilder.Entity<PatientAccount>()
                 .HasIndex(pa => pa.PhoneNumber)
                 .IsUnique();
+
+            // MedicineTransaction relationships
+            modelBuilder.Entity<MedicineTransaction>()
+                .HasOne(mt => mt.Medicine)
+                .WithMany()
+                .HasForeignKey(mt => mt.MedicineId)
+                .OnDelete(DeleteBehavior.Restrict);
         }
     }
 }
