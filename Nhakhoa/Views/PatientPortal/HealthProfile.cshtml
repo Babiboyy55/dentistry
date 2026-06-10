@@ -181,6 +181,22 @@
         </div>
     </div>
 
+    <!-- Alert notifications -->
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show rounded-4 shadow-sm mb-4 border-0" role="alert" style="background: #ecfdf5; color: #065f46;">
+            <i class="bi bi-check-circle-fill me-2"></i> @TempData["SuccessMessage"]
+            <button type="button" class="btn-close shadow-none" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show rounded-4 shadow-sm mb-4 border-0" role="alert" style="background: #fef2f2; color: #991b1b;">
+            <i class="bi bi-exclamation-triangle-fill me-2"></i> @TempData["ErrorMessage"]
+            <button type="button" class="btn-close shadow-none" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+
     <!-- Page Title & Greeting -->
     <div class="row align-items-center mb-4 g-3">
         <div class="col-md-12">
@@ -287,7 +303,21 @@
                                         <h6 class="fw-bold text-primary mb-1">Ngày khám: @sess.CreatedAt.ToString("dd/MM/yyyy HH:mm")</h6>
                                         <small class="text-muted">Bác sĩ thực hiện: <strong>@sess.DoctorName</strong></small>
                                     </div>
-                                    <span class="badge bg-success text-white rounded-pill px-3 py-1 text-xs">Đã kết thúc ca khám</span>
+                                    <div class="d-flex align-items-center gap-2">
+                                        @if (sess.IsRated)
+                                        {
+                                            <span class="badge bg-warning-subtle text-warning-emphasis border border-warning rounded-pill px-3 py-1 text-xs fw-semibold">
+                                                ★ @sess.RatingStars/5 Đã đánh giá
+                                            </span>
+                                        }
+                                        else
+                                        {
+                                            <a href="/PatientPortal/RateSession/@sess.Id" class="btn btn-warning btn-sm text-dark rounded-pill px-3 fw-semibold shadow-sm">
+                                                ⭐ Đánh giá bác sĩ & dịch vụ
+                                            </a>
+                                        }
+                                        <span class="badge bg-success text-white rounded-pill px-3 py-1 text-xs">Đã kết thúc ca khám</span>
+                                    </div>
                                 </div>
                                 <div class="bg-light p-3 rounded-4 mb-3">
                                     <div class="row g-3">
@@ -320,6 +350,14 @@
                                         }
                                     </div>
                                 </div>
+
+                                @if (sess.IsRated && !string.IsNullOrEmpty(sess.RatingComment))
+                                {
+                                    <div class="bg-warning bg-opacity-10 p-3 rounded-4 border border-warning border-opacity-20 mt-2 small text-dark mb-3">
+                                        <span class="text-warning-emphasis fw-bold"><i class="bi bi-chat-left-quote me-1"></i>Nhận xét của bạn:</span>
+                                        <span class="fst-italic text-secondary">"@sess.RatingComment"</span>
+                                    </div>
+                                }
 
                                 <!-- Prescription associated with this session -->
                                 @if (sess.PrescriptionItems.Any())

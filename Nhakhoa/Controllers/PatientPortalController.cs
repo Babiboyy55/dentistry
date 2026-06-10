@@ -213,6 +213,9 @@ namespace Nhakhoa.Controllers
                     }))
                     .ToListAsync();
 
+                var rating = await _context.DoctorRatings
+                    .FirstOrDefaultAsync(r => r.ExaminationSessionId == sess.Id);
+
                 sessionDtos.Add(new PatientExaminationSessionDto
                 {
                     Id = sess.Id,
@@ -222,7 +225,10 @@ namespace Nhakhoa.Controllers
                     HomeCareInstructions = sess.HomeCareInstructions,
                     DoctorName = sess.Doctor?.User?.FullName ?? "Bác sĩ hệ thống",
                     PerformedServices = svcNames,
-                    PrescriptionItems = rxItems
+                    PrescriptionItems = rxItems,
+                    IsRated = rating != null,
+                    RatingStars = rating?.Stars,
+                    RatingComment = rating?.Comment
                 });
             }
 
@@ -322,6 +328,191 @@ namespace Nhakhoa.Controllers
                 .ToListAsync();
 
             return Json(history);
+        }
+
+        // === UC6.5 — PATIENT RATING MODULE ===
+
+        [HttpGet]
+        public async Task<IActionResult> RateSession(int id)
+        {
+            var phone = User.Identity?.Name;
+            if (string.IsNullOrEmpty(phone))
+            {
+                return RedirectToAction("Login", "Auth");
+            }
+
+            var account = await _context.PatientAccounts.FirstOrDefaultAsync(pa => pa.PhoneNumber == phone);
+            if (account == null || !account.PatientId.HasValue)
+            {
+                return RedirectToAction("Login", "Auth");
+            }
+
+            var session = await _context.ExaminationSessions
+                .Include(es => es.Doctor)
+                    .ThenInclude(d => d!.User)
+                .FirstOrDefaultAsync(es => es.Id == id);
+
+            if (session == null)
+            {
+                return NotFound("Ca khám không tồn tại.");
+            }
+
+            // EX6.5-03: IDOR Protection
+            if (session.PatientId != account.PatientId.Value)
+            {
+                var log = new ActivityLog
+                {
+                    Username = phone,
+                    Action = "Truy cập trái phép (IDOR)",
+                    Details = $"Bệnh nhân có số điện thoại {phone} cố gắng truy cập trang đánh giá ca khám ID {id} thuộc bệnh nhân khác (ID {session.PatientId})."
+                };
+                _context.ActivityLogs.Add(log);
+                await _context.SaveChangesAsync();
+                return StatusCode(StatusCodes.Status403Forbidden, "Bạn không có quyền đánh giá ca khám này.");
+            }
+
+            // EX6.5-04: Check if completed
+            if (!session.IsCompleted)
+            {
+                return BadRequest("Ca khám chưa hoàn thành, không thể đánh giá.");
+            }
+
+            // EX6.5-01: Check duplicate rating
+            var existingRating = await _context.DoctorRatings.AnyAsync(r => r.ExaminationSessionId == id);
+            if (existingRating)
+            {
+                TempData["ErrorMessage"] = "Ca khám này đã được đánh giá.";
+                return RedirectToAction("HealthProfile");
+            }
+
+            // Fetch performed service names
+            var svcNames = await _context.Invoices
+                .Where(i => i.ExaminationSessionId == session.Id)
+                .SelectMany(i => i.InvoiceDetails.Select(d => d.MedicalService!.Name))
+                .ToListAsync();
+
+            if (!svcNames.Any())
+            {
+                svcNames = new System.Collections.Generic.List<string> { "Khám tổng quát & Tư vấn" };
+            }
+
+            var dto = new PatientExaminationSessionDto
+            {
+                Id = session.Id,
+                CreatedAt = session.CreatedAt,
+                Diagnosis = session.Diagnosis,
+                DoctorName = session.Doctor?.User?.FullName ?? "Bác sĩ hệ thống",
+                PerformedServices = svcNames
+            };
+
+            ViewBag.Account = account;
+            return View(dto);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> SubmitRating(int sessionId, int stars, string? comment)
+        {
+            var phone = User.Identity?.Name;
+            if (string.IsNullOrEmpty(phone))
+            {
+                return RedirectToAction("Login", "Auth");
+            }
+
+            var account = await _context.PatientAccounts.FirstOrDefaultAsync(pa => pa.PhoneNumber == phone);
+            if (account == null || !account.PatientId.HasValue)
+            {
+                return RedirectToAction("Login", "Auth");
+            }
+
+            var session = await _context.ExaminationSessions.FindAsync(sessionId);
+            if (session == null)
+            {
+                return NotFound("Ca khám không tồn tại.");
+            }
+
+            // EX6.5-03: IDOR Protection
+            if (session.PatientId != account.PatientId.Value)
+            {
+                var log = new ActivityLog
+                {
+                    Username = phone,
+                    Action = "Truy cập trái phép (IDOR)",
+                    Details = $"Bệnh nhân có số điện thoại {phone} cố gắng gửi đánh giá cho ca khám ID {sessionId} thuộc bệnh nhân khác (ID {session.PatientId})."
+                };
+                _context.ActivityLogs.Add(log);
+                await _context.SaveChangesAsync();
+                return StatusCode(StatusCodes.Status403Forbidden, "Bạn không có quyền đánh giá ca khám này.");
+            }
+
+            // EX6.5-04: Check if completed
+            if (!session.IsCompleted)
+            {
+                return BadRequest("Ca khám chưa hoàn thành, không thể đánh giá.");
+            }
+
+            // EX6.5-01: Check duplicate rating
+            var existingRating = await _context.DoctorRatings.AnyAsync(r => r.ExaminationSessionId == sessionId);
+            if (existingRating)
+            {
+                return BadRequest("Ca khám này đã được đánh giá.");
+            }
+
+            if (stars < 1 || stars > 5)
+            {
+                return BadRequest("Số sao đánh giá phải từ 1 đến 5.");
+            }
+
+            // EX6.5-02: XSS Filter & Security Log
+            bool hasXssAttempt = false;
+            string sanitizedComment = SanitizeComment(comment, out hasXssAttempt);
+
+            if (hasXssAttempt)
+            {
+                var securityLog = new ActivityLog
+                {
+                    Username = phone,
+                    Action = "Cảnh báo bảo mật XSS",
+                    Details = $"Phát hiện âm mưu tấn công XSS trong nội dung đánh giá từ bệnh nhân {phone}. Nội dung gốc: '{comment}'"
+                };
+                _context.ActivityLogs.Add(securityLog);
+            }
+
+            var newRating = new DoctorRating
+            {
+                ExaminationSessionId = sessionId,
+                DoctorId = session.DoctorId,
+                PatientId = account.PatientId.Value,
+                Stars = stars,
+                Comment = sanitizedComment,
+                CreatedAt = DateTime.Now
+            };
+
+            _context.DoctorRatings.Add(newRating);
+            await _context.SaveChangesAsync();
+
+            TempData["SuccessMessage"] = "Gửi đánh giá thành công! Cảm ơn ý kiến đóng góp của bạn.";
+            return RedirectToAction("HealthProfile");
+        }
+
+        private string SanitizeComment(string? input, out bool hasXssAttempt)
+        {
+            hasXssAttempt = false;
+            if (string.IsNullOrEmpty(input)) return string.Empty;
+
+            // Simple HTML tag check & script indicator detection
+            if (input.Contains("<") || input.Contains(">") || 
+                System.Text.RegularExpressions.Regex.IsMatch(input, @"(?i)javascript:|onload|onerror|onclick|onmouseover|script"))
+            {
+                hasXssAttempt = true;
+            }
+
+            // Strip HTML tags
+            string clean = System.Text.RegularExpressions.Regex.Replace(input, @"<[^>]*>", string.Empty);
+            // Strip JavaScript keywords & event attributes
+            clean = System.Text.RegularExpressions.Regex.Replace(clean, @"(?i)javascript:|onload|onerror|onclick|onmouseover|script", string.Empty);
+
+            return clean.Trim();
         }
 
         // === UC6.4 — ONLINE BILLING & PAYMENT ===

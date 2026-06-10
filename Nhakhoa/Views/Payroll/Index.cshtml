@@ -494,15 +494,19 @@ async function loadSlip() {
 
     let html = `
     <div class="row g-3 mb-4">
-        <div class="col-md-4"><div class="stat-pill">
+        <div class="col-md-3"><div class="stat-pill">
             <div class="sp-val">${data.totalShifts}</div>
             <div class="sp-lbl">Tổng số ca trực</div>
         </div></div>
-        <div class="col-md-4"><div class="stat-pill">
+        <div class="col-md-3"><div class="stat-pill">
             <div class="sp-val">${data.degreeCoeff}</div>
             <div class="sp-lbl">Hệ số học vị (${data.academicDegree})</div>
         </div></div>
-        <div class="col-md-4"><div class="stat-pill" style="background:#f0fdf4;">
+        <div class="col-md-3"><div class="stat-pill" style="background:#fffbeb;">
+            <div class="sp-val" style="color:#d97706;">${data.averageRating ? data.averageRating.toFixed(1) + ' ★' : '—'}</div>
+            <div class="sp-lbl">Đánh giá TB (${data.totalRatings} lượt)</div>
+        </div></div>
+        <div class="col-md-3"><div class="stat-pill" style="background:#f0fdf4;">
             <div class="sp-val" style="color:#15803d;">${fmt(data.totalPay)}</div>
             <div class="sp-lbl">Tổng tiền làm thêm</div>
         </div></div>
@@ -548,7 +552,7 @@ async function loadMonthlyAll() {
     <table class="pr-table">
         <thead><tr>
             <th>#</th><th>Bác sĩ</th><th>Học vị</th><th>Hệ số</th>
-            <th>Số ca</th><th>Giờ quy đổi</th><th>Tổng tiền làm thêm</th>
+            <th>Số ca</th><th>Giờ quy đổi</th><th>Đánh giá TB</th><th>Tổng tiền làm thêm</th>
         </tr></thead><tbody>`;
 
     data.forEach((d, i) => {
@@ -556,6 +560,7 @@ async function loadMonthlyAll() {
             <td>${i + 1}</td><td class="fw-semibold">${d.doctorName}</td>
             <td>${d.academicDegree}</td><td>${d.degreeCoeff}</td>
             <td>${d.totalShifts}</td><td>${d.totalConvertedHours}</td>
+            <td>${d.averageRating ? `<span class="badge bg-warning text-dark fw-bold">★ ${d.averageRating.toFixed(1)}</span> <span class="text-muted small">(${d.totalRatings} lượt)</span>` : '<span class="text-muted">—</span>'}</td>
             <td class="fw-bold text-primary">${fmt(d.totalPay)}</td>
         </tr>`;
     });

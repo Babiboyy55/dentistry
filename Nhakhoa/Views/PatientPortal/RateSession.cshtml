@@ -1,0 +1,233 @@
+@model Nhakhoa.ViewModels.PatientExaminationSessionDto
+@{
+    ViewData["Title"] = "Đánh giá trải nghiệm khám bệnh";
+}
+
+<style>
+    .glass-card {
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.4);
+    }
+    
+    /* Interactive Star Rating CSS */
+    .star-rating-container {
+        display: inline-flex;
+        flex-direction: row-reverse;
+        justify-content: center;
+        gap: 8px;
+    }
+    
+    .star-rating-container input[type="radio"] {
+        display: none;
+    }
+    
+    .star-rating-container label {
+        font-size: 2.75rem;
+        color: #d1d5db;
+        cursor: pointer;
+        transition: transform 0.15s ease, color 0.15s ease;
+    }
+    
+    .star-rating-container label:hover {
+        transform: scale(1.25);
+    }
+    
+    /* Hover and Checked status styling (relying on reverse row order) */
+    .star-rating-container input[type="radio"]:checked ~ label,
+    .star-rating-container label:hover,
+    .star-rating-container label:hover ~ label {
+        color: #fbbf24; /* yellow-400 */
+    }
+    
+    .rating-desc {
+        font-size: 0.95rem;
+        font-weight: 600;
+        min-height: 24px;
+        color: #4b5563;
+        transition: all 0.2s ease;
+    }
+</style>
+
+<div class="container py-4">
+    <!-- Navigation Header -->
+    <div class="card border-0 shadow-sm rounded-4 mb-4 glass-card">
+        <div class="card-body py-3 px-4 d-flex flex-wrap justify-content-between align-items-center gap-3">
+            <div class="d-flex align-items-center gap-2">
+                <span class="fs-4 text-primary">🏥</span>
+                <div>
+                    <strong class="text-primary fs-5">Portal Bệnh Nhân</strong>
+                    <span class="text-muted text-xs d-block" style="font-size: 0.75rem;">Hệ thống Nha Khoa</span>
+                </div>
+            </div>
+            <div class="d-flex align-items-center gap-2 flex-wrap">
+                <a asp-controller="PatientPortal" asp-action="Index" class="btn btn-light rounded-pill px-3 py-1.5 fw-semibold text-secondary">
+                    🏠 Lịch hẹn
+                </a>
+                <a asp-controller="PatientPortal" asp-action="HealthProfile" class="btn btn-primary rounded-pill px-3 py-1.5 fw-semibold text-white">
+                    🩺 Hồ sơ sức khỏe
+                </a>
+                <a asp-controller="PatientPortal" asp-action="Billing" class="btn btn-light rounded-pill px-3 py-1.5 fw-semibold text-secondary">
+                    💳 Hóa đơn
+                </a>
+                <a asp-controller="PatientPortal" asp-action="ChangePassword" class="btn btn-light rounded-pill px-3 py-1.5 fw-semibold text-secondary">
+                    🔑 Đổi mật khẩu
+                </a>
+                <a asp-controller="Auth" asp-action="Logout" class="btn btn-danger rounded-pill px-3 py-1.5 fw-semibold text-white">
+                    🚪 Đăng xuất
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Rating Form Card -->
+    <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-7">
+            <div class="card border-0 shadow-lg rounded-4 overflow-hidden glass-card">
+                
+                <!-- Card Header -->
+                <div class="card-header bg-gradient bg-primary text-white text-center py-4 border-0" 
+                     style="background: linear-gradient(135deg, #1e3a8a, #3b82f6);">
+                    <h4 class="fw-bold mb-1">⭐ Đánh giá trải nghiệm khám bệnh</h4>
+                    <p class="text-white-50 mb-0 small">Chia sẻ cảm nhận của bạn để giúp chúng tôi nâng cao chất lượng dịch vụ.</p>
+                </div>
+                
+                <!-- Card Body -->
+                <div class="card-body p-4">
+                    
+                    <!-- Examination Info Box -->
+                    <div class="p-3 bg-light rounded-4 mb-4 text-dark border border-light-subtle">
+                        <h6 class="fw-bold mb-3 border-bottom pb-2 text-secondary small text-uppercase">Thông tin ca khám</h6>
+                        <div class="row g-2 small">
+                            <div class="col-sm-6">
+                                <span class="text-muted">Mã lượt khám:</span> 
+                                <strong class="text-dark">LK-@Model.Id</strong>
+                            </div>
+                            <div class="col-sm-6">
+                                <span class="text-muted">Ngày thực hiện:</span> 
+                                <strong>@Model.CreatedAt.ToString("dd/MM/yyyy HH:mm")</strong>
+                            </div>
+                            <div class="col-sm-6">
+                                <span class="text-muted">Bác sĩ điều trị:</span> 
+                                <strong>@Model.DoctorName</strong>
+                            </div>
+                            <div class="col-sm-6">
+                                <span class="text-muted">Trạng thái:</span> 
+                                <span class="badge bg-success rounded-pill px-2.5 py-0.5 text-white">Đã hoàn thành</span>
+                            </div>
+                            <div class="col-12 mt-2">
+                                <span class="text-muted">Dịch vụ thực hiện:</span> 
+                                <div class="d-flex flex-wrap gap-1 mt-1">
+                                    @foreach (var svc in Model.PerformedServices)
+                                    {
+                                        <span class="badge bg-primary-subtle text-primary rounded-pill px-2.5 py-1 text-xs">@svc</span>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Rating Form -->
+                    <form method="post" asp-controller="PatientPortal" asp-action="SubmitRating" id="ratingForm">
+                        <input type="hidden" name="sessionId" value="@Model.Id" />
+                        
+                        <!-- Stars Selector -->
+                        <div class="mb-4 text-center">
+                            <label class="form-label fw-bold text-dark d-block mb-1">Đánh giá chung cho bác sĩ và dịch vụ</label>
+                            <span class="text-muted small d-block mb-3">Vui lòng chọn số sao thích hợp</span>
+                            
+                            <div class="star-rating-container">
+                                <input type="radio" id="star5" name="stars" value="5" required />
+                                <label for="star5" title="Tuyệt vời">★</label>
+                                
+                                <input type="radio" id="star4" name="stars" value="4" />
+                                <label for="star4" title="Rất hài lòng">★</label>
+                                
+                                <input type="radio" id="star3" name="stars" value="3" />
+                                <label for="star3" title="Bình thường">★</label>
+                                
+                                <input type="radio" id="star2" name="stars" value="2" />
+                                <label for="star2" title="Chưa hài lòng">★</label>
+                                
+                                <input type="radio" id="star1" name="stars" value="1" />
+                                <label for="star1" title="Rất kém">★</label>
+                            </div>
+                            
+                            <div id="ratingDescription" class="rating-desc mt-2 text-warning">Hãy chọn mức độ hài lòng</div>
+                        </div>
+
+                        <!-- Feedback Comment Textarea -->
+                        <div class="mb-4">
+                            <label class="form-label fw-bold text-dark d-flex justify-content-between">
+                                <span>Nhận xét và góp ý thêm (tùy chọn)</span>
+                                <span class="text-muted small" id="charCounter">0/1000</span>
+                            </label>
+                            <textarea name="comment" id="commentText" class="form-control rounded-3" rows="4" 
+                                      placeholder="Hãy chia sẻ thêm về trải nghiệm điều trị, thái độ của bác sĩ hoặc cơ sở vật chất..." 
+                                      maxlength="1000"></textarea>
+                            <span class="text-muted small d-block mt-1">Lưu ý: Không nhập các thẻ HTML hoặc các đoạn mã kịch bản.</span>
+                        </div>
+
+                        <!-- Submit Buttons -->
+                        <div class="d-flex gap-3">
+                            <button type="submit" class="btn btn-primary btn-lg rounded-3 fw-bold flex-grow-1 shadow-sm" 
+                                    style="background: #1e3a8a; border-color: #1e3a8a;">
+                                🚀 Gửi đánh giá
+                            </button>
+                            <a asp-controller="PatientPortal" asp-action="HealthProfile" 
+                               class="btn btn-light btn-lg rounded-3 text-secondary border px-4">
+                                Quay lại
+                            </a>
+                        </div>
+                    </form>
+
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function () {
+            const starTexts = {
+                '1': '⭐ Rất kém - Dịch vụ rất không tốt',
+                '2': '⭐⭐ Chưa hài lòng - Cần cải thiện nhiều',
+                '3': '⭐⭐⭐ Bình thường - Chấp nhận được',
+                '4': '⭐⭐⭐⭐ Rất hài lòng - Dịch vụ chu đáo',
+                '5': '⭐⭐⭐⭐⭐ Tuyệt vời - Bác sĩ tận tình, dịch vụ rất tốt'
+            };
+
+            // Dynamic text on radio select
+            $('input[name="stars"]').change(function () {
+                const val = $(this).val();
+                $('#ratingDescription').text(starTexts[val] || 'Hãy chọn mức độ hài lòng');
+            });
+
+            // Character counter for textarea
+            $('#commentText').on('input', function () {
+                const len = $(this).val().length;
+                $('#charCounter').text(`${len}/1000`);
+            });
+
+            // Form validation
+            $('#ratingForm').submit(function (e) {
+                const starsChecked = $('input[name="stars"]:checked').val();
+                if (!starsChecked) {
+                    e.preventDefault();
+                    alert('Vui lòng chọn số sao đánh giá trước khi gửi.');
+                    return false;
+                }
+                
+                // Double check client-side XSS prevention
+                const commentText = $('#commentText').val();
+                if (commentText.includes('<') || commentText.includes('>')) {
+                    if (!confirm('Nhận xét của bạn có chứa các ký tự đặc biệt (ví dụ: < hoặc >). Các thẻ HTML sẽ bị loại bỏ để đảm bảo bảo mật. Bạn vẫn muốn tiếp tục gửi chứ?')) {
+                        e.preventDefault();
+                        return false;
+                    }
+                }
+            });
+        });
+    </script>
+}

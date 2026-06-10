@@ -157,6 +157,14 @@ namespace Nhakhoa.Controllers
                 .Where(e => e.DoctorId == doctorId && e.CreatedAt >= from && e.CreatedAt < to)
                 .ToListAsync();
 
+            // Lấy tất cả đánh giá của bác sĩ trong tháng
+            var ratings = await _db.DoctorRatings
+                .Where(r => r.DoctorId == doctorId && r.CreatedAt >= from && r.CreatedAt < to)
+                .ToListAsync();
+
+            double? averageRating = ratings.Any() ? ratings.Average(r => r.Stars) : null;
+            int totalRatings = ratings.Count;
+
             var shiftDetails = new List<object>();
             decimal totalPay = 0;
 
@@ -207,6 +215,8 @@ namespace Nhakhoa.Controllers
                 Year = year,
                 TotalShifts = shifts.Count,
                 TotalPay = Math.Round(totalPay, 0),
+                AverageRating = averageRating,
+                TotalRatings = totalRatings,
                 Details = shiftDetails
             });
         }
@@ -236,12 +246,18 @@ namespace Nhakhoa.Controllers
                 .Where(e => e.CreatedAt >= from && e.CreatedAt < to)
                 .ToListAsync();
 
+            var ratings = await _db.DoctorRatings
+                .Where(r => r.CreatedAt >= from && r.CreatedAt < to)
+                .ToListAsync();
+
             var result = new List<object>();
 
             foreach (var doc in doctors)
             {
                 var docShifts = shifts.Where(s => s.StaffProfileId == doc.Id).ToList();
                 var docSessions = sessions.Where(e => e.DoctorId == doc.Id).ToList();
+                var docRatings = ratings.Where(r => r.DoctorId == doc.Id).ToList();
+
                 decimal degreeCoeff = GetDegreeCoeff(doc.AcademicDegree, config);
                 decimal totalPay = 0;
                 double totalConvertedHours = 0;
@@ -257,6 +273,9 @@ namespace Nhakhoa.Controllers
                     totalPay += convHrs * degreeCoeff * config.HourlyRate;
                 }
 
+                double? averageRating = docRatings.Any() ? docRatings.Average(r => r.Stars) : null;
+                int totalRatings = docRatings.Count;
+
                 result.Add(new
                 {
                     DoctorId = doc.Id,
@@ -265,7 +284,9 @@ namespace Nhakhoa.Controllers
                     DegreeCoeff = degreeCoeff,
                     TotalShifts = docShifts.Count,
                     TotalConvertedHours = Math.Round(totalConvertedHours, 2),
-                    TotalPay = Math.Round(totalPay, 0)
+                    TotalPay = Math.Round(totalPay, 0),
+                    AverageRating = averageRating,
+                    TotalRatings = totalRatings
                 });
             }
 

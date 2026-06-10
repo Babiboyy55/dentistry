@@ -102,6 +102,9 @@ namespace Nhakhoa.ViewModels
         public string DoctorName { get; set; } = string.Empty;
         public System.Collections.Generic.List<string> PerformedServices { get; set; } = new();
         public System.Collections.Generic.List<PatientPrescriptionItemDto> PrescriptionItems { get; set; } = new();
+        public bool IsRated { get; set; }
+        public int? RatingStars { get; set; }
+        public string? RatingComment { get; set; }
     }
 
     public class PatientPrescriptionItemDto
