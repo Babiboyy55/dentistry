@@ -1,0 +1,283 @@
+@model List<Nhakhoa.Models.Invoice>
+@using Nhakhoa.Models
+@{
+    ViewData["Title"] = "Hóa đơn & Thanh toán";
+    var account = ViewBag.Account as PatientAccount;
+    decimal totalCost = ViewBag.TotalCost;
+    decimal totalPaid = ViewBag.TotalPaid;
+    int successRate = ViewBag.SuccessRate;
+    int pendingInvoices = ViewBag.PendingInvoices;
+}
+
+<div class="container py-4">
+    <!-- Navigation Header -->
+    <div class="card border-0 shadow-sm rounded-4 mb-4" style="background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.4);">
+        <div class="card-body py-3 px-4 d-flex flex-wrap justify-content-between align-items-center gap-3">
+            <div class="d-flex align-items-center gap-2">
+                <span class="fs-4 text-primary">🏥</span>
+                <div>
+                    <strong class="text-primary fs-5">Portal Bệnh Nhân</strong>
+                    <span class="text-muted text-xs d-block" style="font-size: 0.75rem;">Hệ thống Nha Khoa</span>
+                </div>
+            </div>
+            <div class="d-flex align-items-center gap-2 flex-wrap">
+                <a asp-controller="PatientPortal" asp-action="Index" class="btn btn-light rounded-pill px-3 py-1.5 fw-semibold text-secondary">
+                    🏠 Lịch hẹn
+                </a>
+                <a asp-controller="PatientPortal" asp-action="HealthProfile" class="btn btn-light rounded-pill px-3 py-1.5 fw-semibold text-secondary">
+                    🩺 Hồ sơ sức khỏe
+                </a>
+                <a asp-controller="PatientPortal" asp-action="Billing" class="btn btn-primary rounded-pill px-3 py-1.5 fw-semibold text-white">
+                    💳 Hóa đơn
+                </a>
+                <a asp-controller="PatientPortal" asp-action="ChangePassword" class="btn btn-light rounded-pill px-3 py-1.5 fw-semibold text-secondary">
+                    🔑 Đổi mật khẩu
+                </a>
+                <a asp-controller="Auth" asp-action="Logout" class="btn btn-danger rounded-pill px-3 py-1.5 fw-semibold text-white">
+                    🚪 Đăng xuất
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Page Title -->
+    <div class="row align-items-center mb-4 g-3">
+        <div class="col-md-12">
+            <h2 class="h4 fw-bold text-dark mb-1">Lịch sử giao dịch & Thanh toán</h2>
+            <p class="text-muted mb-0">Theo dõi các khoản thanh toán, tải hóa đơn điện tử và thanh toán hóa đơn điều trị trực tuyến.</p>
+        </div>
+    </div>
+
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <div class="alert alert-danger border-0 rounded-3 small mb-4" style="background-color: rgba(220, 53, 69, 0.1); color: #bd2130;">
+            @TempData["ErrorMessage"]
+        </div>
+    }
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="alert alert-success border-0 rounded-3 small mb-4" style="background-color: rgba(40, 167, 69, 0.1); color: #1e7e34;">
+            @TempData["SuccessMessage"]
+        </div>
+    }
+
+    <!-- Stat Cards -->
+    <div class="row g-4 mb-4">
+        <!-- Card 1: Total Invoices -->
+        <div class="col-12 col-md-3">
+            <div class="card border-0 shadow-sm rounded-4 h-100 p-3" style="background: linear-gradient(135deg, #1b75d0 0%, #0d4c92 100%); color: white;">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                    <span class="text-white-50 text-sm fw-semibold">Tổng số hóa đơn</span>
+                    <span class="fs-4">📄</span>
+                </div>
+                <h3 class="fw-bold mb-1">@Model.Count</h3>
+                <span class="text-white-50 small">Tổng lượt kê hóa đơn</span>
+            </div>
+        </div>
+        <!-- Card 2: Total Cost -->
+        <div class="col-12 col-md-3">
+            <div class="card border-0 shadow-sm rounded-4 h-100 p-3" style="background: linear-gradient(135deg, #8252e9 0%, #5b21b6 100%); color: white;">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                    <span class="text-white-50 text-sm fw-semibold">Tổng chi phí điều trị</span>
+                    <span class="fs-4">💸</span>
+                </div>
+                <h3 class="fw-bold mb-1">@totalCost.ToString("N0")đ</h3>
+                <span class="text-white-50 small">Giá trị các dịch vụ chỉ định</span>
+            </div>
+        </div>
+        <!-- Card 3: Total Paid -->
+        <div class="col-12 col-md-3">
+            <div class="card border-0 shadow-sm rounded-4 h-100 p-3" style="background: linear-gradient(135deg, #28a745 0%, #1e7e34 100%); color: white;">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                    <span class="text-white-50 text-sm fw-semibold">Đã thanh toán</span>
+                    <span class="fs-4">🛡️</span>
+                </div>
+                <h3 class="fw-bold mb-1">@totalPaid.ToString("N0")đ</h3>
+                <span class="text-white-50 small">Hóa đơn hoàn thành thanh toán</span>
+            </div>
+        </div>
+        <!-- Card 4: Success Rate -->
+        <div class="col-12 col-md-3">
+            <div class="card border-0 shadow-sm rounded-4 h-100 p-3" style="background: linear-gradient(135deg, #fd7e14 0%, #d35400 100%); color: white;">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                    <span class="text-white-50 text-sm fw-semibold">Giao dịch thành công</span>
+                    <span class="fs-4">📈</span>
+                </div>
+                <h3 class="fw-bold mb-1">@successRate%</h3>
+                <span class="text-white-50 small">Tỷ lệ thanh toán hoàn tất</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Invoices List Card -->
+    <div class="card border-0 shadow-sm rounded-4 bg-white mb-4">
+        <div class="card-header bg-white border-0 pt-4 px-4 pb-2 d-flex justify-content-between align-items-center">
+            <h5 class="fw-bold text-dark mb-0">Lịch sử giao dịch</h5>
+            @if (pendingInvoices > 0)
+            {
+                <span class="badge bg-warning-subtle text-warning-emphasis px-3 py-2 rounded-pill small fw-semibold">
+                    <span class="spinner-grow spinner-grow-sm me-1" role="status" style="width: 0.75rem; height: 0.75rem;"></span>
+                    Có @pendingInvoices hóa đơn cần thanh toán
+                </span>
+            }
+        </div>
+        <div class="card-body px-4 pb-4">
+            <div class="table-responsive">
+                <table class="table align-middle table-hover mb-0 text-sm">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="border-0 py-3">Mã hóa đơn</th>
+                            <th class="border-0 py-3">Ngày phát hành</th>
+                            <th class="border-0 py-3">Dịch vụ điều trị</th>
+                            <th class="border-0 py-3">Phương thức</th>
+                            <th class="border-0 py-3 text-end">Số tiền</th>
+                            <th class="border-0 py-3 text-center">Trạng thái</th>
+                            <th class="border-0 py-3 text-center">Tài liệu / Thao tác</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (Model == null || !Model.Any())
+                        {
+                            <tr>
+                                <td colspan="7" class="text-center py-5 text-muted">
+                                    <div class="fs-2 mb-2">📭</div>
+                                    Bạn chưa có hóa đơn nào được ghi nhận trên hệ thống.
+                                </td>
+                            </tr>
+                        }
+                        else
+                        {
+                            foreach (var inv in Model)
+                            {
+                                <tr>
+                                    <td class="font-monospace fw-bold text-primary py-3">@inv.InvoiceCode</td>
+                                    <td>@inv.IssuedAt.ToString("dd/MM/yyyy HH:mm")</td>
+                                    <td>
+                                        @{
+                                            var servicesList = inv.InvoiceDetails != null && inv.InvoiceDetails.Any()
+                                                ? string.Join(", ", inv.InvoiceDetails.Select(d => d.MedicalService?.Name))
+                                                : "Dịch vụ khám lâm sàng";
+                                            if (servicesList.Length > 45) servicesList = servicesList.Substring(0, 42) + "...";
+                                        }
+                                        <div class="fw-bold text-dark">@servicesList</div>
+                                        <small class="text-muted">Ca khám: #@inv.ExaminationSessionId</small>
+                                    </td>
+                                    <td>
+                                        @if (inv.PaymentMethodCode == "CASH")
+                                        {
+                                            <span>💵 Tiền mặt</span>
+                                        }
+                                        else if (inv.PaymentMethodCode == "BANK")
+                                        {
+                                            <span>🏦 Chuyển khoản</span>
+                                        }
+                                        else if (inv.PaymentMethodCode == "VNPAY")
+                                        {
+                                            <span>💳 Cổng VNPay</span>
+                                        }
+                                        else if (inv.PaymentMethodCode == "MOMO")
+                                        {
+                                            <span>📱 Ví MoMo</span>
+                                        }
+                                        else
+                                        {
+                                            <span>Chưa xác định</span>
+                                        }
+                                    </td>
+                                    <td class="text-end fw-bold text-dark">@inv.TotalAmount.ToString("N0") đ</td>
+                                    <td class="text-center">
+                                        @if (inv.Status == "Đã thanh toán")
+                                        {
+                                            <span class="badge bg-success-subtle text-success px-2.5 py-1.5 rounded-pill small fw-semibold">Success</span>
+                                        }
+                                        else if (inv.Status == "Đang xử lý")
+                                        {
+                                            <span class="badge bg-primary-subtle text-primary px-2.5 py-1.5 rounded-pill small fw-semibold">Processing</span>
+                                        }
+                                        else if (inv.Status == "Đã hoàn tiền")
+                                        {
+                                            <span class="badge bg-info-subtle text-info px-2.5 py-1.5 rounded-pill small fw-semibold">Refunded</span>
+                                        }
+                                        else if (inv.Status == "Thất bại")
+                                        {
+                                            <span class="badge bg-danger-subtle text-danger px-2.5 py-1.5 rounded-pill small fw-semibold">Failed</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-warning-subtle text-warning-emphasis px-2.5 py-1.5 rounded-pill small fw-semibold">Pending</span>
+                                        }
+                                    </td>
+                                    <td class="text-center">
+                                        <div class="d-flex gap-2 justify-content-center">
+                                            @if (inv.Status == "Chờ thanh toán" || inv.Status == "Đang xử lý")
+                                            {
+                                                <a asp-action="Checkout" asp-route-id="@inv.Id" class="btn btn-primary btn-xs rounded-pill px-3 py-1 fw-bold text-white text-xs">
+                                                    Thanh toán
+                                                </a>
+                                            }
+                                            else
+                                            {
+                                                <span class="text-muted text-xs">Không cần xử lý</span>
+                                            }
+
+                                            <a asp-action="DownloadInvoicePdf" asp-route-id="@inv.Id" class="btn btn-outline-secondary btn-xs rounded-pill px-2.5 py-1 text-xs" title="Tải hóa đơn PDF">
+                                                📥 PDF
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Document Center Section -->
+    <h5 class="fw-bold text-dark mb-3">Trung tâm tài liệu cá nhân</h5>
+    <div class="row g-4">
+        @if (Model != null && Model.Any())
+        {
+            var documentCount = 0;
+            foreach (var inv in Model)
+            {
+                if (documentCount >= 4) break;
+                documentCount++;
+                
+                <div class="col-12 col-md-3">
+                    <div class="card border-0 shadow-sm rounded-4 bg-white p-3 h-100 text-center">
+                        <div class="fs-1 text-primary mb-3">📄</div>
+                        <h6 class="fw-bold text-dark mb-1">Hoa_don_@inv.InvoiceCode</h6>
+                        <p class="text-muted text-xxs mb-3">@inv.IssuedAt.ToString("dd/MM/yyyy") | @(inv.TotalAmount.ToString("N0"))đ</p>
+                        <div class="d-flex gap-2 justify-content-center mt-auto">
+                            <a asp-action="DownloadInvoicePdf" asp-route-id="@inv.Id" class="btn btn-outline-primary btn-sm rounded-pill w-100 fw-bold text-xs">
+                                Tải xuống
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            }
+        }
+        else
+        {
+            <div class="col-12">
+                <div class="card border-0 shadow-sm rounded-4 bg-white p-4 text-center text-muted">
+                    Chưa có tài liệu điện tử nào khả dụng để tải xuống.
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+<style>
+    .btn-xs {
+        padding: 0.25rem 0.5rem;
+        font-size: 0.75rem;
+        line-height: 1.5;
+        border-radius: 0.2rem;
+    }
+    .text-xxs {
+        font-size: 0.7rem;
+    }
+</style>

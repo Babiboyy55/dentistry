@@ -34,6 +34,13 @@ namespace Nhakhoa.Middleware
 
             if (!isAuthPath && !isStaticFile && context.User.Identity?.IsAuthenticated == true)
             {
+                var userRole = context.User.FindFirst(ClaimTypes.Role)?.Value;
+                if (userRole == "Patient")
+                {
+                    await _next(context);
+                    return;
+                }
+
                 var userIdClaim = context.User.FindFirst("UserId")?.Value;
                 if (int.TryParse(userIdClaim, out int userId))
                 {

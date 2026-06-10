@@ -12,6 +12,7 @@ namespace Nhakhoa.Data
         }
 
         public DbSet<User> Users { get; set; }
+        public DbSet<PatientAccount> PatientAccounts { get; set; }
         public DbSet<StaffProfile> StaffProfiles { get; set; }
         public DbSet<StaffSalaryInfo> StaffSalaryInfos { get; set; }
         public DbSet<StaffQualification> StaffQualifications { get; set; }
@@ -607,7 +608,6 @@ namespace Nhakhoa.Data
                 new PaymentMethod { Id = 5, Name = "Bảo hiểm y tế", Code = "INSURANCE", IsEnabled = true, IsDigitalGateway = false, UpdatedAt = new DateTime(2026, 1, 1) }
             );
 
-            // Seed a pending cash invoice to test cash toggle constraint (EX-5.1.3)
             modelBuilder.Entity<Invoice>().HasData(
                 new Invoice { Id = 1, InvoiceCode = "HD-CASH-TEST", PatientId = null, SubTotal = 0m, VATPercent = 10m, VATAmount = 0m, DiscountAmount = 0m, TotalAmount = 500000m, PaymentMethodCode = "CASH", Status = "Chờ thanh toán", Notes = "Hóa đơn thử nghiệm tiền mặt", CreatedBy = "admin", IssuedAt = new DateTime(2026, 1, 1) }
             );
@@ -630,6 +630,10 @@ namespace Nhakhoa.Data
                 .WithMany()
                 .HasForeignKey(dr => dr.PatientId)
                 .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<PatientAccount>()
+                .HasIndex(pa => pa.PhoneNumber)
+                .IsUnique();
         }
     }
 }
