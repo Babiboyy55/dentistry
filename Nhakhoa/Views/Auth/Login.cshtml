@@ -45,21 +45,39 @@
             <h2>Đăng nhập hệ thống quản lý phòng khám</h2>
             <p>Vui lòng nhập thông tin tài khoản của bạn.</p>
 
+            @if (TempData["SuccessMessage"] != null)
+            {
+                <div class="alert alert-success border-0 rounded-3 small mb-4" style="background-color: rgba(40, 167, 69, 0.1); color: #1e7e34;">
+                    @TempData["SuccessMessage"]
+                </div>
+            }
+
             <form class="auth-form__body" method="post" asp-controller="Auth" asp-action="Login">
                 <div asp-validation-summary="ModelOnly" class="text-danger small"></div>
+                <input type="hidden" asp-for="Role" id="login-role" />
 
-                <label class="auth-label" asp-for="Username">Tên đăng nhập</label>
+                <!-- Role Selection Tabs -->
+                <div class="d-flex p-1 bg-light rounded-3 mb-4" style="border: 1px solid rgba(0,0,0,0.06); font-size: 0.9rem;">
+                    <button type="button" id="tab-staff" class="btn btn-sm flex-fill py-2 active" style="transition: all 0.3s ease; font-weight: 600;" onclick="switchRole('Staff')">
+                        👨‍⚕️ Nhân sự phòng khám
+                    </button>
+                    <button type="button" id="tab-patient" class="btn btn-sm flex-fill py-2 text-muted" style="transition: all 0.3s ease; font-weight: 600;" onclick="switchRole('Patient')">
+                        👤 Bệnh nhân
+                    </button>
+                </div>
+
+                <label class="auth-label" id="username-label" asp-for="Username">Tên đăng nhập</label>
                 <div class="auth-input">
-                    <span class="auth-input__icon">&#64;</span>
-                    <input asp-for="Username" type="text" placeholder="Nhập tên đăng nhập" autocomplete="username" />
+                    <span class="auth-input__icon" id="username-icon">&#64;</span>
+                    <input asp-for="Username" id="login-username" type="text" placeholder="Nhập tên đăng nhập" autocomplete="username" />
                 </div>
                 <span asp-validation-for="Username" class="text-danger small"></span>
 
                 <label class="auth-label" asp-for="Password">Mật khẩu</label>
                 <div class="auth-input">
                     <span class="auth-input__icon">*</span>
-                    <input asp-for="Password" type="password" placeholder="••••••••" autocomplete="current-password" />
-                    <button type="button" class="auth-input__action" aria-label="Hiện mật khẩu">Hiện</button>
+                    <input asp-for="Password" id="login-password" type="password" placeholder="••••••••" autocomplete="current-password" />
+                    <button type="button" class="auth-input__action toggle-password" data-target="login-password">Hiện</button>
                 </div>
                 <span asp-validation-for="Password" class="text-danger small"></span>
 
@@ -68,7 +86,7 @@
                         <input type="checkbox" asp-for="RememberMe" />
                         Ghi nhớ đăng nhập
                     </label>
-                    <a class="auth-link" asp-controller="Auth" asp-action="ForgotPassword">Quên mật khẩu?</a>
+                    <a class="auth-link" id="forgot-password-link" asp-controller="Auth" asp-action="ForgotPassword">Quên mật khẩu?</a>
                 </div>
 
                 <button type="submit" class="auth-submit">Đăng nhập</button>
@@ -83,3 +101,72 @@
         </section>
     </div>
 </div>
+
+@section Scripts {
+    <script>
+        // Toggle password visibility
+        document.querySelectorAll('.toggle-password').forEach(button => {
+            button.addEventListener('click', function(e) {
+                e.preventDefault();
+                const targetId = this.getAttribute('data-target');
+                const input = document.getElementById(targetId);
+                if (input.type === 'password') {
+                    input.type = 'text';
+                    this.textContent = 'Ẩn';
+                } else {
+                    input.type = 'password';
+                    this.textContent = 'Hiện';
+                }
+            });
+        });
+
+        // Switch role dynamically
+        function switchRole(role) {
+            const roleInput = document.getElementById('login-role');
+            const tabStaff = document.getElementById('tab-staff');
+            const tabPatient = document.getElementById('tab-patient');
+            const usernameLabel = document.getElementById('username-label');
+            const usernameIcon = document.getElementById('username-icon');
+            const usernameInput = document.getElementById('login-username');
+            const forgotLink = document.getElementById('forgot-password-link');
+
+            roleInput.value = role;
+
+            if (role === 'Staff') {
+                tabStaff.classList.add('active', 'btn-primary');
+                tabStaff.classList.remove('text-muted');
+                tabPatient.classList.remove('active', 'btn-primary');
+                tabPatient.classList.add('text-muted');
+
+                usernameLabel.innerText = "Tên đăng nhập";
+                usernameIcon.innerHTML = "&#64;";
+                usernameInput.placeholder = "Nhập tên đăng nhập";
+                forgotLink.href = "/Auth/ForgotPassword";
+            } else {
+                tabPatient.classList.add('active', 'btn-primary');
+                tabPatient.classList.remove('text-muted');
+                tabStaff.classList.remove('active', 'btn-primary');
+                tabStaff.classList.add('text-muted');
+
+                usernameLabel.innerText = "Số điện thoại";
+                usernameIcon.innerHTML = "📞";
+                usernameInput.placeholder = "Nhập số điện thoại bệnh nhân";
+                forgotLink.href = "/Auth/ForgotPatientPassword";
+            }
+        }
+
+        // Initialize based on current model value
+        window.addEventListener('DOMContentLoaded', () => {
+            const currentRole = document.getElementById('login-role').value || "Staff";
+            switchRole(currentRole);
+        });
+    </script>
+    <style>
+        .auth-form .btn-primary {
+            background-color: #1b75d0 !important;
+            border-color: #1b75d0 !important;
+            color: #fff !important;
+            box-shadow: 0 4px 12px rgba(27, 117, 208, 0.2);
+        }
+    </style>
+}

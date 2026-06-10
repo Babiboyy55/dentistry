@@ -1,0 +1,106 @@
+@model Nhakhoa.Models.Invoice
+@using Nhakhoa.Models
+@{
+    ViewData["Title"] = "Kết quả thanh toán";
+    var account = ViewBag.Account as PatientAccount;
+    var status = ViewBag.Status as string;
+    var error = ViewBag.Error as string;
+    var alreadyPaid = (bool)(ViewBag.AlreadyPaid ?? false);
+    
+    var isSuccess = status == "success";
+    var method = Model.PaymentMethodCode;
+    var methodName = method == "VNPAY" ? "Cổng VNPay" : (method == "MOMO" ? "Ví MoMo" : "Trực tuyến");
+    var paymentRecord = Model.Payments?.OrderByDescending(p => p.CreatedAt).FirstOrDefault();
+    var txnCode = paymentRecord?.TransactionCode ?? "N/A";
+}
+
+<div class="container py-5" style="max-width: 650px;">
+    <!-- Result Card -->
+    <div class="card border-0 shadow-lg rounded-4 overflow-hidden text-center bg-white p-4 p-md-5">
+        @if (isSuccess)
+        {
+            <!-- Success UI -->
+            <div class="mx-auto mb-4 d-flex align-items-center justify-content-center bg-success bg-opacity-10 text-success rounded-circle" style="width: 80px; height: 80px;">
+                <i class="bi bi-check-circle-fill" style="font-size: 3.5rem;"></i>
+            </div>
+            
+            <h2 class="fw-bold text-success mb-2">Thanh toán thành công!</h2>
+            @if (alreadyPaid)
+            {
+                <p class="text-muted small">Hóa đơn này đã hoàn tất thanh toán từ trước.</p>
+            }
+            else
+            {
+                <p class="text-muted small">Cảm ơn bạn. Giao dịch trực tuyến của bạn đã được xử lý và ghi nhận thành công.</p>
+            }
+
+            <div class="card border-0 bg-light rounded-4 p-4 text-start my-4">
+                <h6 class="fw-bold text-dark border-bottom pb-2 mb-3">Thông tin giao dịch</h6>
+                <div class="d-flex justify-content-between mb-2 text-xs">
+                    <span class="text-secondary">Mã hóa đơn:</span>
+                    <strong class="text-dark font-monospace">@Model.InvoiceCode</strong>
+                </div>
+                <div class="d-flex justify-content-between mb-2 text-xs">
+                    <span class="text-secondary">Mã giao dịch:</span>
+                    <strong class="text-dark font-monospace">@txnCode</strong>
+                </div>
+                <div class="d-flex justify-content-between mb-2 text-xs">
+                    <span class="text-secondary">Phương thức:</span>
+                    <span class="fw-semibold text-dark">@methodName</span>
+                </div>
+                <div class="d-flex justify-content-between mb-2 text-xs">
+                    <span class="text-secondary">Ngày thanh toán:</span>
+                    <span class="fw-semibold text-dark">@(Model.PaidAt?.ToString("dd/MM/yyyy HH:mm") ?? DateTime.Now.ToString("dd/MM/yyyy HH:mm"))</span>
+                </div>
+                <hr class="my-2 border-secondary-subtle" />
+                <div class="d-flex justify-content-between text-dark">
+                    <span class="fw-bold text-sm">Số tiền đã trả:</span>
+                    <span class="fw-bold fs-5 text-primary">@Model.TotalAmount.ToString("N0") VNĐ</span>
+                </div>
+            </div>
+
+            <div class="d-flex flex-column flex-md-row gap-3 justify-content-center mt-4">
+                <a asp-action="DownloadInvoicePdf" asp-route-id="@Model.Id" class="btn btn-primary rounded-pill px-4 py-2.5 fw-bold text-white shadow-sm">
+                    <i class="bi bi-download me-1"></i> Tải hóa đơn PDF
+                </a>
+                <a asp-action="Billing" class="btn btn-outline-secondary rounded-pill px-4 py-2.5 fw-bold">
+                    Quay lại danh sách
+                </a>
+            </div>
+        }
+        else
+        {
+            <!-- Failure UI -->
+            <div class="mx-auto mb-4 d-flex align-items-center justify-content-center bg-danger bg-opacity-10 text-danger rounded-circle" style="width: 80px; height: 80px;">
+                <i class="bi bi-x-circle-fill" style="font-size: 3.5rem;"></i>
+            </div>
+
+            <h2 class="fw-bold text-danger mb-2">Thanh toán thất bại!</h2>
+            <p class="text-muted small">Giao dịch của bạn không thể hoàn tất. Chi tiết lỗi từ cổng thanh toán:</p>
+            
+            <div class="alert alert-danger border-0 rounded-4 text-xs p-3 text-start my-4" style="background-color: rgba(220, 53, 69, 0.08); color: #842029;">
+                <strong>Chi tiết lỗi:</strong> @(error ?? "Giao dịch bị từ chối hoặc người dùng hủy bỏ.")
+            </div>
+
+            <div class="card border-0 bg-light rounded-4 p-4 text-start mb-4">
+                <div class="d-flex justify-content-between mb-2 text-xs">
+                    <span class="text-secondary">Mã hóa đơn:</span>
+                    <strong class="text-dark font-monospace">@Model.InvoiceCode</strong>
+                </div>
+                <div class="d-flex justify-content-between text-dark">
+                    <span class="fw-bold text-sm">Số tiền cần trả:</span>
+                    <span class="fw-bold text-danger">@Model.TotalAmount.ToString("N0") VNĐ</span>
+                </div>
+            </div>
+
+            <div class="d-flex flex-column flex-md-row gap-3 justify-content-center mt-4">
+                <a asp-action="Checkout" asp-route-id="@Model.Id" class="btn btn-danger rounded-pill px-4 py-2.5 fw-bold text-white shadow-sm">
+                    <i class="bi bi-arrow-repeat me-1"></i> Thử lại thanh toán
+                </a>
+                <a asp-action="Billing" class="btn btn-outline-secondary rounded-pill px-4 py-2.5 fw-bold">
+                    Quay lại danh sách
+                </a>
+            </div>
+        }
+    </div>
+</div>

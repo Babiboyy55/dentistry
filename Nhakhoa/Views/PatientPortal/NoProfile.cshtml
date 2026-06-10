@@ -1,0 +1,58 @@
+@using Nhakhoa.Models
+@{
+    ViewData["Title"] = "Hồ sơ sức khỏe";
+    var account = ViewBag.Account as PatientAccount;
+}
+
+<div class="container py-4">
+    <!-- Navigation Header -->
+    <div class="card border-0 shadow-sm rounded-4 mb-4" style="background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.4);">
+        <div class="card-body py-3 px-4 d-flex flex-wrap justify-content-between align-items-center gap-3">
+            <div class="d-flex align-items-center gap-2">
+                <span class="fs-4 text-primary">🏥</span>
+                <div>
+                    <strong class="text-primary fs-5">Portal Bệnh Nhân</strong>
+                    <span class="text-muted text-xs d-block" style="font-size: 0.75rem;">Hệ thống Nha Khoa</span>
+                </div>
+            </div>
+            <div class="d-flex align-items-center gap-2 flex-wrap">
+                <a asp-controller="PatientPortal" asp-action="Index" class="btn btn-light rounded-pill px-3 py-1.5 fw-semibold text-secondary">
+                    🏠 Lịch hẹn
+                </a>
+                <a asp-controller="PatientPortal" asp-action="HealthProfile" class="btn btn-primary rounded-pill px-3 py-1.5 fw-semibold text-white">
+                    🩺 Hồ sơ sức khỏe
+                </a>
+                <a asp-controller="PatientPortal" asp-action="ChangePassword" class="btn btn-light rounded-pill px-3 py-1.5 fw-semibold text-secondary">
+                    🔑 Đổi mật khẩu
+                </a>
+                <a asp-controller="Auth" asp-action="Logout" class="btn btn-danger rounded-pill px-3 py-1.5 fw-semibold text-white">
+                    🚪 Đăng xuất
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Error/Warning Card -->
+    <div class="row justify-content-center">
+        <div class="col-md-8 text-center py-5">
+            <div class="card border-0 shadow-sm rounded-4 p-5" style="background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.4);">
+                <div class="text-warning mb-4">
+                    <span class="display-1">⚠️</span>
+                </div>
+                <h3 class="fw-bold text-dark mb-3">Chưa liên kết hồ sơ bệnh án</h3>
+                <p class="text-secondary mb-4">
+                    Tài khoản của bạn (SĐT: <strong>@account?.PhoneNumber</strong>) hiện chưa được liên kết với hồ sơ khám bệnh lâm sàng nào của hệ thống.
+                </p>
+                <div class="alert alert-warning border-0 rounded-3 small text-start p-3 mb-4 mx-auto" style="max-width: 500px; background-color: rgba(255, 193, 7, 0.1); color: #856404;">
+                    <i class="bi bi-info-circle-fill me-2"></i>
+                    <strong>Hướng dẫn liên kết:</strong> Vui lòng liên hệ trực tiếp với quầy lễ tân của phòng khám để thực hiện đăng ký/cập nhật số điện thoại chính xác trên hệ thống hồ sơ bệnh án điện tử (EMR).
+                </div>
+                <div class="d-grid gap-2 col-sm-6 mx-auto">
+                    <a asp-controller="PatientPortal" asp-action="Index" class="btn btn-primary rounded-pill py-2.5 fw-bold">
+                        Quay lại trang chủ
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

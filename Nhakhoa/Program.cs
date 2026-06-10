@@ -37,6 +37,7 @@ app.UseRouting();
 
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseMiddleware<Nhakhoa.Middleware.PatientPortalAccessMiddleware>();
 app.UseMiddleware<Nhakhoa.Middleware.ForcePasswordChangeMiddleware>();
 
 app.MapStaticAssets();
