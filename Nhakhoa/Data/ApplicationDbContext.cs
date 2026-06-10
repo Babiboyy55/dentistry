@@ -45,6 +45,7 @@ namespace Nhakhoa.Data
         public DbSet<RefundApproval> RefundApprovals { get; set; }
         public DbSet<DailyReconciliation> DailyReconciliations { get; set; }
         public DbSet<ReconciliationDetail> ReconciliationDetails { get; set; }
+        public DbSet<DoctorRating> DoctorRatings { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -610,6 +611,25 @@ namespace Nhakhoa.Data
             modelBuilder.Entity<Invoice>().HasData(
                 new Invoice { Id = 1, InvoiceCode = "HD-CASH-TEST", PatientId = null, SubTotal = 0m, VATPercent = 10m, VATAmount = 0m, DiscountAmount = 0m, TotalAmount = 500000m, PaymentMethodCode = "CASH", Status = "Chờ thanh toán", Notes = "Hóa đơn thử nghiệm tiền mặt", CreatedBy = "admin", IssuedAt = new DateTime(2026, 1, 1) }
             );
+
+            // DoctorRating configuration
+            modelBuilder.Entity<DoctorRating>()
+                .HasOne(dr => dr.ExaminationSession)
+                .WithMany()
+                .HasForeignKey(dr => dr.ExaminationSessionId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<DoctorRating>()
+                .HasOne(dr => dr.Doctor)
+                .WithMany()
+                .HasForeignKey(dr => dr.DoctorId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<DoctorRating>()
+                .HasOne(dr => dr.Patient)
+                .WithMany()
+                .HasForeignKey(dr => dr.PatientId)
+                .OnDelete(DeleteBehavior.Restrict);
         }
     }
 }
