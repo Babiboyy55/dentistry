@@ -14,7 +14,7 @@ namespace Nhakhoa.Models
 
         [Required]
         [MaxLength(50)]
-        public string Code { get; set; } = string.Empty; // CASH, BANK, VNPAY, MOMO, INSURANCE
+        public string Code { get; set; } = string.Empty; // CASH, BANK, VNPAY, MOMO
 
         [Required]
         public bool IsEnabled { get; set; } = true;

@@ -365,12 +365,12 @@
                                     <textarea class="form-control rounded-3" id="emr-care" rows="2" placeholder="Vệ sinh răng miệng, súc miệng, ăn đồ mềm...">@(activeSession?.HomeCareInstructions ?? "")</textarea>
                                 </div>
                                 <div class="col-md-6">
-                                    <label class="form-label fw-bold small text-secondary">Hệ số bệnh nhân (Patient Coefficient) <span class="text-danger">*</span></label>
+                                    <label class="form-label fw-bold small text-secondary">Hệ số bệnh nhân (Patient Coefficient)</label>
                                     <div class="input-group">
                                         <span class="input-group-text bg-light"><i class="bi bi-calculator"></i></span>
-                                        <input type="number" step="0.01" min="0" max="0.5" class="form-control" id="emr-coefficient" value="@(activeSession?.PatientCoefficient.ToString("F2") ?? "0.10")" placeholder="0.0 - 0.5" required />
+                                        <input type="number" step="0.01" min="0" max="0.5" class="form-control bg-light" id="emr-coefficient" value="@(activeSession?.PatientCoefficient.ToString("F2") ?? "0.00")" readonly />
                                     </div>
-                                    <small class="text-muted">Bắt buộc từ 0.0 đến 0.5 (Dùng tính lương cho BS)</small>
+                                    <small class="text-muted">Mặc định 0.00. Chỉ ca phức tạp được Admin duyệt mới tăng hệ số.</small>
                                 </div>
                                 
                                 <div class="col-12 border-top pt-3 mt-3">
@@ -396,6 +396,17 @@
                                     <i class="bi bi-cloud-check-fill text-success"></i> Đang tự động lưu nháp cục bộ.
                                 </div>
                                 <div class="d-flex gap-2">
+                                    @if (activeSession != null)
+                                    {
+                                        var hasFlaggedComplex = activeSession.ComplexStatus == "Pending" || activeSession.ComplexStatus == "Approved";
+                                        <button type="button"
+                                                id="activeFlagComplexBtn"
+                                                class="btn @(hasFlaggedComplex ? "btn-danger" : "btn-outline-danger") rounded-pill px-4 fw-semibold"
+                                                onclick="openFlagComplexModal(@activeSession.Id, '@(activeSession.Diagnosis?.Replace("'","\\'")??"")')"
+                                                @(hasFlaggedComplex ? "disabled" : "")>
+                                            <i class="bi bi-flag-fill me-1"></i> @(hasFlaggedComplex ? "Đã báo ca phức tạp" : "Báo ca phức tạp")
+                                        </button>
+                                    }
                                     <button type="button" class="btn btn-outline-primary rounded-pill px-4" onclick="saveEMR(false)">
                                         <i class="bi bi-save me-1"></i> Lưu nháp bệnh án
                                     </button>
@@ -429,26 +440,82 @@
                             {
                                 @foreach (var sess in (List<Nhakhoa.Models.ExaminationSession>)ViewBag.ExaminationSessions)
                                 {
-                                    <div class="d-flex gap-3 mb-4 position-relative border-bottom pb-3">
+                                    <div class="d-flex gap-3 mb-4 position-relative border-bottom pb-3" id="sess-row-@sess.Id">
                                         <div class="text-end" style="min-width: 100px;">
                                             <div class="fw-bold">@sess.CreatedAt.ToString("dd/MM/yyyy")</div>
                                             <div class="text-muted small">@sess.CreatedAt.ToString("HH:mm")</div>
                                         </div>
                                         <div class="bg-primary rounded-circle shadow-sm" style="width:14px; height:14px; margin-top: 5px; flex-shrink: 0; z-index:1;"></div>
                                         <div class="flex-grow-1">
-                                            <div class="d-flex justify-content-between align-items-start">
+                                            <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
                                                 <h6 class="fw-bold text-dark mb-0">Chẩn đoán: @sess.Diagnosis</h6>
-                                                @if (sess.IsCompleted)
+                                                <div class="d-flex gap-2 align-items-center flex-wrap">
+                                                    @if (sess.IsCompleted)
+                                                    {
+                                                        <span class="badge bg-success-subtle text-success rounded-pill px-2">Đã kết thúc</span>
+                                                    }
+                                                    else
+                                                    {
+                                                        <span class="badge bg-warning-subtle text-warning-emphasis rounded-pill px-2">Bản nháp</span>
+                                                    }
+
+                                                    @* Badge trạng thái ca phức tạp *@
+                                                    @if (sess.ComplexStatus == "Pending")
+                                                    {
+                                                        <span class="badge rounded-pill px-2 py-1" style="background:#fff3cd; color:#856404; border:1px solid #ffc107;">
+                                                            <i class="bi bi-hourglass-split me-1"></i>Chờ duyệt phức tạp
+                                                        </span>
+                                                    }
+                                                    else if (sess.ComplexStatus == "Approved")
+                                                    {
+                                                        <span class="badge rounded-pill px-2 py-1" style="background:#d1fae5; color:#065f46; border:1px solid #6ee7b7;" title="Hệ số được duyệt: @sess.PatientCoefficient">
+                                                            <i class="bi bi-check-circle-fill me-1"></i>Phức tạp — Hệ số @sess.PatientCoefficient.ToString("F2")
+                                                        </span>
+                                                    }
+                                                    else if (sess.ComplexStatus == "Rejected")
+                                                    {
+                                                        <span class="badge rounded-pill px-2 py-1" style="background:#fee2e2; color:#991b1b; border:1px solid #fca5a5;" title="Lý do từ chối: @sess.AdminNote">
+                                                            <i class="bi bi-x-circle-fill me-1"></i>Đã từ chối
+                                                        </span>
+                                                    }
+
+                                                    @* Nút báo ca phức tạp — chỉ hiện cho bác sĩ khi ca đã kết thúc và chưa báo hoặc bị từ chối *@
+                                                    @if ((isDoctor || isAdmin) && sess.IsCompleted && (sess.ComplexStatus == null || sess.ComplexStatus == "Rejected"))
+                                                    {
+                                                        <button class="btn btn-sm rounded-pill px-2 py-1 fw-semibold"
+                                                                style="background:#fee2e2; color:#991b1b; border:1px solid #fca5a5; font-size:0.75rem;"
+                                                                onclick="openFlagComplexModal(@sess.Id, '@(sess.Diagnosis?.Replace("'","\\'")??"")') "
+                                                                title="Báo ca này là ca phức tạp để yêu cầu tăng hệ số">
+                                                            <i class="bi bi-flag-fill me-1"></i>Báo phức tạp
+                                                        </button>
+                                                    }
+                                                </div>
+                                            </div>
+                                            <div class="text-muted small mt-1">
+                                                Bác sĩ thực hiện: <strong>@sess.Doctor?.User?.FullName</strong>
+                                                @if (sess.ComplexStatus == "Approved")
                                                 {
-                                                    <span class="badge bg-success-subtle text-success rounded-pill px-2">Đã kết thúc</span>
+                                                    <span class="ms-2 text-success fw-semibold">| Hệ số phức tạp: <strong>@sess.PatientCoefficient.ToString("F2")</strong></span>
                                                 }
                                                 else
                                                 {
-                                                    <span class="badge bg-warning-subtle text-warning-emphasis rounded-pill px-2">Bản nháp</span>
+                                                    <span class="ms-2 text-muted">| Hệ số: <strong>@sess.PatientCoefficient.ToString("F2")</strong></span>
                                                 }
                                             </div>
-                                            <div class="text-muted small mt-1">Bác sĩ thực hiện: <strong>@sess.Doctor?.User?.FullName</strong> | Hệ số: <strong>@sess.PatientCoefficient</strong></div>
-                                            
+
+                                            @* Hiển thị lý do báo phức tạp nếu có *@
+                                            @if (!string.IsNullOrEmpty(sess.ComplexReason))
+                                            {
+                                                <div class="mt-2 p-2 rounded-3 small" style="background:#fff8e1; border-left: 3px solid #ffc107;">
+                                                    <i class="bi bi-chat-quote-fill text-warning me-1"></i>
+                                                    <strong>Lý do báo phức tạp:</strong> @sess.ComplexReason
+                                                    @if (!string.IsNullOrEmpty(sess.AdminNote))
+                                                    {
+                                                        <span class="text-muted"> | Ghi chú admin: @sess.AdminNote</span>
+                                                    }
+                                                </div>
+                                            }
+
                                             @if (!string.IsNullOrEmpty(sess.ClinicalNotes))
                                             {
                                                 <p class="mt-2 text-secondary mb-1 small"><strong>Ghi chú lâm sàng:</strong> @sess.ClinicalNotes</p>
@@ -1560,7 +1627,7 @@
             clinicalNotes: document.getElementById("emr-notes").value,
             treatmentPlanSummary: document.getElementById("emr-plan").value,
             homeCareInstructions: document.getElementById("emr-care").value,
-            patientCoefficient: parseFloat(document.getElementById("emr-coefficient").value) || 0.00,
+            patientCoefficient: 0.00,
             concurrencyStamp: document.getElementById("emr-concurrency-stamp").value || null
         };
 
@@ -1595,12 +1662,6 @@
     }
 
     function finishSession() {
-        const coef = parseFloat(document.getElementById("emr-coefficient").value);
-        if (isNaN(coef) || coef < 0 || coef > 0.5) {
-            showToast("Hệ số bệnh nhân không hợp lệ (Bắt buộc từ 0.0 đến 0.5).", "danger");
-            return;
-        }
-
         const selectedServices = Array.from(document.querySelectorAll('input[name="performedServices"]:checked')).map(cb => parseInt(cb.value));
 
         // Save EMR first, then trigger finish
@@ -1639,7 +1700,7 @@
             clinicalNotes: document.getElementById("emr-notes").value,
             treatmentPlanSummary: document.getElementById("emr-plan").value,
             homeCareInstructions: document.getElementById("emr-care").value,
-            patientCoefficient: document.getElementById("emr-coefficient").value,
+            patientCoefficient: "0.00",
             timestamp: new Date().getTime()
         };
         localStorage.setItem("emr_draft_" + patientId, JSON.stringify(draft));
@@ -1657,7 +1718,7 @@
             document.getElementById("emr-notes").value = draft.clinicalNotes;
             document.getElementById("emr-plan").value = draft.treatmentPlanSummary;
             document.getElementById("emr-care").value = draft.homeCareInstructions;
-            document.getElementById("emr-coefficient").value = draft.patientCoefficient;
+            document.getElementById("emr-coefficient").value = "0.00";
             
             showToast("Đã khôi phục bản nháp bệnh án chưa lưu trước đó.", "info");
         }
@@ -1975,5 +2036,160 @@
         `;
         alertZone.appendChild(alert);
         setTimeout(() => alert.remove(), 4000);
+    }
+</script>
+
+<!-- ==================== MODAL BÁO CA PHỨC TẠP ==================== -->
+<div class="modal fade" id="flagComplexModal" tabindex="-1" aria-labelledby="flagComplexModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <div class="modal-header border-0" style="background: linear-gradient(135deg, #fee2e2, #fef2f2);">
+                <h5 class="modal-title fw-bold text-danger" id="flagComplexModalLabel">
+                    <i class="bi bi-flag-fill me-2"></i>Báo ca phức tạp
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <input type="hidden" id="flagSessionId" />
+
+                <div class="alert alert-warning border-0 rounded-3 py-2 px-3 small mb-4">
+                    <i class="bi bi-info-circle-fill me-1"></i>
+                    Yêu cầu này sẽ được gửi đến <strong>Admin</strong> để xem xét và duyệt hệ số.
+                    Ca sẽ được đánh dấu <strong>"Chờ duyệt"</strong> cho đến khi Admin xử lý.
+                </div>
+
+                <div class="mb-3 p-3 bg-light rounded-3 small">
+                    <div class="text-muted">Ca khám:</div>
+                    <div class="fw-bold text-dark" id="flagSessionDiagnosis">—</div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label fw-semibold small">Lý do báo ca phức tạp <span class="text-danger">*</span></label>
+                    <textarea class="form-control rounded-3" id="flagReason" rows="4"
+                              placeholder="Mô tả chi tiết tại sao ca này phức tạp: tình trạng bệnh nhân đặc biệt, kỹ thuật khó, thời gian xử lý lâu hơn bình thường..."></textarea>
+                    <div class="text-muted small mt-1" id="flagReasonCount">0/1000 ký tự</div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label fw-semibold small">Hệ số đề xuất <span class="text-danger">*</span></label>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="bi bi-plus-slash-minus"></i></span>
+                        <input type="number" class="form-control" id="flagCoefficient"
+                               min="0.10" max="0.50" step="0.05" value="0.20"
+                               placeholder="0.10 – 0.50" />
+                    </div>
+                    <div class="d-flex gap-2 mt-2 flex-wrap" id="flagCoeffPresets">
+                        <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3" onclick="setFlagCoeff(0.10)">+0.10</button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3" onclick="setFlagCoeff(0.20)">+0.20</button>
+                        <button type="button" class="btn btn-sm btn-outline-warning rounded-pill px-3" onclick="setFlagCoeff(0.30)">+0.30</button>
+                        <button type="button" class="btn btn-sm btn-outline-danger rounded-pill px-3" onclick="setFlagCoeff(0.40)">+0.40</button>
+                        <button type="button" class="btn btn-sm btn-danger rounded-pill px-3" onclick="setFlagCoeff(0.50)">+0.50 (Tối đa)</button>
+                    </div>
+                    <small class="text-muted">Hệ số tăng thêm cho ca: từ 0.10 đến 0.50</small>
+                </div>
+            </div>
+            <div class="modal-footer border-0 pt-0 px-4 pb-4">
+                <button type="button" class="btn btn-outline-secondary rounded-pill px-4" data-bs-dismiss="modal">Hủy</button>
+                <button type="button" class="btn btn-danger rounded-pill px-4 fw-semibold" id="btnSubmitFlag" onclick="submitFlagComplex()">
+                    <i class="bi bi-send-fill me-1"></i>Gửi yêu cầu
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // ── Modal Báo Ca Phức Tạp ───────────────────────────────────────
+    const flagComplexModal = new bootstrap.Modal(document.getElementById('flagComplexModal'));
+
+    function openFlagComplexModal(sessionId, diagnosis) {
+        if (!confirm('Bạn có chắc muốn báo cáo ca này là ca phức tạp không?\nYêu cầu sau khi gửi sẽ chuyển sang trang Payroll để Admin duyệt hệ số.')) {
+            return;
+        }
+        document.getElementById('flagSessionId').value = sessionId;
+        document.getElementById('flagSessionDiagnosis').textContent = diagnosis || '—';
+        document.getElementById('flagReason').value = '';
+        document.getElementById('flagCoefficient').value = '0.20';
+        document.getElementById('flagReasonCount').textContent = '0/1000 ký tự';
+        flagComplexModal.show();
+    }
+
+    function setFlagCoeff(val) {
+        document.getElementById('flagCoefficient').value = val.toFixed(2);
+    }
+
+    document.getElementById('flagReason').addEventListener('input', function () {
+        document.getElementById('flagReasonCount').textContent = this.value.length + '/1000 ký tự';
+    });
+
+    async function submitFlagComplex() {
+        const sessionId = parseInt(document.getElementById('flagSessionId').value);
+        const reason = document.getElementById('flagReason').value.trim();
+        const coeff = parseFloat(document.getElementById('flagCoefficient').value);
+        const btn = document.getElementById('btnSubmitFlag');
+
+        if (!reason) {
+            alert('Vui lòng nhập lý do báo ca phức tạp.');
+            return;
+        }
+        if (isNaN(coeff) || coeff < 0.10 || coeff > 0.50) {
+            alert('Hệ số đề xuất phải từ 0.10 đến 0.50.');
+            return;
+        }
+        if (!confirm(`Xác nhận gửi báo cáo ca phức tạp với hệ số đề xuất ${coeff.toFixed(2)}?\nYêu cầu sẽ được gửi lên Admin để xem xét và duyệt.`)) {
+            return;
+        }
+
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Đang gửi...';
+
+        try {
+            const res = await fetch('/Patient/FlagComplexSession', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+                body: JSON.stringify({ sessionId, requestedCoefficient: coeff, reason })
+            });
+            if (!res.ok) {
+                alert(res.status === 403 ? 'Bạn không có quyền báo ca phức tạp cho ca khám này.' : 'Không gửi được yêu cầu. Vui lòng thử lại.');
+                return;
+            }
+            const data = await res.json();
+
+            if (data.success) {
+                flagComplexModal.hide();
+                showAlert('success', '<i class="bi bi-check-circle-fill me-2"></i>' + data.message + ' <a href="/Payroll" class="alert-link">Mở Payroll để duyệt</a>.');
+
+                // Cập nhật badge trong row mà không cần reload
+                const row = document.getElementById('sess-row-' + sessionId);
+                if (row) {
+                    // Xoá nút báo phức tạp và thêm badge Chờ duyệt
+                    const flagBtn = row.querySelector('[onclick^="openFlagComplexModal"]');
+                    if (flagBtn) flagBtn.remove();
+
+                    const badgeContainer = row.querySelector('.d-flex.gap-2.align-items-center');
+                    if (badgeContainer) {
+                        const pendingBadge = document.createElement('span');
+                        pendingBadge.className = 'badge rounded-pill px-2 py-1';
+                        pendingBadge.style.cssText = 'background:#fff3cd; color:#856404; border:1px solid #ffc107;';
+                        pendingBadge.innerHTML = '<i class="bi bi-hourglass-split me-1"></i>Chờ duyệt phức tạp';
+                        badgeContainer.appendChild(pendingBadge);
+                    }
+                }
+
+                const activeFlagBtn = document.getElementById('activeFlagComplexBtn');
+                if (activeFlagBtn && parseInt(document.getElementById('flagSessionId').value) === sessionId) {
+                    activeFlagBtn.className = 'btn btn-danger rounded-pill px-4 fw-semibold';
+                    activeFlagBtn.disabled = true;
+                    activeFlagBtn.innerHTML = '<i class="bi bi-flag-fill me-1"></i> Đã báo ca phức tạp';
+                }
+            } else {
+                alert(data.message || 'Có lỗi xảy ra.');
+            }
+        } catch (e) {
+            alert('Lỗi kết nối. Vui lòng thử lại.');
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bi bi-send-fill me-1"></i>Gửi yêu cầu';
+        }
     }
 </script>

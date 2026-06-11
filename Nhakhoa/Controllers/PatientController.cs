@@ -98,6 +98,12 @@ namespace Nhakhoa.Controllers
                 .FirstOrDefaultAsync(p => p.Id == id);
 
             if (patient == null) return NotFound();
+
+            // Load portal account if exists
+            var portalAccount = await _db.PatientAccounts
+                .FirstOrDefaultAsync(pa => pa.PatientId == id || pa.PhoneNumber == patient.PhoneNumber);
+            ViewBag.PortalAccount = portalAccount;
+
             return View(patient);
         }
 
@@ -192,6 +198,112 @@ namespace Nhakhoa.Controllers
             await _db.SaveChangesAsync();
             TempData["Success"] = "Đã xóa hồ sơ bệnh nhân.";
             return RedirectToAction(nameof(Index));
+        }
+
+        // ==========================================
+        // PATIENT PORTAL ACCOUNT MANAGEMENT (UC-PA)
+        // ==========================================
+
+        // POST: /Patient/CreatePortalAccount
+        [HttpPost, ValidateAntiForgeryToken, Authorize(Roles = "Admin,Receptionist")]
+        public async Task<IActionResult> CreatePortalAccount(int patientId)
+        {
+            var patient = await _db.Patients.FindAsync(patientId);
+            if (patient == null) return NotFound();
+
+            // Check if portal account already exists
+            var existing = await _db.PatientAccounts
+                .FirstOrDefaultAsync(pa => pa.PatientId == patientId || pa.PhoneNumber == patient.PhoneNumber);
+
+            if (existing != null)
+            {
+                TempData["Warning"] = "Bệnh nhân này đã có tài khoản Patient Portal.";
+                return RedirectToAction(nameof(Details), new { id = patientId });
+            }
+
+            // Generate temporary password: BN@{PatientCode}
+            var tempPassword = $"BN@{patient.PatientCode}";
+
+            var account = new PatientAccount
+            {
+                PhoneNumber = patient.PhoneNumber,
+                FullName = patient.FullName,
+                Email = patient.Email,
+                PasswordHash = tempPassword,
+                IsActive = true,
+                PatientId = patient.Id,
+                SecurityStamp = Guid.NewGuid().ToString(),
+                CreatedAt = DateTime.Now,
+                UpdatedAt = DateTime.Now
+            };
+
+            _db.PatientAccounts.Add(account);
+
+            var log = new ActivityLog
+            {
+                Username = User.Identity?.Name ?? "System",
+                Action = "Tạo tài khoản Patient Portal",
+                Details = $"Nhân viên {User.Identity?.Name} đã tạo tài khoản Patient Portal cho bệnh nhân {patient.FullName} ({patient.PatientCode}). Mật khẩu tạm thời: {tempPassword}",
+                Timestamp = DateTime.Now
+            };
+            _db.ActivityLogs.Add(log);
+            await _db.SaveChangesAsync();
+
+            TempData["PortalSuccess"] = $"Đã tạo tài khoản thành công! Mật khẩu tạm thời: <strong>{tempPassword}</strong>. Yêu cầu bệnh nhân đổi mật khẩu sau khi đăng nhập.";
+            return RedirectToAction(nameof(Details), new { id = patientId });
+        }
+
+        // POST: /Patient/TogglePortalAccount
+        [HttpPost, ValidateAntiForgeryToken, Authorize(Roles = "Admin,Receptionist")]
+        public async Task<IActionResult> TogglePortalAccount(int accountId, int patientId)
+        {
+            var account = await _db.PatientAccounts.FindAsync(accountId);
+            if (account == null) return NotFound();
+
+            account.IsActive = !account.IsActive;
+            account.UpdatedAt = DateTime.Now;
+
+            var action = account.IsActive ? "Mở khóa" : "Khóa";
+            var log = new ActivityLog
+            {
+                Username = User.Identity?.Name ?? "System",
+                Action = $"{action} tài khoản Patient Portal",
+                Details = $"Nhân viên {User.Identity?.Name} đã {action.ToLower()} tài khoản Patient Portal của bệnh nhân {account.FullName} (SĐT: {account.PhoneNumber}).",
+                Timestamp = DateTime.Now
+            };
+            _db.ActivityLogs.Add(log);
+            await _db.SaveChangesAsync();
+
+            TempData["Success"] = $"Đã {action.ToLower()} tài khoản Patient Portal thành công.";
+            return RedirectToAction(nameof(Details), new { id = patientId });
+        }
+
+        // POST: /Patient/ResetPortalPassword
+        [HttpPost, ValidateAntiForgeryToken, Authorize(Roles = "Admin,Receptionist")]
+        public async Task<IActionResult> ResetPortalPassword(int accountId, int patientId)
+        {
+            var account = await _db.PatientAccounts.FindAsync(accountId);
+            if (account == null) return NotFound();
+
+            var patient = await _db.Patients.FindAsync(patientId);
+            var tempPassword = $"BN@{patient?.PatientCode ?? account.PhoneNumber}";
+
+            account.PasswordHash = tempPassword;
+            account.SecurityStamp = Guid.NewGuid().ToString();
+            account.UpdatedAt = DateTime.Now;
+
+            var log = new ActivityLog
+            {
+                Username = User.Identity?.Name ?? "System",
+                Action = "Đặt lại mật khẩu Patient Portal",
+                Details = $"Nhân viên {User.Identity?.Name} đã đặt lại mật khẩu Patient Portal cho bệnh nhân {account.FullName}. Mật khẩu tạm mới: {tempPassword}",
+                Timestamp = DateTime.Now
+            };
+            _db.ActivityLogs.Add(log);
+            await _db.SaveChangesAsync();
+
+            TempData["PortalSuccess"] = $"Đã đặt lại mật khẩu thành công! Mật khẩu tạm thời mới: <strong>{tempPassword}</strong>";
+            return RedirectToAction(nameof(Details), new { id = patientId });
         }
 
         // GET: /Patient/ClinicalRecord/5
@@ -571,7 +683,10 @@ namespace Nhakhoa.Controllers
                 session.ClinicalNotes = model.ClinicalNotes;
                 session.TreatmentPlanSummary = model.TreatmentPlanSummary;
                 session.HomeCareInstructions = model.HomeCareInstructions;
-                session.PatientCoefficient = model.PatientCoefficient;
+                if (session.ComplexStatus != "Approved")
+                {
+                    session.PatientCoefficient = 0.00m;
+                }
                 session.ConcurrencyStamp = Guid.NewGuid();
             }
             else
@@ -585,7 +700,7 @@ namespace Nhakhoa.Controllers
                     ClinicalNotes = model.ClinicalNotes,
                     TreatmentPlanSummary = model.TreatmentPlanSummary,
                     HomeCareInstructions = model.HomeCareInstructions,
-                    PatientCoefficient = model.PatientCoefficient,
+                    PatientCoefficient = 0.00m,
                     IsCompleted = false,
                     CreatedAt = DateTime.Now,
                     ConcurrencyStamp = Guid.NewGuid()
@@ -1180,6 +1295,97 @@ namespace Nhakhoa.Controllers
             public int WarrantyId { get; set; }
             public string Reason { get; set; } = string.Empty;
             public int ExtendMonths { get; set; }
+        }
+
+        // ==========================================
+        // UC4.3 — BÁO CA PHỨC TẠP (Doctor side)
+        // ==========================================
+
+        // POST: /Patient/FlagComplexSession
+        [HttpPost]
+        [Authorize(Roles = "Doctor,Admin")]
+        public async Task<IActionResult> FlagComplexSession([FromBody] FlagComplexModel model)
+        {
+            if (model == null) return BadRequest(new { error = "Dữ liệu không hợp lệ." });
+
+            var session = await _db.ExaminationSessions
+                .Include(s => s.Patient)
+                .FirstOrDefaultAsync(s => s.Id == model.SessionId);
+
+            if (session == null) return NotFound(new { error = "Không tìm thấy ca khám." });
+
+            // Bác sĩ tạo ca hoặc bác sĩ phụ trách bệnh nhân được quyền báo ca phức tạp.
+            if (User.IsInRole("Doctor"))
+            {
+                var currentUser = await _db.Users
+                    .Include(u => u.StaffProfile)
+                    .FirstOrDefaultAsync(u => u.Username == User.Identity!.Name);
+
+                var currentDoctorId = currentUser?.StaffProfile?.Id;
+                var isSessionDoctor = currentDoctorId == session.DoctorId;
+                var isPrimaryDoctor = currentDoctorId != null && session.Patient?.PrimaryDoctorId == currentDoctorId;
+                var patientHasNoPrimaryDoctor = session.Patient?.PrimaryDoctorId == null;
+
+                if (currentDoctorId == null || (!isSessionDoctor && !isPrimaryDoctor && !patientHasNoPrimaryDoctor))
+                    return Json(new { success = false, message = "Bạn không có quyền báo ca phức tạp cho ca khám này." });
+            }
+
+            // Chỉ được báo khi chưa báo hoặc đã bị từ chối (tránh spam)
+            if (session.ComplexStatus == "Pending" || session.ComplexStatus == "Approved")
+                return Json(new { success = false, message = $"Ca này đang ở trạng thái '{session.ComplexStatus}', không thể báo lại." });
+
+            // Validate hệ số đề xuất
+            if (model.RequestedCoefficient < 0.1m || model.RequestedCoefficient > 0.5m)
+                return Json(new { success = false, message = "Hệ số đề xuất phải từ 0.10 đến 0.50." });
+
+            if (string.IsNullOrWhiteSpace(model.Reason))
+                return Json(new { success = false, message = "Vui lòng nhập lý do báo ca phức tạp." });
+
+            session.ComplexStatus = "Pending";
+            session.ComplexReason = model.Reason.Trim();
+            session.RequestedCoefficient = model.RequestedCoefficient;
+            session.AdminNote = null;
+            session.ReviewedAt = null;
+
+            var log = new ActivityLog
+            {
+                Username = User.Identity?.Name ?? "Unknown",
+                Action = "Báo ca phức tạp",
+                Details = $"Bác sĩ báo ca khám #{session.Id} (BN: {session.Patient?.FullName}) là ca phức tạp. Hệ số đề xuất: {model.RequestedCoefficient}. Lý do: {model.Reason}",
+                Timestamp = DateTime.Now
+            };
+            _db.ActivityLogs.Add(log);
+            await _db.SaveChangesAsync();
+
+            return Json(new { success = true, message = "Đã gửi yêu cầu báo ca phức tạp. Admin sẽ xem xét và duyệt sớm." });
+        }
+
+        // GET: /Patient/GetSessionComplexStatus/{sessionId}
+        [HttpGet]
+        [Authorize(Roles = "Doctor,Admin")]
+        public async Task<IActionResult> GetSessionComplexStatus(int sessionId)
+        {
+            var session = await _db.ExaminationSessions
+                .Select(s => new {
+                    s.Id,
+                    s.ComplexStatus,
+                    s.ComplexReason,
+                    s.RequestedCoefficient,
+                    s.AdminNote,
+                    s.ReviewedAt,
+                    s.PatientCoefficient
+                })
+                .FirstOrDefaultAsync(s => s.Id == sessionId);
+
+            if (session == null) return NotFound();
+            return Json(session);
+        }
+
+        public class FlagComplexModel
+        {
+            public int SessionId { get; set; }
+            public decimal RequestedCoefficient { get; set; }
+            public string Reason { get; set; } = string.Empty;
         }
     }
 }

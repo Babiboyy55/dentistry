@@ -499,13 +499,15 @@ namespace Nhakhoa.Data
                 ("patient_reg",    "Đăng ký / tìm kiếm bệnh nhân",       "bi-person-plus",   9),
                 ("invoice",        "Tạo hóa đơn & thu tiền",              "bi-receipt",      10),
                 ("patient_admin",  "Thông tin hành chính bệnh nhân",      "bi-clipboard2-data",11),
+                ("medicine_inventory", "Quản lý kho thuốc",                "bi-box-seam",      12),
+                ("patient_portal", "Cấp tài khoản Patient Portal",        "bi-person-badge",  13),
             };
 
             var defaultPerms = new Dictionary<string, HashSet<string>>
             {
-                ["Admin"]        = new(){ "account_rbac","audit_log","system_config","emr","prescription","lab_test","schedule_view","appointment","patient_reg","invoice","patient_admin" },
+                ["Admin"]        = new(){ "account_rbac","audit_log","system_config","emr","prescription","lab_test","schedule_view","appointment","patient_reg","invoice","patient_admin","medicine_inventory","patient_portal" },
                 ["Doctor"]       = new(){ "emr","prescription","lab_test","schedule_view" },
-                ["Receptionist"] = new(){ "appointment","patient_reg","invoice","patient_admin" },
+                ["Receptionist"] = new(){ "appointment","patient_reg","invoice","patient_admin","patient_portal" },
             };
 
             var roles = new[] { "Admin", "Doctor", "Receptionist" };
@@ -605,8 +607,7 @@ namespace Nhakhoa.Data
                 new PaymentMethod { Id = 1, Name = "Tiền mặt", Code = "CASH", IsEnabled = true, IsDigitalGateway = false, UpdatedAt = new DateTime(2026, 1, 1) },
                 new PaymentMethod { Id = 2, Name = "Chuyển khoản", Code = "BANK", IsEnabled = true, IsDigitalGateway = false, UpdatedAt = new DateTime(2026, 1, 1) },
                 new PaymentMethod { Id = 3, Name = "VNPay", Code = "VNPAY", IsEnabled = false, IsDigitalGateway = true, Environment = "Sandbox", EndpointUrl = "https://sandbox.vnpayment.vn/paymentv2/vpcpay.html", UpdatedAt = new DateTime(2026, 1, 1) },
-                new PaymentMethod { Id = 4, Name = "MoMo", Code = "MOMO", IsEnabled = false, IsDigitalGateway = true, Environment = "Sandbox", EndpointUrl = "https://test-payment.momo.vn/v2/gateway/api/create", UpdatedAt = new DateTime(2026, 1, 1) },
-                new PaymentMethod { Id = 5, Name = "Bảo hiểm y tế", Code = "INSURANCE", IsEnabled = true, IsDigitalGateway = false, UpdatedAt = new DateTime(2026, 1, 1) }
+                new PaymentMethod { Id = 4, Name = "MoMo", Code = "MOMO", IsEnabled = false, IsDigitalGateway = true, Environment = "Sandbox", EndpointUrl = "https://test-payment.momo.vn/v2/gateway/api/create", UpdatedAt = new DateTime(2026, 1, 1) }
             );
 
             modelBuilder.Entity<Invoice>().HasData(

@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Nhakhoa.Data;
 
@@ -11,9 +12,11 @@ using Nhakhoa.Data;
 namespace Nhakhoa.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260610170130_AddPatientPortalPermission")]
+    partial class AddPatientPortalPermission
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -529,24 +532,12 @@ namespace Nhakhoa.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<string>("AdminNote")
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
-
                     b.Property<int?>("AppointmentId")
                         .HasColumnType("int");
 
                     b.Property<string>("ClinicalNotes")
                         .HasMaxLength(2000)
                         .HasColumnType("nvarchar(2000)");
-
-                    b.Property<string>("ComplexReason")
-                        .HasMaxLength(1000)
-                        .HasColumnType("nvarchar(1000)");
-
-                    b.Property<string>("ComplexStatus")
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
 
                     b.Property<Guid>("ConcurrencyStamp")
                         .IsConcurrencyToken()
@@ -575,12 +566,6 @@ namespace Nhakhoa.Migrations
 
                     b.Property<int>("PatientId")
                         .HasColumnType("int");
-
-                    b.Property<decimal?>("RequestedCoefficient")
-                        .HasColumnType("decimal(3,2)");
-
-                    b.Property<DateTime?>("ReviewedAt")
-                        .HasColumnType("datetime2");
 
                     b.Property<string>("TreatmentPlanSummary")
                         .HasMaxLength(2000)
@@ -640,7 +625,7 @@ namespace Nhakhoa.Migrations
                         new
                         {
                             Id = 1,
-                            CreatedAt = new DateTime(2026, 6, 11, 13, 56, 59, 938, DateTimeKind.Local).AddTicks(4169),
+                            CreatedAt = new DateTime(2026, 6, 11, 0, 1, 30, 6, DateTimeKind.Local).AddTicks(9927),
                             CreatedBy = "Hệ thống",
                             Date = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
                             HolidayType = "Cố định",
@@ -651,7 +636,7 @@ namespace Nhakhoa.Migrations
                         new
                         {
                             Id = 2,
-                            CreatedAt = new DateTime(2026, 6, 11, 13, 56, 59, 938, DateTimeKind.Local).AddTicks(5034),
+                            CreatedAt = new DateTime(2026, 6, 11, 0, 1, 30, 7, DateTimeKind.Local).AddTicks(824),
                             CreatedBy = "Hệ thống",
                             Date = new DateTime(2026, 4, 30, 0, 0, 0, 0, DateTimeKind.Unspecified),
                             HolidayType = "Cố định",
@@ -662,7 +647,7 @@ namespace Nhakhoa.Migrations
                         new
                         {
                             Id = 3,
-                            CreatedAt = new DateTime(2026, 6, 11, 13, 56, 59, 938, DateTimeKind.Local).AddTicks(5036),
+                            CreatedAt = new DateTime(2026, 6, 11, 0, 1, 30, 7, DateTimeKind.Local).AddTicks(828),
                             CreatedBy = "Hệ thống",
                             Date = new DateTime(2026, 5, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
                             HolidayType = "Cố định",
@@ -673,7 +658,7 @@ namespace Nhakhoa.Migrations
                         new
                         {
                             Id = 4,
-                            CreatedAt = new DateTime(2026, 6, 11, 13, 56, 59, 938, DateTimeKind.Local).AddTicks(5037),
+                            CreatedAt = new DateTime(2026, 6, 11, 0, 1, 30, 7, DateTimeKind.Local).AddTicks(830),
                             CreatedBy = "Hệ thống",
                             Date = new DateTime(2026, 9, 2, 0, 0, 0, 0, DateTimeKind.Unspecified),
                             HolidayType = "Cố định",
@@ -1362,6 +1347,15 @@ namespace Nhakhoa.Migrations
                             IsEnabled = false,
                             Name = "MoMo",
                             UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified)
+                        },
+                        new
+                        {
+                            Id = 5,
+                            Code = "INSURANCE",
+                            IsDigitalGateway = false,
+                            IsEnabled = true,
+                            Name = "Bảo hiểm y tế",
+                            UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified)
                         });
                 });
 
@@ -1741,37 +1735,27 @@ namespace Nhakhoa.Migrations
                         new
                         {
                             Id = 13,
-                            IsAllowed = true,
-                            ModuleIcon = "bi-person-badge",
-                            ModuleKey = "patient_portal",
-                            ModuleName = "Cấp tài khoản Patient Portal",
-                            Role = "Admin",
-                            SortOrder = 13
+                            IsAllowed = false,
+                            ModuleIcon = "bi-person-lock",
+                            ModuleKey = "account_rbac",
+                            ModuleName = "Quản lý tài khoản & RBAC",
+                            Role = "Doctor",
+                            SortOrder = 1
                         },
                         new
                         {
                             Id = 14,
                             IsAllowed = false,
-                            ModuleIcon = "bi-person-lock",
-                            ModuleKey = "account_rbac",
-                            ModuleName = "Quản lý tài khoản & RBAC",
+                            ModuleIcon = "bi-journal-check",
+                            ModuleKey = "audit_log",
+                            ModuleName = "Audit log & báo cáo hệ thống",
                             Role = "Doctor",
-                            SortOrder = 1
+                            SortOrder = 2
                         },
                         new
                         {
                             Id = 15,
                             IsAllowed = false,
-                            ModuleIcon = "bi-journal-check",
-                            ModuleKey = "audit_log",
-                            ModuleName = "Audit log & báo cáo hệ thống",
-                            Role = "Doctor",
-                            SortOrder = 2
-                        },
-                        new
-                        {
-                            Id = 16,
-                            IsAllowed = false,
                             ModuleIcon = "bi-gear",
                             ModuleKey = "system_config",
                             ModuleName = "Cấu hình hệ thống",
@@ -1780,7 +1764,7 @@ namespace Nhakhoa.Migrations
                         },
                         new
                         {
-                            Id = 17,
+                            Id = 16,
                             IsAllowed = true,
                             ModuleIcon = "bi-file-medical",
                             ModuleKey = "emr",
@@ -1790,7 +1774,7 @@ namespace Nhakhoa.Migrations
                         },
                         new
                         {
-                            Id = 18,
+                            Id = 17,
                             IsAllowed = true,
                             ModuleIcon = "bi-capsule",
                             ModuleKey = "prescription",
@@ -1800,7 +1784,7 @@ namespace Nhakhoa.Migrations
                         },
                         new
                         {
-                            Id = 19,
+                            Id = 18,
                             IsAllowed = true,
                             ModuleIcon = "bi-eyedropper",
                             ModuleKey = "lab_test",
@@ -1810,7 +1794,7 @@ namespace Nhakhoa.Migrations
                         },
                         new
                         {
-                            Id = 20,
+                            Id = 19,
                             IsAllowed = true,
                             ModuleIcon = "bi-calendar-event",
                             ModuleKey = "schedule_view",
@@ -1820,7 +1804,7 @@ namespace Nhakhoa.Migrations
                         },
                         new
                         {
-                            Id = 21,
+                            Id = 20,
                             IsAllowed = false,
                             ModuleIcon = "bi-calendar-check",
                             ModuleKey = "appointment",
@@ -1830,7 +1814,7 @@ namespace Nhakhoa.Migrations
                         },
                         new
                         {
-                            Id = 22,
+                            Id = 21,
                             IsAllowed = false,
                             ModuleIcon = "bi-person-plus",
                             ModuleKey = "patient_reg",
@@ -1840,7 +1824,7 @@ namespace Nhakhoa.Migrations
                         },
                         new
                         {
-                            Id = 23,
+                            Id = 22,
                             IsAllowed = false,
                             ModuleIcon = "bi-receipt",
                             ModuleKey = "invoice",
@@ -1850,7 +1834,7 @@ namespace Nhakhoa.Migrations
                         },
                         new
                         {
-                            Id = 24,
+                            Id = 23,
                             IsAllowed = false,
                             ModuleIcon = "bi-clipboard2-data",
                             ModuleKey = "patient_admin",
@@ -1860,7 +1844,7 @@ namespace Nhakhoa.Migrations
                         },
                         new
                         {
-                            Id = 25,
+                            Id = 24,
                             IsAllowed = false,
                             ModuleIcon = "bi-box-seam",
                             ModuleKey = "medicine_inventory",
@@ -1870,17 +1854,7 @@ namespace Nhakhoa.Migrations
                         },
                         new
                         {
-                            Id = 26,
-                            IsAllowed = false,
-                            ModuleIcon = "bi-person-badge",
-                            ModuleKey = "patient_portal",
-                            ModuleName = "Cấp tài khoản Patient Portal",
-                            Role = "Doctor",
-                            SortOrder = 13
-                        },
-                        new
-                        {
-                            Id = 27,
+                            Id = 25,
                             IsAllowed = false,
                             ModuleIcon = "bi-person-lock",
                             ModuleKey = "account_rbac",
@@ -1890,7 +1864,7 @@ namespace Nhakhoa.Migrations
                         },
                         new
                         {
-                            Id = 28,
+                            Id = 26,
                             IsAllowed = false,
                             ModuleIcon = "bi-journal-check",
                             ModuleKey = "audit_log",
@@ -1900,7 +1874,7 @@ namespace Nhakhoa.Migrations
                         },
                         new
                         {
-                            Id = 29,
+                            Id = 27,
                             IsAllowed = false,
                             ModuleIcon = "bi-gear",
                             ModuleKey = "system_config",
@@ -1910,7 +1884,7 @@ namespace Nhakhoa.Migrations
                         },
                         new
                         {
-                            Id = 30,
+                            Id = 28,
                             IsAllowed = false,
                             ModuleIcon = "bi-file-medical",
                             ModuleKey = "emr",
@@ -1920,7 +1894,7 @@ namespace Nhakhoa.Migrations
                         },
                         new
                         {
-                            Id = 31,
+                            Id = 29,
                             IsAllowed = false,
                             ModuleIcon = "bi-capsule",
                             ModuleKey = "prescription",
@@ -1930,7 +1904,7 @@ namespace Nhakhoa.Migrations
                         },
                         new
                         {
-                            Id = 32,
+                            Id = 30,
                             IsAllowed = false,
                             ModuleIcon = "bi-eyedropper",
                             ModuleKey = "lab_test",
@@ -1940,7 +1914,7 @@ namespace Nhakhoa.Migrations
                         },
                         new
                         {
-                            Id = 33,
+                            Id = 31,
                             IsAllowed = false,
                             ModuleIcon = "bi-calendar-event",
                             ModuleKey = "schedule_view",
@@ -1950,7 +1924,7 @@ namespace Nhakhoa.Migrations
                         },
                         new
                         {
-                            Id = 34,
+                            Id = 32,
                             IsAllowed = true,
                             ModuleIcon = "bi-calendar-check",
                             ModuleKey = "appointment",
@@ -1960,7 +1934,7 @@ namespace Nhakhoa.Migrations
                         },
                         new
                         {
-                            Id = 35,
+                            Id = 33,
                             IsAllowed = true,
                             ModuleIcon = "bi-person-plus",
                             ModuleKey = "patient_reg",
@@ -1970,7 +1944,7 @@ namespace Nhakhoa.Migrations
                         },
                         new
                         {
-                            Id = 36,
+                            Id = 34,
                             IsAllowed = true,
                             ModuleIcon = "bi-receipt",
                             ModuleKey = "invoice",
@@ -1980,7 +1954,7 @@ namespace Nhakhoa.Migrations
                         },
                         new
                         {
-                            Id = 37,
+                            Id = 35,
                             IsAllowed = true,
                             ModuleIcon = "bi-clipboard2-data",
                             ModuleKey = "patient_admin",
@@ -1990,23 +1964,13 @@ namespace Nhakhoa.Migrations
                         },
                         new
                         {
-                            Id = 38,
+                            Id = 36,
                             IsAllowed = false,
                             ModuleIcon = "bi-box-seam",
                             ModuleKey = "medicine_inventory",
                             ModuleName = "Quản lý kho thuốc",
                             Role = "Receptionist",
                             SortOrder = 12
-                        },
-                        new
-                        {
-                            Id = 39,
-                            IsAllowed = true,
-                            ModuleIcon = "bi-person-badge",
-                            ModuleKey = "patient_portal",
-                            ModuleName = "Cấp tài khoản Patient Portal",
-                            Role = "Receptionist",
-                            SortOrder = 13
                         });
                 });
 
@@ -2060,7 +2024,7 @@ namespace Nhakhoa.Migrations
                         {
                             Id = 1,
                             ClinicId = 1,
-                            CreatedAt = new DateTime(2026, 6, 11, 13, 56, 59, 938, DateTimeKind.Local).AddTicks(3057),
+                            CreatedAt = new DateTime(2026, 6, 11, 0, 1, 30, 6, DateTimeKind.Local).AddTicks(8809),
                             IsActive = true,
                             ShiftDate = new DateTime(2026, 12, 10, 0, 0, 0, 0, DateTimeKind.Unspecified),
                             ShiftType = "Sáng",

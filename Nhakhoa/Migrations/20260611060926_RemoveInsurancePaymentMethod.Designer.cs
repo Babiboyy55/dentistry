@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Nhakhoa.Data;
 
@@ -11,9 +12,11 @@ using Nhakhoa.Data;
 namespace Nhakhoa.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260611060926_RemoveInsurancePaymentMethod")]
+    partial class RemoveInsurancePaymentMethod
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -529,24 +532,12 @@ namespace Nhakhoa.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<string>("AdminNote")
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
-
                     b.Property<int?>("AppointmentId")
                         .HasColumnType("int");
 
                     b.Property<string>("ClinicalNotes")
                         .HasMaxLength(2000)
                         .HasColumnType("nvarchar(2000)");
-
-                    b.Property<string>("ComplexReason")
-                        .HasMaxLength(1000)
-                        .HasColumnType("nvarchar(1000)");
-
-                    b.Property<string>("ComplexStatus")
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
 
                     b.Property<Guid>("ConcurrencyStamp")
                         .IsConcurrencyToken()
@@ -575,12 +566,6 @@ namespace Nhakhoa.Migrations
 
                     b.Property<int>("PatientId")
                         .HasColumnType("int");
-
-                    b.Property<decimal?>("RequestedCoefficient")
-                        .HasColumnType("decimal(3,2)");
-
-                    b.Property<DateTime?>("ReviewedAt")
-                        .HasColumnType("datetime2");
 
                     b.Property<string>("TreatmentPlanSummary")
                         .HasMaxLength(2000)
@@ -640,7 +625,7 @@ namespace Nhakhoa.Migrations
                         new
                         {
                             Id = 1,
-                            CreatedAt = new DateTime(2026, 6, 11, 13, 56, 59, 938, DateTimeKind.Local).AddTicks(4169),
+                            CreatedAt = new DateTime(2026, 6, 11, 13, 9, 25, 365, DateTimeKind.Local).AddTicks(5362),
                             CreatedBy = "Hệ thống",
                             Date = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
                             HolidayType = "Cố định",
@@ -651,7 +636,7 @@ namespace Nhakhoa.Migrations
                         new
                         {
                             Id = 2,
-                            CreatedAt = new DateTime(2026, 6, 11, 13, 56, 59, 938, DateTimeKind.Local).AddTicks(5034),
+                            CreatedAt = new DateTime(2026, 6, 11, 13, 9, 25, 365, DateTimeKind.Local).AddTicks(6276),
                             CreatedBy = "Hệ thống",
                             Date = new DateTime(2026, 4, 30, 0, 0, 0, 0, DateTimeKind.Unspecified),
                             HolidayType = "Cố định",
@@ -662,7 +647,7 @@ namespace Nhakhoa.Migrations
                         new
                         {
                             Id = 3,
-                            CreatedAt = new DateTime(2026, 6, 11, 13, 56, 59, 938, DateTimeKind.Local).AddTicks(5036),
+                            CreatedAt = new DateTime(2026, 6, 11, 13, 9, 25, 365, DateTimeKind.Local).AddTicks(6279),
                             CreatedBy = "Hệ thống",
                             Date = new DateTime(2026, 5, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
                             HolidayType = "Cố định",
@@ -673,7 +658,7 @@ namespace Nhakhoa.Migrations
                         new
                         {
                             Id = 4,
-                            CreatedAt = new DateTime(2026, 6, 11, 13, 56, 59, 938, DateTimeKind.Local).AddTicks(5037),
+                            CreatedAt = new DateTime(2026, 6, 11, 13, 9, 25, 365, DateTimeKind.Local).AddTicks(6283),
                             CreatedBy = "Hệ thống",
                             Date = new DateTime(2026, 9, 2, 0, 0, 0, 0, DateTimeKind.Unspecified),
                             HolidayType = "Cố định",
@@ -2060,7 +2045,7 @@ namespace Nhakhoa.Migrations
                         {
                             Id = 1,
                             ClinicId = 1,
-                            CreatedAt = new DateTime(2026, 6, 11, 13, 56, 59, 938, DateTimeKind.Local).AddTicks(3057),
+                            CreatedAt = new DateTime(2026, 6, 11, 13, 9, 25, 365, DateTimeKind.Local).AddTicks(4219),
                             IsActive = true,
                             ShiftDate = new DateTime(2026, 12, 10, 0, 0, 0, 0, DateTimeKind.Unspecified),
                             ShiftType = "Sáng",

@@ -1,4 +1,5 @@
 @{
+    Layout = "~/Views/Shared/_AdminLayout.cshtml";
     ViewData["Title"] = "Phân quyền hệ thống";
     var allPerms = ViewBag.Permissions as List<Nhakhoa.Models.RolePermission> ?? new();
     var auditLogs = ViewBag.AuditLogs as List<Nhakhoa.Models.ActivityLog> ?? new();
@@ -167,7 +168,6 @@
     .role-tabs {
         display: flex;
         gap: 8px;
-        padding: 0 20px 16px 20px;
     }
     .role-tab {
         display: flex;
@@ -192,6 +192,63 @@
         border-color: #0d6efd;
     }
 
+    /* ──── FILTER BAR ──── */
+    .filter-bar {
+        display: flex;
+        gap: 12px;
+        margin-bottom: 20px;
+        background: #fff;
+        padding: 12px 16px;
+        border-radius: 4px;
+        border: 1px solid #dee2e6;
+        align-items: center;
+    }
+    .filter-input-wrapper {
+        position: relative;
+        flex: 1;
+    }
+    .filter-input-wrapper i {
+        position: absolute;
+        left: 12px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #6c757d;
+    }
+    .filter-input-wrapper input {
+        width: 100%;
+        padding: 8px 12px 8px 34px;
+        border: 1px solid #ced4da;
+        border-radius: 4px;
+        outline: none;
+        font-size: 0.88rem;
+    }
+    .filter-input-wrapper input:focus {
+        border-color: #86b7fe;
+    }
+    .filter-select {
+        padding: 8px 12px;
+        border: 1px solid #ced4da;
+        border-radius: 4px;
+        outline: none;
+        font-size: 0.88rem;
+        background: #fff;
+        cursor: pointer;
+        min-width: 200px;
+        color: #495057;
+    }
+    .filter-select:focus {
+        border-color: #86b7fe;
+    }
+    .badge-wrap {
+        font-size: 0.78rem;
+        font-weight: 600;
+        padding: 4px 10px;
+        border-radius: 4px;
+        display: inline-block;
+    }
+    .badge-success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+    .badge-secondary { background: #e2e3e5; color: #383d41; border: 1px solid #d6d8db; }
+
     /* ──── PERMISSION TABLE ──── */
     .perm-table-wrapper {
         padding: 0 20px 20px 20px;
@@ -212,10 +269,6 @@
         border-bottom: 1px solid #dee2e6;
         text-align: left;
     }
-    .perm-table thead th:not(:first-child) {
-        text-align: center;
-        width: 100px;
-    }
     .perm-table tbody tr {
         border-bottom: 1px solid #e9ecef;
     }
@@ -228,9 +281,6 @@
     .perm-table td {
         padding: 12px 14px;
         vertical-align: middle;
-    }
-    .perm-table td:not(:first-child) {
-        text-align: center;
     }
     .module-cell {
         display: flex;
@@ -570,63 +620,84 @@
         </div>
     </div>
 
+    <!-- ========== FILTER BAR ========== -->
+    <div class="filter-bar">
+        <div class="filter-input-wrapper">
+            <i class="bi bi-search"></i>
+            <input type="text" id="moduleSearch" placeholder="Tìm kiếm theo tên module hoặc mã chức năng..." oninput="filterModules()" />
+        </div>
+        <select id="statusFilter" class="filter-select" onchange="filterModules()">
+            <option value="">Tất cả quyền</option>
+            <option value="allowed">Được cho phép</option>
+            <option value="denied">Bị chặn / Từ chối</option>
+        </select>
+    </div>
+
     <!-- ========== MAIN CONTENT: PERMISSIONS ========== -->
     <div class="rbac-main-card">
         <div class="rbac-main-card-header">
             <h2>
                 <i class="bi bi-lock-fill me-2" style="color: #1b75d0;"></i>Quản lý quyền truy cập
             </h2>
-        </div>
-
-        <!-- Role tabs -->
-        <div class="role-tabs">
-            @foreach (var r in roles)
-            {
-                <button class="role-tab @(r.Key == "Admin" ? "active" : "")"
-                        onclick="switchRole('@r.Key', this)"
-                        title="Bấm để xem quyền hạn của vai trò '@r.Label'">
-                    <i class="bi @r.Icon"></i> @r.Label
-                </button>
-            }
+            <!-- Role tabs -->
+            <div class="role-tabs">
+                @foreach (var r in roles)
+                {
+                    <button class="role-tab @(r.Key == "Admin" ? "active" : "")"
+                            onclick="switchRole('@r.Key', this)"
+                            title="Bấm để xem quyền hạn của vai trò '@r.Label'">
+                        <i class="bi @r.Icon"></i> @r.Label
+                    </button>
+                }
+            </div>
         </div>
 
         <!-- Permission table -->
         <div class="perm-table-wrapper">
-            <table class="perm-table">
+            <table class="perm-table" id="permTable">
                 <thead>
                     <tr>
                         <th>Module / Chức năng</th>
-                        @foreach (var r in roles)
-                        {
-                            <th>@r.Label</th>
-                        }
+                        <th style="width: 250px;">Mã chức năng</th>
+                        <th style="width: 200px; text-align: center;">Trạng thái truy cập</th>
                     </tr>
                 </thead>
                 <tbody>
                     @foreach (var mod in modules)
                     {
-                        <tr>
+                        <tr class="perm-row" data-module-name="@mod.ModuleName.ToLower()" data-module-key="@mod.ModuleKey.ToLower()">
                             <td>
                                 <div class="module-cell">
                                     <div class="module-icon-wrap"><i class="bi @mod.ModuleIcon"></i></div>
                                     <span class="module-name">@mod.ModuleName</span>
                                 </div>
                             </td>
-                            @foreach (var r in roles)
-                            {
-                                var perm = allPerms.FirstOrDefault(p => p.Role == r.Key && p.ModuleKey == mod.ModuleKey);
-                                bool isAllowed = perm?.IsAllowed ?? false;
-                                bool isAdmin = r.Key == "Admin";
-                                <td>
-                                    <input type="checkbox"
-                                           class="perm-check"
-                                           data-role="@r.Key"
-                                           data-module="@mod.ModuleKey"
-                                           @(isAllowed ? "checked" : "")
-                                           @(isAdmin ? "disabled" : "")
-                                           title="@(isAdmin ? "Admin luôn có toàn quyền" : "Bấm để bật/tắt quyền này")" />
-                                </td>
-                            }
+                            <td class="text-secondary font-monospace" style="font-size: 0.85rem;">@mod.ModuleKey</td>
+                            <td>
+                                @foreach (var r in roles)
+                                {
+                                    var perm = allPerms.FirstOrDefault(p => p.Role == r.Key && p.ModuleKey == mod.ModuleKey);
+                                    bool isAllowed = perm?.IsAllowed ?? false;
+                                    bool isAdmin = r.Key == "Admin";
+                                    
+                                    <div class="role-perm-container" data-role="@r.Key" style="display: @(r.Key == "Admin" ? "block" : "none")">
+                                        <div class="d-flex align-items-center justify-content-center gap-2">
+                                            <input type="checkbox"
+                                                   class="perm-check"
+                                                   data-role="@r.Key"
+                                                   data-module="@mod.ModuleKey"
+                                                   data-original="@isAllowed.ToString().ToLower()"
+                                                   @(isAllowed ? "checked" : "")
+                                                   @(isAdmin ? "disabled" : "")
+                                                   onchange="updateRowStyle(this)"
+                                                   title="@(isAdmin ? "Admin luôn có toàn quyền" : "Bật/Tắt quyền")" />
+                                            <span class="badge-wrap @(isAllowed ? "badge-success" : "badge-secondary") status-badge">
+                                                @(isAllowed ? "Cho phép" : "Từ chối")
+                                            </span>
+                                        </div>
+                                    </div>
+                                }
+                            </td>
                         </tr>
                     }
                 </tbody>
@@ -713,14 +784,89 @@
     let pendingChanges = {};   // { moduleKey: bool }
     let pendingRole = '';
 
-    // ── Highlight active role column ──────────────────────────────
+    // Initialize display states on DOM load
+    document.addEventListener("DOMContentLoaded", function() {
+        document.querySelectorAll('.perm-check').forEach(chk => {
+            chk.dataset.original = chk.checked.toString();
+        });
+        // Set initial tab state
+        const activeBtn = document.querySelector('.role-tab.active');
+        if (activeBtn) {
+            switchRole('Admin', activeBtn);
+        }
+    });
+
+    // ── Switch active role ─────────────────────────────────────────
     function switchRole(role, btn) {
         currentRole = role;
         document.querySelectorAll('.role-tab').forEach(t => t.classList.remove('active'));
         btn.classList.add('active');
-        // Scroll to first non-disabled checkbox of this role
-        const firstCheck = document.querySelector(`.perm-check[data-role="${role}"]`);
-        if (firstCheck) firstCheck.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        
+        // Toggle checkbox visibility
+        document.querySelectorAll('.role-perm-container').forEach(el => {
+            if (el.dataset.role === role) {
+                el.style.display = 'block';
+            } else {
+                el.style.display = 'none';
+            }
+        });
+        
+        filterModules();
+    }
+
+    // ── Filter table rows based on search & status selection ───────
+    function filterModules() {
+        const searchText = document.getElementById("moduleSearch").value.toLowerCase().trim();
+        const selectedStatus = document.getElementById("statusFilter").value;
+        const rows = document.querySelectorAll(".perm-row");
+        let visibleCount = 0;
+
+        rows.forEach(row => {
+            const name = row.dataset.moduleName || "";
+            const key = row.dataset.moduleKey || "";
+            const chk = row.querySelector(`.role-perm-container[data-role="${currentRole}"] .perm-check`);
+            
+            const isAllowed = chk ? chk.checked : false;
+            
+            const matchesSearch = name.includes(searchText) || key.includes(searchText);
+            let matchesStatus = true;
+            if (selectedStatus === "allowed") matchesStatus = isAllowed;
+            else if (selectedStatus === "denied") matchesStatus = !isAllowed;
+
+            if (matchesSearch && matchesStatus) {
+                row.style.display = "";
+                visibleCount++;
+            } else {
+                row.style.display = "none";
+            }
+        });
+
+        // Handle empty table placeholder
+        let noRecordsRow = document.querySelector(".no-records-filtered");
+        if (visibleCount === 0 && rows.length > 0) {
+            if (!noRecordsRow) {
+                noRecordsRow = document.createElement("tr");
+                noRecordsRow.className = "no-records-filtered";
+                noRecordsRow.innerHTML = `<td colspan="3" class="text-center text-muted py-4">Không tìm thấy chức năng phù hợp</td>`;
+                document.querySelector("#permTable tbody").appendChild(noRecordsRow);
+            }
+        } else if (noRecordsRow) {
+            noRecordsRow.remove();
+        }
+    }
+
+    // ── Update row status badge dynamically ───────────────────────
+    function updateRowStyle(chk) {
+        const container = chk.closest('.role-perm-container');
+        const badge = container.querySelector('.status-badge');
+        if (chk.checked) {
+            badge.textContent = "Cho phép";
+            badge.className = "badge-wrap badge-success status-badge";
+        } else {
+            badge.textContent = "Từ chối";
+            badge.className = "badge-wrap badge-secondary status-badge";
+        }
+        filterModules();
     }
 
     // ── Gather changes for the active role ───────────────────────
@@ -732,7 +878,6 @@
 
         checks.forEach(chk => {
             perms[chk.dataset.module] = chk.checked;
-            // "original" state stored in data-original attribute
             const orig = chk.dataset.original === 'true';
             if (chk.checked && !orig) {
                 added.push(chk.closest('tr').querySelector('.module-name')?.textContent.trim() ?? chk.dataset.module);
@@ -742,11 +887,6 @@
         });
         return { perms, added, removed };
     }
-
-    // ── Store original state on page load ────────────────────────
-    document.querySelectorAll('.perm-check').forEach(chk => {
-        chk.dataset.original = chk.checked.toString();
-    });
 
     // ── Handle Save ──────────────────────────────────────────────
     function handleSave() {

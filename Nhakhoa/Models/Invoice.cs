@@ -24,7 +24,7 @@ namespace Nhakhoa.Models
         [Column(TypeName = "decimal(18,2)")]
         public decimal TotalAmount { get; set; }
 
-        // CASH, BANK, VNPAY, MOMO, INSURANCE
+        // CASH, BANK, VNPAY, MOMO
         [Required]
         [MaxLength(50)]
         public string PaymentMethodCode { get; set; } = "CASH";

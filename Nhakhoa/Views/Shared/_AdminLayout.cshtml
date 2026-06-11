@@ -261,6 +261,7 @@
 
                 <div class="menu-category">Quản trị</div>
                 <a asp-controller="Staff" asp-action="Index" class="@(controller == "Staff" ? "active" : "")"><i class="bi bi-people"></i> Nhân sự</a>
+                <a asp-controller="PatientAccount" asp-action="Index" class="@(controller == "PatientAccount" ? "active" : "")"><i class="bi bi-person-badge"></i> Tài khoản bệnh nhân</a>
                 @if (User.IsInRole("Admin"))
                 {
                     <a asp-controller="Payroll" asp-action="Index" class="@(controller == "Payroll" ? "active" : "")">

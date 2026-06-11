@@ -29,6 +29,13 @@
 {
     <div class="alert alert-warning border-0 rounded-4 py-2 px-3 mb-3"><i class="bi bi-exclamation-circle me-2"></i>@TempData["Warning"]</div>
 }
+@if (TempData["PortalSuccess"] != null)
+{
+    <div class="alert alert-success border-0 rounded-4 py-2 px-3 mb-3 d-flex align-items-start gap-2">
+        <i class="bi bi-person-check-fill text-success mt-1"></i>
+        <div>@Html.Raw(TempData["PortalSuccess"]?.ToString())</div>
+    </div>
+}
 
 <div class="row g-4">
     <!-- Thống kê chung -->
@@ -80,6 +87,104 @@
                     }
                 </div>
 
+                <!-- ====== PATIENT PORTAL ACCOUNT SECTION ====== -->
+                @{
+                    var portalAccount = ViewBag.PortalAccount as Nhakhoa.Models.PatientAccount;
+                }
+                <div class="pt-3 border-top mb-4">
+                    <div class="d-flex align-items-center justify-content-between mb-2">
+                        <div class="fw-semibold text-dark small d-flex align-items-center gap-1">
+                            <i class="bi bi-person-badge text-primary"></i> Tài khoản Patient Portal
+                        </div>
+                        @if (portalAccount != null)
+                        {
+                            if (portalAccount.IsActive)
+                            {
+                                <span class="badge bg-success-subtle text-success rounded-pill px-2 small">
+                                    <i class="bi bi-circle-fill" style="font-size:0.5rem;vertical-align:middle;"></i> Đang hoạt động
+                                </span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-danger-subtle text-danger rounded-pill px-2 small">
+                                    <i class="bi bi-lock-fill" style="font-size:0.7rem;"></i> Đã khóa
+                                </span>
+                            }
+                        }
+                    </div>
+
+                    @if (portalAccount == null)
+                    {
+                        <!-- No account yet -->
+                        <p class="text-muted small mb-2">Bệnh nhân chưa có tài khoản đăng nhập Patient Portal.</p>
+                        @if (User.IsInRole("Admin") || User.IsInRole("Receptionist"))
+                        {
+                            <form method="post" action="/Patient/CreatePortalAccount">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="patientId" value="@Model.Id" />
+                                <button type="submit" class="btn btn-outline-primary btn-sm rounded-pill w-100">
+                                    <i class="bi bi-person-plus"></i> Tạo tài khoản Portal
+                                </button>
+                            </form>
+                        }
+                    }
+                    else
+                    {
+                        <!-- Account exists -->
+                        <div class="bg-light rounded-3 p-3 mb-3 small">
+                            <div class="mb-1">
+                                <span class="text-muted">Đăng nhập bằng SĐT:</span>
+                                <span class="fw-semibold ms-1">@portalAccount.PhoneNumber</span>
+                            </div>
+                            <div class="mb-1">
+                                <span class="text-muted">Mật khẩu:</span>
+                                <span class="fw-semibold ms-1 text-secondary fst-italic">●●●●●●●●</span>
+                            </div>
+                            <div>
+                                <span class="text-muted">Tạo lúc:</span>
+                                <span class="fw-semibold ms-1">@portalAccount.CreatedAt.ToString("dd/MM/yyyy HH:mm")</span>
+                            </div>
+                        </div>
+
+                        @if (User.IsInRole("Admin") || User.IsInRole("Receptionist"))
+                        {
+                            <div class="d-flex gap-2">
+                                <!-- Toggle lock/unlock -->
+                                <form method="post" action="/Patient/TogglePortalAccount" class="flex-fill">
+                                    @Html.AntiForgeryToken()
+                                    <input type="hidden" name="accountId" value="@portalAccount.Id" />
+                                    <input type="hidden" name="patientId" value="@Model.Id" />
+                                    @if (portalAccount.IsActive)
+                                    {
+                                        <button type="submit" class="btn btn-outline-danger btn-sm rounded-pill w-100"
+                                                onclick="return confirm('Khóa tài khoản Patient Portal của bệnh nhân này?')">
+                                            <i class="bi bi-lock"></i> Khóa TK
+                                        </button>
+                                    }
+                                    else
+                                    {
+                                        <button type="submit" class="btn btn-outline-success btn-sm rounded-pill w-100"
+                                                onclick="return confirm('Mở khóa tài khoản Patient Portal của bệnh nhân này?')">
+                                            <i class="bi bi-unlock"></i> Mở khóa
+                                        </button>
+                                    }
+                                </form>
+
+                                <!-- Reset password -->
+                                <form method="post" action="/Patient/ResetPortalPassword" class="flex-fill">
+                                    @Html.AntiForgeryToken()
+                                    <input type="hidden" name="accountId" value="@portalAccount.Id" />
+                                    <input type="hidden" name="patientId" value="@Model.Id" />
+                                    <button type="submit" class="btn btn-outline-secondary btn-sm rounded-pill w-100"
+                                            onclick="return confirm('Đặt lại mật khẩu về mặc định (BN@MãBN)?')">
+                                        <i class="bi bi-key"></i> Đặt lại MK
+                                    </button>
+                                </form>
+                            </div>
+                        }
+                    }
+                </div>
+
                 <div class="pt-3 border-top d-grid gap-2">
                     <a href="/Patient/ClinicalRecord/@Model.Id" class="btn btn-outline-danger btn-sm rounded-pill fw-semibold">
                         <i class="bi bi-file-earmark-medical"></i> Xem thông tin lâm sàng (EMR)
@@ -93,7 +198,7 @@
     <div class="col-lg-8">
         <div class="card border-0 shadow-sm rounded-4">
             <div class="card-header bg-white border-0 pt-4 px-4 pb-0">
-                <h5 class="fw-bold text-dark mb-0"><i class="bi bi-calendar-event text-primary me-2"></i>Lịch sử & Lịch hẹn sắp tới</h5>
+                <h5 class="fw-bold text-dark mb-0"><i class="bi bi-calendar-event text-primary me-2"></i>Lịch sử &amp; Lịch hẹn sắp tới</h5>
             </div>
             <div class="card-body p-4">
                 @if (!Model.Appointments.Any())

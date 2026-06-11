@@ -95,6 +95,56 @@
 /* ── Feedback toast ────────────────────────────────────────────── */
 #prFeedback { position: fixed; bottom: 24px; right: 24px; z-index: 9999;
     display: none; min-width: 280px; }
+
+/* ── Doctor selection chips (horizontal scrollable) ─────────────── */
+.doctor-badge-row {
+    display: flex;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    gap: 8px;
+    padding-bottom: 8px;
+    scrollbar-width: thin;
+}
+.doctor-badge-row::-webkit-scrollbar {
+    height: 5px;
+}
+.doctor-badge-row::-webkit-scrollbar-track {
+    background: #f1f5f9;
+    border-radius: 10px;
+}
+.doctor-badge-row::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 10px;
+}
+.doctor-badge-row::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+}
+.doctor-badge-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    border-radius: 50px;
+    font-size: .82rem;
+    font-weight: 600;
+    color: #475569;
+    cursor: pointer;
+    background: #f1f5f9;
+    border: 1px solid #e2e8f0;
+    transition: all .15s ease;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+.doctor-badge-item:hover {
+    background: #e2e8f0;
+    color: #0f172a;
+}
+.doctor-badge-item.active {
+    background: #3b82f6;
+    color: #fff;
+    border-color: #3b82f6;
+    box-shadow: 0 4px 10px rgba(59, 130, 246, 0.25);
+}
 </style>
 
 <!-- Page Header -->
@@ -113,7 +163,7 @@
     <!-- ── Sidebar ─────────────────────────────────────────────────── -->
     <div class="pr-sidebar">
         <div class="sidebar-title">Cấu hình</div>
-        <a class="pr-item active" href="#" data-section="sec-hourly">
+        <a class="pr-item" href="#" data-section="sec-hourly">
             <i class="bi bi-cash-coin"></i> Mức tiền cơ bản/giờ
         </a>
         <a class="pr-item" href="#" data-section="sec-weekcoeff">
@@ -124,12 +174,16 @@
         <a class="pr-item" href="#" data-section="sec-complex">
             <i class="bi bi-person-raised-hand"></i> Hệ số ca phức tạp
         </a>
+        <a class="pr-item" href="#" data-section="sec-approve" id="sidebarApproveLink">
+            <i class="bi bi-clipboard2-check"></i> Duyệt ca phức tạp
+            <span id="pendingBadge" class="badge rounded-pill ms-auto" style="background:#ef4444;color:#fff;font-size:0.7rem;display:none;">0</span>
+        </a>
 
         <div class="sidebar-title">Phiếu lương</div>
         <a class="pr-item" href="#" data-section="sec-slip">
             <i class="bi bi-receipt-cutoff"></i> Phiếu lương theo tháng
         </a>
-        <a class="pr-item" href="#" data-section="sec-monthly-all">
+        <a class="pr-item active" href="#" data-section="sec-monthly-all">
             <i class="bi bi-table"></i> Tổng hợp tháng (tất cả)
         </a>
 
@@ -146,7 +200,7 @@
     <div class="pr-content">
 
         <!-- ══ UC4.1 — Mức tiền cơ bản/giờ & hệ số học vị ══════════ -->
-        <div class="section active" id="sec-hourly">
+        <div class="section" id="sec-hourly">
             <div class="pr-card">
                 <div class="card-title"><i class="bi bi-cash-coin"></i> Mức tiền cơ bản & Hệ số học hàm/học vị</div>
                 <div class="row g-3 mb-4">
@@ -221,20 +275,25 @@
             </div>
         </div>
 
-        <!-- ══ UC4.3 — Hệ số ca phức tạp ══════════════════════════════ -->
         <div class="section" id="sec-complex">
             <div class="pr-card">
                 <div class="card-title"><i class="bi bi-person-raised-hand"></i> Hệ số ca bệnh nhân phức tạp trong tháng</div>
-                <div class="row g-3 mb-4 align-items-end">
-                    <div class="col-md-4">
-                        <label class="form-label fw-semibold small">Bác sĩ</label>
-                        <select id="cxDoctor" class="form-select form-select-sm rounded-3">
-                            @foreach (var d in doctors)
-                            {
-                                <option value="@d.Id">@d.User?.FullName (@(d.AcademicDegree ?? "Đại học"))</option>
-                            }
-                        </select>
+                
+                <!-- Bác sĩ Selection chips -->
+                <div class="mb-4">
+                    <label class="form-label fw-semibold small text-muted">Chọn bác sĩ:</label>
+                    <div class="doctor-badge-row" id="cxDoctorList">
+                        @foreach (var d in doctors)
+                        {
+                            <div class="doctor-badge-item @(d == doctors.First() ? "active" : "")" data-id="@d.Id" onclick="selectDoctor('cx', this)">
+                                <i class="bi bi-person-badge"></i> @d.User?.FullName
+                            </div>
+                        }
                     </div>
+                    <input type="hidden" id="cxDoctor" value="@(doctors.FirstOrDefault()?.Id)" />
+                </div>
+
+                <div class="row g-3 mb-4 align-items-end">
                     <div class="col-md-2">
                         <label class="form-label fw-semibold small">Tháng</label>
                         <input type="number" id="cxMonth" class="form-control form-control-sm rounded-3"
@@ -247,7 +306,7 @@
                     </div>
                     <div class="col-md-2">
                         <button class="btn btn-outline-primary btn-sm rounded-pill w-100" onclick="loadComplexSessions()">
-                            <i class="bi bi-search me-1"></i> Xem
+                            <i class="bi bi-search me-1"></i> Xem danh sách ca
                         </button>
                     </div>
                 </div>
@@ -255,20 +314,57 @@
             </div>
         </div>
 
-        <!-- ══ UC4.4 — Phiếu lương 1 bác sĩ ══════════════════════════ -->
+        <!-- ══ UC4.3 NEW — Duyệt ca phức tạp (Admin approval) ════════════ -->
+        <div class="section" id="sec-approve">
+            <div class="pr-card">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <div class="card-title mb-0"><i class="bi bi-clipboard2-check"></i> Duyệt yêu cầu ca phức tạp</div>
+                    <button class="btn btn-outline-secondary btn-sm rounded-pill" onclick="loadPendingComplexSessions()">
+                        <i class="bi bi-arrow-clockwise me-1"></i> Tải lại
+                    </button>
+                </div>
+
+                <!-- Filter tabs -->
+                <div class="d-flex gap-2 mb-4 flex-wrap">
+                    <button class="btn btn-sm rounded-pill px-3 fw-semibold" id="filterPending"
+                            style="background:#fef3c7;color:#92400e;border:1px solid #fcd34d;"
+                            onclick="filterApproveTable('Pending')">
+                        <i class="bi bi-hourglass-split me-1"></i> Chờ duyệt
+                        <span id="cntPending" class="ms-1 badge" style="background:#ef4444;color:#fff;">0</span>
+                    </button>
+                    <button class="btn btn-sm rounded-pill px-3 fw-semibold btn-outline-secondary" id="filterApproved"
+                            onclick="filterApproveTable('Approved')">
+                        <i class="bi bi-check-circle me-1"></i> Đã duyệt
+                    </button>
+                    <button class="btn btn-sm rounded-pill px-3 fw-semibold btn-outline-secondary" id="filterRejected"
+                            onclick="filterApproveTable('Rejected')">
+                        <i class="bi bi-x-circle me-1"></i> Đã từ chối
+                    </button>
+                </div>
+
+                <div id="approveTable" class="table-responsive"></div>
+            </div>
+        </div>
+
         <div class="section" id="sec-slip">
             <div class="pr-card">
                 <div class="card-title"><i class="bi bi-receipt-cutoff"></i> Phiếu lương bác sĩ theo tháng</div>
-                <div class="row g-3 mb-4 align-items-end">
-                    <div class="col-md-4">
-                        <label class="form-label fw-semibold small">Bác sĩ</label>
-                        <select id="slipDoctor" class="form-select form-select-sm rounded-3">
-                            @foreach (var d in doctors)
-                            {
-                                <option value="@d.Id">@d.User?.FullName</option>
-                            }
-                        </select>
+                
+                <!-- Bác sĩ Selection chips -->
+                <div class="mb-4">
+                    <label class="form-label fw-semibold small text-muted">Chọn bác sĩ:</label>
+                    <div class="doctor-badge-row" id="slipDoctorList">
+                        @foreach (var d in doctors)
+                        {
+                            <div class="doctor-badge-item @(d == doctors.First() ? "active" : "")" data-id="@d.Id" onclick="selectDoctor('slip', this)">
+                                <i class="bi bi-person-badge"></i> @d.User?.FullName
+                            </div>
+                        }
                     </div>
+                    <input type="hidden" id="slipDoctor" value="@(doctors.FirstOrDefault()?.Id)" />
+                </div>
+
+                <div class="row g-3 mb-4 align-items-end">
                     <div class="col-md-2">
                         <label class="form-label fw-semibold small">Tháng</label>
                         <input type="number" id="slipMonth" class="form-control form-control-sm rounded-3"
@@ -290,7 +386,7 @@
         </div>
 
         <!-- ══ UC4.5 — Tổng hợp tháng (tất cả bác sĩ) ════════════════ -->
-        <div class="section" id="sec-monthly-all">
+        <div class="section active" id="sec-monthly-all">
             <div class="pr-card">
                 <div class="card-title"><i class="bi bi-table"></i> Báo cáo lương tất cả bác sĩ trong tháng</div>
                 <div class="row g-3 mb-4 align-items-end">
@@ -318,13 +414,22 @@
         <div class="section" id="sec-yearly-one">
             <div class="pr-card">
                 <div class="card-title"><i class="bi bi-bar-chart-line"></i> Lương bác sĩ qua các tháng trong năm</div>
-                <div class="row g-3 mb-4 align-items-end">
-                    <div class="col-md-4">
-                        <label class="form-label fw-semibold small">Bác sĩ</label>
-                        <select id="y1Doctor" class="form-select form-select-sm rounded-3">
-                            @foreach (var d in doctors) { <option value="@d.Id">@d.User?.FullName</option> }
-                        </select>
+                
+                <!-- Bác sĩ Selection chips -->
+                <div class="mb-4">
+                    <label class="form-label fw-semibold small text-muted">Chọn bác sĩ:</label>
+                    <div class="doctor-badge-row" id="y1DoctorList">
+                        @foreach (var d in doctors)
+                        {
+                            <div class="doctor-badge-item @(d == doctors.First() ? "active" : "")" data-id="@d.Id" onclick="selectDoctor('y1', this)">
+                                <i class="bi bi-person-badge"></i> @d.User?.FullName
+                            </div>
+                        }
                     </div>
+                    <input type="hidden" id="y1Doctor" value="@(doctors.FirstOrDefault()?.Id)" />
+                </div>
+
+                <div class="row g-3 mb-4 align-items-end">
                     <div class="col-md-2">
                         <label class="form-label fw-semibold small">Năm</label>
                         <input type="number" id="y1Year" class="form-control form-control-sm rounded-3"
@@ -336,15 +441,17 @@
                         </button>
                     </div>
                 </div>
-                <canvas id="chartY1" height="100"></canvas>
-                <div id="y1Table" class="table-responsive mt-4"></div>
+                <div style="position: relative; height: 320px; width: 100%;" class="mb-4">
+                    <canvas id="chartY1"></canvas>
+                </div>
+                <div id="y1Table" class="table-responsive"></div>
             </div>
         </div>
 
         <!-- ══ UC4.7 — Tổng hợp năm (tất cả bác sĩ) ══════════════════ -->
         <div class="section" id="sec-yearly-all">
             <div class="pr-card">
-                <div class="card-title"><i class="bi bi-pie-chart"></i> Tổng lương tất cả bác sĩ trong năm</div>
+                <div class="card-title"><i class="bi bi-table"></i> Báo cáo lương tất cả bác sĩ trong năm</div>
                 <div class="row g-3 mb-4 align-items-end">
                     <div class="col-md-2">
                         <label class="form-label fw-semibold small">Năm</label>
@@ -353,17 +460,17 @@
                     </div>
                     <div class="col-md-2">
                         <button class="btn btn-primary btn-sm rounded-pill w-100" onclick="loadYearlyAll()">
-                            <i class="bi bi-graph-up me-1"></i> Xem biểu đồ
+                            <i class="bi bi-search me-1"></i> Xem báo cáo
                         </button>
                     </div>
                 </div>
-                <div class="row g-4">
-                    <div class="col-md-5">
-                        <canvas id="chartYA" height="250"></canvas>
-                    </div>
-                    <div class="col-md-7">
-                        <div id="yaTable" class="table-responsive"></div>
-                    </div>
+                <div id="yaTable" class="table-responsive"></div>
+            </div>
+
+            <div class="pr-card mt-4">
+                <div class="card-title"><i class="bi bi-pie-chart-fill"></i> Biểu đồ phân bổ lương cả năm</div>
+                <div class="d-flex justify-content-center" style="max-height: 280px; position: relative;">
+                    <canvas id="chartYA"></canvas>
                 </div>
             </div>
         </div>
@@ -387,8 +494,40 @@ document.querySelectorAll('.pr-item').forEach(link => {
         link.classList.add('active');
         const sec = document.getElementById(target);
         if (sec) sec.classList.add('active');
+
+        if (target === 'sec-yearly-one') {
+            loadYearlyOne();
+        } else if (target === 'sec-slip') {
+            loadSlip();
+        } else if (target === 'sec-complex') {
+            loadComplexSessions();
+        } else if (target === 'sec-monthly-all') {
+            loadMonthlyAll();
+        } else if (target === 'sec-yearly-all') {
+            loadYearlyAll();
+        } else if (target === 'sec-approve') {
+            loadPendingComplexSessions();
+        }
     });
 });
+
+function selectDoctor(prefix, el) {
+    const list = el.closest('.doctor-badge-row');
+    list.querySelectorAll('.doctor-badge-item').forEach(item => item.classList.remove('active'));
+    el.classList.add('active');
+    const input = document.getElementById(`${prefix}Doctor`);
+    if (input) {
+        input.value = el.dataset.id;
+    }
+
+    if (prefix === 'y1') {
+        loadYearlyOne();
+    } else if (prefix === 'slip') {
+        loadSlip();
+    } else if (prefix === 'cx') {
+        loadComplexSessions();
+    }
+}
 
 // ─── Feedback toast ───────────────────────────────────────────────
 function showToast(msg, type = 'success') {
@@ -552,7 +691,7 @@ async function loadMonthlyAll() {
     <table class="pr-table">
         <thead><tr>
             <th>#</th><th>Bác sĩ</th><th>Học vị</th><th>Hệ số</th>
-            <th>Số ca</th><th>Giờ quy đổi</th><th>Đánh giá TB</th><th>Tổng tiền làm thêm</th>
+            <th>Số ca</th><th>Giờ quy đổi</th><th>Đánh giá TB</th><th>Tổng tiền làm thêm</th><th>Hành động</th>
         </tr></thead><tbody>`;
 
     data.forEach((d, i) => {
@@ -562,6 +701,11 @@ async function loadMonthlyAll() {
             <td>${d.totalShifts}</td><td>${d.totalConvertedHours}</td>
             <td>${d.averageRating ? `<span class="badge bg-warning text-dark fw-bold">★ ${d.averageRating.toFixed(1)}</span> <span class="text-muted small">(${d.totalRatings} lượt)</span>` : '<span class="text-muted">—</span>'}</td>
             <td class="fw-bold text-primary">${fmt(d.totalPay)}</td>
+            <td>
+                <button class="btn btn-outline-primary btn-sm rounded-pill px-3" onclick="viewDoctorSlip(${d.doctorId}, ${month}, ${year})">
+                    <i class="bi bi-eye"></i> Chi tiết
+                </button>
+            </td>
         </tr>`;
     });
 
@@ -633,6 +777,7 @@ async function loadYearlyAll() {
         },
         options: {
             responsive: true,
+            maintainAspectRatio: false,
             plugins: {
                 legend: { position: 'bottom' },
                 tooltip: { callbacks: { label: ctx => ` ${ctx.label}: ${fmt(ctx.raw)}` } }
@@ -641,21 +786,275 @@ async function loadYearlyAll() {
     });
 
     let total = data.reduce((s, d) => s + d.total, 0);
-    let html = `<p class="small text-muted mb-2">Năm ${year} — Tổng toàn phòng khám: <strong class="text-primary">${fmt(total)}</strong></p>
+    let html = `<p class="small text-muted mb-3">Năm ${year} — Tổng toàn phòng khám: <strong class="text-primary">${fmt(total)}</strong></p>
     <table class="pr-table">
-        <thead><tr><th>#</th><th>Bác sĩ</th><th>Học vị</th><th>Tổng cả năm</th><th>Tỉ lệ</th></tr></thead><tbody>`;
+        <thead><tr>
+            <th>#</th><th>Bác sĩ</th><th>Học vị</th><th>Hệ số</th>
+            <th>Số ca</th><th>Giờ quy đổi</th><th>Đánh giá TB</th><th>Tổng tiền làm thêm</th><th>Hành động</th>
+        </tr></thead><tbody>`;
     data.forEach((d, i) => {
-        const pct = total > 0 ? ((d.total / total) * 100).toFixed(1) : 0;
         html += `<tr>
-            <td><span class="badge rounded-pill" style="background:${palette[i % palette.length]}">${i+1}</span></td>
-            <td class="fw-semibold">${d.doctorName}</td>
-            <td>${d.academicDegree}</td>
+            <td>${i + 1}</td><td class="fw-semibold">${d.doctorName}</td>
+            <td>${d.academicDegree}</td><td>${d.degreeCoeff}</td>
+            <td>${d.totalShifts}</td><td>${d.totalConvertedHours}</td>
+            <td>${d.averageRating ? `<span class="badge bg-warning text-dark fw-bold">★ ${d.averageRating.toFixed(1)}</span> <span class="text-muted small">(${d.totalRatings} lượt)</span>` : '<span class="text-muted">—</span>'}</td>
             <td class="fw-bold text-primary">${fmt(d.total)}</td>
-            <td>${pct}%</td>
+            <td>
+                <button class="btn btn-outline-primary btn-sm rounded-pill px-3" onclick="viewDoctorYearly(${d.doctorId}, ${year})">
+                    <i class="bi bi-eye"></i> Chi tiết
+                </button>
+            </td>
         </tr>`;
     });
     html += '</tbody></table>';
     document.getElementById('yaTable').innerHTML = html;
 }
+
+// ─── Switch & Load helpers ─────────────────────────────────────────
+function viewDoctorSlip(doctorId, month, year) {
+    document.getElementById('slipDoctor').value = doctorId;
+    document.getElementById('slipMonth').value = month;
+    document.getElementById('slipYear').value = year;
+
+    // Cập nhật trạng thái active trên danh sách bác sĩ (chips)
+    const list = document.getElementById('slipDoctorList');
+    if (list) {
+        list.querySelectorAll('.doctor-badge-item').forEach(item => {
+            if (item.getAttribute('data-id') == doctorId) {
+                item.classList.add('active');
+            } else {
+                item.classList.remove('active');
+            }
+        });
+    }
+
+    const slipLink = document.querySelector('.pr-item[data-section="sec-slip"]');
+    if (slipLink) slipLink.click();
+    loadSlip();
+}
+
+function viewDoctorYearly(doctorId, year) {
+    document.getElementById('y1Doctor').value = doctorId;
+    document.getElementById('y1Year').value = year;
+
+    // Cập nhật trạng thái active trên danh sách bác sĩ (chips)
+    const list = document.getElementById('y1DoctorList');
+    if (list) {
+        list.querySelectorAll('.doctor-badge-item').forEach(item => {
+            if (item.getAttribute('data-id') == doctorId) {
+                item.classList.add('active');
+            } else {
+                item.classList.remove('active');
+            }
+        });
+    }
+
+    const y1Link = document.querySelector('.pr-item[data-section="sec-yearly-one"]');
+    if (y1Link) y1Link.click();
+    loadYearlyOne();
+}
+
+// ─── Initial Page Load ─────────────────────────────────────────────
+document.addEventListener("DOMContentLoaded", () => {
+    loadMonthlyAll();
+    loadPendingCount();
+});
+
+// ─── UC4.3 NEW — Complex approval ─────────────────────────────────
+let allComplexSessions = [];
+let currentFilter = 'Pending';
+
+async function loadPendingCount() {
+    try {
+        const res = await fetch('/Payroll/GetPendingComplexCount');
+        const data = await res.json();
+        const badge = document.getElementById('pendingBadge');
+        const cntBadge = document.getElementById('cntPending');
+        if (badge) {
+            if (data.count > 0) {
+                badge.textContent = data.count;
+                badge.style.display = 'inline';
+            } else {
+                badge.style.display = 'none';
+            }
+        }
+        if (cntBadge) cntBadge.textContent = data.count;
+    } catch(e) {}
+}
+
+async function loadPendingComplexSessions() {
+    document.getElementById('approveTable').innerHTML = '<div class="text-center py-4 text-muted"><span class="spinner-border spinner-border-sm me-2"></span>Đang tải...</div>';
+    try {
+        const res = await fetch('/Payroll/GetAllComplexSessions');
+        allComplexSessions = await res.json();
+        renderApproveTable(currentFilter);
+        loadPendingCount();
+    } catch(e) {
+        document.getElementById('approveTable').innerHTML = '<div class="alert alert-danger">Lỗi tải dữ liệu.</div>';
+    }
+}
+
+function filterApproveTable(status) {
+    currentFilter = status;
+    ['Pending', 'Approved', 'Rejected'].forEach(s => {
+        const btn = document.getElementById('filter' + s);
+        if (btn) btn.classList.toggle('btn-outline-secondary', s !== status);
+    });
+    renderApproveTable(status);
+}
+
+function renderApproveTable(status) {
+    const sessions = allComplexSessions.filter(s => s.complexStatus === status);
+
+    if (!sessions.length) {
+        document.getElementById('approveTable').innerHTML = `<div class="text-center py-5 text-muted"><i class="bi bi-inbox display-4 opacity-25 d-block mb-2"></i>Không có ca nào ở trạng thái "${status === 'Pending' ? 'Chờ duyệt' : status === 'Approved' ? 'Đã duyệt' : 'Đã từ chối'}".</div>`;
+        return;
+    }
+
+    let html = `<table class="pr-table">
+        <thead><tr>
+            <th>#</th><th>Ngày</th><th>Bác sĩ</th><th>Bệnh nhân</th>
+            <th>Chẩn đoán</th><th>Lý do báo</th>
+            <th>HệSố đề xuất</th>
+            ${status === 'Pending' ? '<th>Hành động</th>' : '<th>Kết quả</th>'}
+        </tr></thead><tbody>`;
+
+    sessions.forEach((s, i) => {
+        const date = new Date(s.createdAt).toLocaleDateString('vi-VN');
+        const reason = s.complexReason ? `<span title="${s.complexReason}">${s.complexReason.substring(0, 60)}${s.complexReason.length > 60 ? '...' : ''}</span>` : '—';
+
+        let actionCell = '';
+        if (status === 'Pending') {
+            actionCell = `<td class="d-flex gap-1">
+                <button class="btn btn-success btn-sm rounded-pill px-2" onclick="openReviewModal(${s.id}, 'Approved', ${s.requestedCoefficient ?? 0.20}, \`${s.doctorName}\`, \`${s.patientName}\`)">
+                    <i class="bi bi-check-lg"></i> Duyệt
+                </button>
+                <button class="btn btn-danger btn-sm rounded-pill px-2" onclick="openReviewModal(${s.id}, 'Rejected', ${s.requestedCoefficient ?? 0.20}, \`${s.doctorName}\`, \`${s.patientName}\`)">
+                    <i class="bi bi-x-lg"></i> Từ chối
+                </button>
+            </td>`;
+        } else if (status === 'Approved') {
+            actionCell = `<td><span class="badge rounded-pill px-3 py-2" style="background:#d1fae5;color:#065f46;border:1px solid #6ee7b7;">✅ Hệ số: ${s.patientCoefficient?.toFixed(2)}</span>
+                ${s.adminNote ? `<div class="text-muted small mt-1">${s.adminNote}</div>` : ''}</td>`;
+        } else {
+            actionCell = `<td><span class="badge rounded-pill px-3 py-2" style="background:#fee2e2;color:#991b1b;border:1px solid #fca5a5;">❌ Từ chối</span>
+                ${s.adminNote ? `<div class="text-muted small mt-1">${s.adminNote}</div>` : ''}</td>`;
+        }
+
+        html += `<tr>
+            <td>${i + 1}</td>
+            <td>${date}</td>
+            <td class="fw-semibold">${s.doctorName}</td>
+            <td>${s.patientName}</td>
+            <td>${s.diagnosis || '—'}</td>
+            <td class="small text-secondary">${reason}</td>
+            <td><span class="badge bg-primary rounded-pill">${(s.requestedCoefficient ?? 0).toFixed(2)}</span></td>
+            ${actionCell}
+        </tr>`;
+    });
+
+    html += '</tbody></table>';
+    document.getElementById('approveTable').innerHTML = html;
+}
+
+// Modal duyệt/từ chối
+let reviewSessionId = null;
+let reviewAction = null;
+
+function openReviewModal(sessionId, action, defaultCoeff, doctorName, patientName) {
+    reviewSessionId = sessionId;
+    reviewAction = action;
+    document.getElementById('reviewModalTitle').textContent = action === 'Approved' ? '✅ Duyệt ca phức tạp' : '❌ Từ chối ca phức tạp';
+    document.getElementById('reviewModalContext').textContent = `Bác sĩ: ${doctorName} | Bệnh nhân: ${patientName}`;
+    document.getElementById('reviewApprovedCoeff').value = defaultCoeff.toFixed(2);
+    document.getElementById('reviewAdminNote').value = '';
+
+    const coeffGroup = document.getElementById('reviewCoeffGroup');
+    if (action === 'Approved') {
+        coeffGroup.style.display = 'block';
+        document.getElementById('btnConfirmReview').className = 'btn btn-success rounded-pill px-4 fw-semibold';
+        document.getElementById('btnConfirmReview').innerHTML = '<i class="bi bi-check-circle-fill me-1"></i>Xác nhận duyệt';
+    } else {
+        coeffGroup.style.display = 'none';
+        document.getElementById('btnConfirmReview').className = 'btn btn-danger rounded-pill px-4 fw-semibold';
+        document.getElementById('btnConfirmReview').innerHTML = '<i class="bi bi-x-circle-fill me-1"></i>Xác nhận từ chối';
+    }
+    reviewModal.show();
+}
+
+async function submitReview() {
+    const btn = document.getElementById('btnConfirmReview');
+    const coeff = reviewAction === 'Approved' ? parseFloat(document.getElementById('reviewApprovedCoeff').value) : 0.1;
+    const note = document.getElementById('reviewAdminNote').value.trim();
+
+    if (reviewAction === 'Approved' && (isNaN(coeff) || coeff < 0.1 || coeff > 0.5)) {
+        alert('Hệ số duyệt phải từ 0.10 đến 0.50.');
+        return;
+    }
+
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Đang xử lý...';
+
+    try {
+        const res = await fetch('/Payroll/ReviewComplexSession', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ sessionId: reviewSessionId, action: reviewAction, approvedCoefficient: coeff, adminNote: note })
+        });
+        const data = await res.json();
+
+        if (res.ok && data.success) {
+            reviewModal.hide();
+            showToast(reviewAction === 'Approved' ? '✅ Đã duyệt và ghi nhận hệ số thành công!' : '❌ Đã từ chối yêu cầu.', reviewAction === 'Approved' ? 'success' : 'warning');
+            await loadPendingComplexSessions();
+        } else {
+            alert(data.error || 'Có lỗi xảy ra.');
+        }
+    } catch(e) {
+        alert('Lỗi kết nối.');
+    } finally {
+        btn.disabled = false;
+    }
+}
 </script>
 }
+
+<!-- Modal Duyệt/Từ chối ca phức tạp -->
+<div class="modal fade" id="reviewComplexModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <div class="modal-header border-0 pb-2">
+                <h5 class="modal-title fw-bold" id="reviewModalTitle">Duyệt ca phức tạp</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body px-4">
+                <p class="text-muted small mb-3" id="reviewModalContext"></p>
+
+                <div class="mb-3" id="reviewCoeffGroup">
+                    <label class="form-label fw-semibold small">Hệ số phê duyệt <span class="text-danger">*</span></label>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="bi bi-plus-slash-minus"></i></span>
+                        <input type="number" class="form-control" id="reviewApprovedCoeff"
+                               min="0.10" max="0.50" step="0.05" placeholder="0.10 – 0.50" />
+                    </div>
+                    <small class="text-muted">Bạn có thể điều chỉnh hệ số so với đề xuất của bác sĩ.</small>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label fw-semibold small">Ghi chú admin (tuỳ chọn)</label>
+                    <textarea class="form-control rounded-3" id="reviewAdminNote" rows="3"
+                              placeholder="Lý do duyệt/từ chối, điều kiện kèm theo..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer border-0 pt-0 px-4 pb-4">
+                <button type="button" class="btn btn-outline-secondary rounded-pill px-4" data-bs-dismiss="modal">Hủy</button>
+                <button type="button" class="btn btn-success rounded-pill px-4 fw-semibold" id="btnConfirmReview" onclick="submitReview()">
+                    <i class="bi bi-check-circle-fill me-1"></i>Xác nhận
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+    const reviewModal = new bootstrap.Modal(document.getElementById('reviewComplexModal'));
+</script>

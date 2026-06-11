@@ -318,7 +318,7 @@ namespace Nhakhoa.Controllers
             }
             else
             {
-                // Physical payment (CASH, BANK, INSURANCE) - receptionist handles immediately
+                // Physical payment (CASH, BANK) - receptionist handles immediately
                 invoice.Status = "Đã thanh toán";
                 invoice.PaymentMethodCode = paymentMethodCode;
                 invoice.PaidAt = DateTime.Now;

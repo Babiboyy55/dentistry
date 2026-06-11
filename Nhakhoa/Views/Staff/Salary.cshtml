@@ -39,10 +39,9 @@
                         + Model.Salary.MonthlyBonus;
 
     decimal bhxh = baseSalary * 0.08m;
-    decimal bhyt = baseSalary * 0.015m;
     decimal bhtn = baseSalary * 0.01m;
     decimal unionFee = baseSalary * 0.01m;
-    decimal mandatoryIns = bhxh + bhyt + bhtn + unionFee;
+    decimal mandatoryIns = bhxh + bhtn + unionFee;
 
     decimal taxableIncome = grossSalary - mandatoryIns - personalTaxDeduction;
     decimal pit = 0;
@@ -178,7 +177,7 @@
 
             <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
                 <div class="ps-2">
-                    <div class="fw-semibold text-dark small">Bảo hiểm bắt buộc (BHXH 8%, BHYT 1.5%, BHTN 1%)</div>
+                    <div class="fw-semibold text-dark small">Bảo hiểm bắt buộc (BHXH 8%, BHTN 1%)</div>
                     <div class="text-muted" style="font-size:0.75rem;">Tính trên lương cơ bản</div>
                 </div>
                 <span class="fw-semibold text-danger">-@FormatMoney(mandatoryIns)</span>
@@ -231,7 +230,7 @@
             </h6>
             <div class="bg-white rounded-3 p-3 border" style="font-family: monospace; font-size: 0.82rem; line-height: 1.8; color: #1a2332;">
                 <div><span class="text-success fw-bold">Gross Salary</span> = @FormatMoney(grossSalary)</div>
-                <div><span class="text-danger fw-bold">- Bảo hiểm (10.5%)</span> = @FormatMoney(mandatoryIns)</div>
+                <div><span class="text-danger fw-bold">- Bảo hiểm (9%)</span> = @FormatMoney(mandatoryIns)</div>
                 <div><span class="text-danger fw-bold">- Thuế TNCN</span> = @FormatMoney(pit)</div>
                 <div><span class="text-danger fw-bold">- Khấu trừ khác</span> = @FormatMoney(Model.Salary.OtherDeductions)</div>
                 <div class="border-top mt-2 pt-2 fw-bold text-primary">= Thực lĩnh: @FormatMoney(netSalary)</div>

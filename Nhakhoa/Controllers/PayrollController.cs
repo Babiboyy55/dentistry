@@ -107,7 +107,7 @@ namespace Nhakhoa.Controllers
             return Json(sessions);
         }
 
-        // Cập nhật hệ số phức tạp cho 1 ca khám
+        // Cập nhật hệ số phức tạp cho 1 ca khám (legacy - admin trực tiếp gán)
         [HttpPost]
         public async Task<IActionResult> SaveComplexSessionCoefficient([FromBody] UpdateCoeffModel m)
         {
@@ -119,6 +119,142 @@ namespace Nhakhoa.Controllers
             session.PatientCoefficient = m.Coefficient;
             await _db.SaveChangesAsync();
             return Ok(new { success = true });
+        }
+
+        // ─────────────────────────────────────────────────────────────────
+        // UC4.3 — Luồng duyệt ca phức tạp (Admin review)
+        // ─────────────────────────────────────────────────────────────────
+
+        // Đếm số ca đang chờ duyệt (dùng cho badge notification)
+        [HttpGet]
+        public async Task<IActionResult> GetPendingComplexCount()
+        {
+            var count = await _db.ExaminationSessions
+                .CountAsync(e => e.ComplexStatus == "Pending");
+            return Json(new { count });
+        }
+
+        // Lấy tất cả ca đang chờ duyệt (hoặc theo tháng/bác sĩ)
+        [HttpGet]
+        public async Task<IActionResult> GetPendingComplexSessions(int? month, int? year)
+        {
+            var query = _db.ExaminationSessions
+                .Include(e => e.Patient)
+                .Include(e => e.Doctor)
+                    .ThenInclude(d => d!.User)
+                .Where(e => e.ComplexStatus == "Pending");
+
+            if (month.HasValue && year.HasValue)
+            {
+                var from = new DateTime(year.Value, month.Value, 1);
+                var to = from.AddMonths(1);
+                query = query.Where(e => e.CreatedAt >= from && e.CreatedAt < to);
+            }
+
+            var sessions = await query
+                .OrderBy(e => e.CreatedAt)
+                .Select(e => new
+                {
+                    e.Id,
+                    e.CreatedAt,
+                    PatientName = e.Patient != null ? e.Patient.FullName : "—",
+                    DoctorName = e.Doctor != null && e.Doctor.User != null ? e.Doctor.User.FullName : "—",
+                    DoctorId = e.DoctorId,
+                    e.Diagnosis,
+                    e.ComplexReason,
+                    e.RequestedCoefficient,
+                    e.ComplexStatus,
+                    e.PatientCoefficient
+                })
+                .ToListAsync();
+
+            return Json(sessions);
+        }
+
+        // Lấy tất cả ca phức tạp (bao gồm đã duyệt/từ chối) — cho bảng lịch sử
+        [HttpGet]
+        public async Task<IActionResult> GetAllComplexSessions(int? month, int? year, string? status)
+        {
+            var query = _db.ExaminationSessions
+                .Include(e => e.Patient)
+                .Include(e => e.Doctor)
+                    .ThenInclude(d => d!.User)
+                .Where(e => e.ComplexStatus != null);
+
+            if (!string.IsNullOrEmpty(status))
+                query = query.Where(e => e.ComplexStatus == status);
+
+            if (month.HasValue && year.HasValue)
+            {
+                var from = new DateTime(year.Value, month.Value, 1);
+                var to = from.AddMonths(1);
+                query = query.Where(e => e.CreatedAt >= from && e.CreatedAt < to);
+            }
+
+            var sessions = await query
+                .OrderByDescending(e => e.CreatedAt)
+                .Select(e => new
+                {
+                    e.Id,
+                    e.CreatedAt,
+                    PatientName = e.Patient != null ? e.Patient.FullName : "—",
+                    DoctorName = e.Doctor != null && e.Doctor.User != null ? e.Doctor.User.FullName : "—",
+                    DoctorId = e.DoctorId,
+                    e.Diagnosis,
+                    e.ComplexReason,
+                    e.RequestedCoefficient,
+                    e.ComplexStatus,
+                    e.AdminNote,
+                    e.ReviewedAt,
+                    e.PatientCoefficient
+                })
+                .ToListAsync();
+
+            return Json(sessions);
+        }
+
+        // Admin duyệt hoặc từ chối ca phức tạp
+        [HttpPost]
+        public async Task<IActionResult> ReviewComplexSession([FromBody] ReviewComplexModel model)
+        {
+            var session = await _db.ExaminationSessions.FindAsync(model.SessionId);
+            if (session == null) return NotFound(new { error = "Không tìm thấy ca khám." });
+
+            if (session.ComplexStatus != "Pending")
+                return BadRequest(new { error = "Ca này không ở trạng thái chờ duyệt." });
+
+            var validActions = new[] { "Approved", "Rejected" };
+            if (!validActions.Contains(model.Action))
+                return BadRequest(new { error = "Hành động không hợp lệ." });
+
+            if (model.Action == "Approved")
+            {
+                // Validate hệ số admin muốn duyệt
+                if (model.ApprovedCoefficient < 0.1m || model.ApprovedCoefficient > 0.5m)
+                    return BadRequest(new { error = "Hệ số duyệt phải từ 0.10 đến 0.50." });
+
+                session.PatientCoefficient = model.ApprovedCoefficient;
+                session.ComplexStatus = "Approved";
+            }
+            else
+            {
+                // Từ chối — PatientCoefficient giữ nguyên (0.00)
+                session.ComplexStatus = "Rejected";
+            }
+
+            session.AdminNote = model.AdminNote?.Trim();
+            session.ReviewedAt = DateTime.Now;
+
+            await _db.SaveChangesAsync();
+            return Ok(new { success = true, newStatus = session.ComplexStatus, patientCoefficient = session.PatientCoefficient });
+        }
+
+        public class ReviewComplexModel
+        {
+            public int SessionId { get; set; }
+            public string Action { get; set; } = "Approved"; // "Approved" or "Rejected"
+            public decimal ApprovedCoefficient { get; set; } = 0.1m;
+            public string? AdminNote { get; set; }
         }
 
         // ─────────────────────────────────────────────────────────────────
@@ -354,28 +490,45 @@ namespace Nhakhoa.Controllers
             var shifts = await _db.Shifts.Where(s => s.ShiftDate >= from && s.ShiftDate < to && s.IsActive).ToListAsync();
             var sessions = await _db.ExaminationSessions.Where(e => e.CreatedAt >= from && e.CreatedAt < to).ToListAsync();
             var shiftSettings = await _db.ShiftSettings.ToListAsync();
+            var ratings = await _db.DoctorRatings.Where(r => r.CreatedAt >= from && r.CreatedAt < to).ToListAsync();
 
             var result = new List<object>();
             foreach (var doc in doctors)
             {
+                var docShifts = shifts.Where(s => s.StaffProfileId == doc.Id).ToList();
+                var docSessions = sessions.Where(e => e.DoctorId == doc.Id).ToList();
+                var docRatings = ratings.Where(r => r.DoctorId == doc.Id).ToList();
+
                 decimal degreeCoeff = GetDegreeCoeff(doc.AcademicDegree, config);
                 var monthly = new decimal[12];
-                foreach (var shift in shifts.Where(s => s.StaffProfileId == doc.Id))
+                double totalConvertedHours = 0;
+
+                foreach (var shift in docShifts)
                 {
                     int m = shift.ShiftDate.Month - 1;
                     var setting = shiftSettings.FirstOrDefault(ss => ss.ShiftName == shift.ShiftType);
                     double dur = setting?.DurationHours ?? 0;
                     decimal dayMul = GetDayMultiplier(shift.ShiftDate.DayOfWeek, config);
-                    decimal patCoeff = sessions.Where(e => e.DoctorId == doc.Id && e.CreatedAt.Date == shift.ShiftDate.Date).Sum(e => e.PatientCoefficient);
+                    decimal patCoeff = docSessions.Where(e => e.CreatedAt.Date == shift.ShiftDate.Date).Sum(e => e.PatientCoefficient);
                     decimal convHrs = (decimal)dur * (dayMul + patCoeff);
+                    totalConvertedHours += (double)convHrs;
                     monthly[m] += convHrs * degreeCoeff * config.HourlyRate;
                 }
+
+                double? averageRating = docRatings.Any() ? docRatings.Average(r => r.Stars) : null;
+                int totalRatings = docRatings.Count;
+
                 result.Add(new
                 {
                     DoctorId = doc.Id,
                     DoctorName = doc.User?.FullName ?? "—",
                     AcademicDegree = doc.AcademicDegree ?? "Đại học",
+                    DegreeCoeff = degreeCoeff,
+                    TotalShifts = docShifts.Count,
+                    TotalConvertedHours = Math.Round(totalConvertedHours, 2),
                     Total = Math.Round(monthly.Sum(), 0),
+                    AverageRating = averageRating,
+                    TotalRatings = totalRatings,
                     Monthly = monthly.Select((v, i) => new { Month = i + 1, Pay = Math.Round(v, 0) })
                 });
             }

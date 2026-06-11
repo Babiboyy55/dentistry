@@ -20,6 +20,18 @@ namespace Nhakhoa.Controllers
             _db = db;
         }
 
+        public override async Task OnActionExecutionAsync(Microsoft.AspNetCore.Mvc.Filters.ActionExecutingContext context, Microsoft.AspNetCore.Mvc.Filters.ActionExecutionDelegate next)
+        {
+            var role = User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value;
+            var isAllowed = await _db.RolePermissions.AnyAsync(p => p.Role == role && p.ModuleKey == "medicine_inventory" && p.IsAllowed);
+            if (!isAllowed)
+            {
+                context.Result = Forbid();
+                return;
+            }
+            await base.OnActionExecutionAsync(context, next);
+        }
+
         // ==========================================
         // GET: /Medicine/Dispense
         // ==========================================

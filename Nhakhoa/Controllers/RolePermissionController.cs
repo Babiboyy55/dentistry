@@ -140,7 +140,7 @@ namespace Nhakhoa.Controllers
             // Default permission matrix
             var defaults = new Dictionary<string, HashSet<string>>
             {
-                ["Admin"]        = new() { "account_rbac","audit_log","system_config","emr","prescription","lab_test","schedule_view","appointment","patient_reg","invoice","patient_admin" },
+                ["Admin"]        = new() { "account_rbac","audit_log","system_config","emr","prescription","lab_test","schedule_view","appointment","patient_reg","invoice","patient_admin","medicine_inventory" },
                 ["Doctor"]       = new() { "emr","prescription","lab_test","schedule_view" },
                 ["Receptionist"] = new() { "appointment","patient_reg","invoice","patient_admin" },
             };

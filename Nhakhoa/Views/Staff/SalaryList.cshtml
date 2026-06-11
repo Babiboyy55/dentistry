@@ -7,7 +7,7 @@
         amount == 0 ? "0 ₫" : amount.ToString("N0") + " ₫";
 
     // Standard Vietnamese payroll deduction rates (based on base salary)
-    decimal insuranceRate = 0.105m; // 8% BHXH + 1.5% BHYT + 1% BHTN
+    decimal insuranceRate = 0.09m; // 8% BHXH + 1% BHTN
     decimal unionRate = 0.01m; // 1% Công đoàn phí
     decimal personalTaxDeduction = 11000000m; // 11,000,000 ₫ personal deduction
 
@@ -395,10 +395,6 @@
                                                 <span id="psBHXH" class="text-dark">400,000 ₫</span>
                                             </div>
                                             <div class="d-flex justify-content-between py-2 border-bottom text-secondary">
-                                                <span>Bảo hiểm y tế (BHYT - 1.5%)</span>
-                                                <span id="psBHYT" class="text-dark">75,000 ₫</span>
-                                            </div>
-                                            <div class="d-flex justify-content-between py-2 border-bottom text-secondary">
                                                 <span>BH thất nghiệp (BHTN - 1%)</span>
                                                 <span id="psBHTN" class="text-dark">50,000 ₫</span>
                                             </div>
@@ -525,10 +521,9 @@
 
             // Insurances & Union
             const bhxh = base * 0.08;
-            const bhyt = base * 0.015;
             const bhtn = base * 0.01;
             const union = base * 0.01;
-            const mandatoryIns = bhxh + bhyt + bhtn + union;
+            const mandatoryIns = bhxh + bhtn + union;
 
             // Personal Income Tax (PIT)
             const personalDeduction = 11000000;
@@ -559,7 +554,6 @@
             return {
                 gross,
                 bhxh,
-                bhyt,
                 bhtn,
                 union,
                 pit,
@@ -604,7 +598,6 @@
             );
 
             document.getElementById('psBHXH').innerText = formatVND(calc.bhxh);
-            document.getElementById('psBHYT').innerText = formatVND(calc.bhyt);
             document.getElementById('psBHTN').innerText = formatVND(calc.bhtn);
             document.getElementById('psUnionFee').innerText = formatVND(calc.union);
             document.getElementById('psPIT').innerText = formatVND(calc.pit);
