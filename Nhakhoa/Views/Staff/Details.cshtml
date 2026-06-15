@@ -12,21 +12,39 @@
         if (string.IsNullOrWhiteSpace(name)) return "?";
         return name.Trim().Substring(0, 1).ToUpperInvariant();
     }
-    string GetNamePrefix(string? degreeTitle, string? rankTitle)
+    string GetNamePrefix(string? degreeTitle, string? rankTitle, string? fullName = null)
     {
-        if (!string.IsNullOrEmpty(rankTitle))
+        var prefix = "";
+        if (!string.IsNullOrWhiteSpace(rankTitle) && rankTitle != "Không" && rankTitle != "Chưa cập nhật")
         {
-            if (rankTitle.Contains("Giáo sư")) return "GS. ";
-            if (rankTitle.Contains("Phó Giáo sư")) return "PGS. ";
+            if (rankTitle.Contains("Phó Giáo sư") || rankTitle.Contains("PGS")) prefix += "PGS. ";
+            else if (rankTitle.Contains("Giáo sư") || rankTitle.Contains("GS")) prefix += "GS. ";
         }
-        if (!string.IsNullOrEmpty(degreeTitle))
+        if (!string.IsNullOrWhiteSpace(degreeTitle) && degreeTitle != "Không" && degreeTitle != "Bình thường" && degreeTitle != "Chưa cập nhật")
         {
-            if (degreeTitle.Contains("Tiến sĩ")) return "TS. ";
-            if (degreeTitle.Contains("Thạc sĩ")) return "ThS. ";
-            if (degreeTitle.Contains("Bác sĩ")) return "BS. ";
-            if (degreeTitle.Contains("Cử nhân")) return "CN. ";
+            if (degreeTitle.Contains("Tiến sĩ") || degreeTitle.Contains("TS")) prefix += "TS. ";
+            else if (degreeTitle.Contains("Thạc sĩ") || degreeTitle.Contains("ThS")) prefix += "ThS. ";
+            else if (degreeTitle.Contains("Bác sĩ chuyên khoa ii") || degreeTitle.Contains("bác sĩ chuyên khoa ii") || degreeTitle.Contains("CKII") || degreeTitle.Contains("CK II") || degreeTitle.ToLower().Contains("chuyên khoa ii")) prefix += "BS. CKII. ";
+            else if (degreeTitle.Contains("Bác sĩ chuyên khoa i") || degreeTitle.Contains("bác sĩ chuyên khoa i") || degreeTitle.Contains("CKI") || degreeTitle.Contains("CK I") || degreeTitle.ToLower().Contains("chuyên khoa i")) prefix += "BS. CKI. ";
+            else if (degreeTitle.Contains("Bác sĩ") || degreeTitle.Contains("BS")) prefix += "BS. ";
+            else if (degreeTitle.Contains("Cử nhân") || degreeTitle.Contains("CN")) prefix += "CN. ";
         }
-        return "";
+
+        if (!string.IsNullOrEmpty(fullName) && !string.IsNullOrEmpty(prefix))
+        {
+            var cleanedFullName = fullName.Trim().ToLower();
+            var cleanedPrefix = prefix.Trim().ToLower();
+            if (cleanedFullName.StartsWith(cleanedPrefix) || 
+                cleanedFullName.StartsWith("bs.") || 
+                cleanedFullName.StartsWith("ts.") || 
+                cleanedFullName.StartsWith("ths.") || 
+                cleanedFullName.StartsWith("gs.") || 
+                cleanedFullName.StartsWith("pgs."))
+            {
+                return "";
+            }
+        }
+        return prefix;
     }
 }
 
@@ -115,7 +133,7 @@
             </div>
             <div>
                 <h3 class="fw-bold mb-2 text-dark">
-                    @GetNamePrefix(Model.Salary.DegreeTitle, Model.Salary.RankTitle)@Model.FullName
+                    @GetNamePrefix(Model.AcademicDegree, Model.AcademicRank, Model.FullName)@Model.FullName
                 </h3>
                 <div class="d-flex flex-wrap gap-2 mb-2">
                     <span class="badge bg-primary-subtle text-primary px-2.5 py-1 rounded-pill small">

@@ -1314,6 +1314,10 @@ namespace Nhakhoa.Controllers
 
             if (session == null) return NotFound(new { error = "Không tìm thấy ca khám." });
 
+            // Chỉ được báo khi ca khám đã hoàn thành
+            if (!session.IsCompleted)
+                return Json(new { success = false, message = "Không thể báo ca phức tạp cho ca khám chưa hoàn thành." });
+
             // Bác sĩ tạo ca hoặc bác sĩ phụ trách bệnh nhân được quyền báo ca phức tạp.
             if (User.IsInRole("Doctor"))
             {

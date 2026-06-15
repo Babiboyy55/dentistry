@@ -1,0 +1,1295 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Kiểm Thử Phi Chức Năng – Hệ Thống Phòng Khám Nha Khoa</title>
+  <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --blue-dark:   #0f172a;
+      --blue-mid:    #1e3a5f;
+      --blue-accent: #2563eb;
+      --cyan:        #06b6d4;
+      --teal:        #0d9488;
+      --green:       #10b981;
+      --amber:       #f59e0b;
+      --red:         #ef4444;
+      --purple:      #7c3aed;
+      --white:       #f8fafc;
+      --gray-light:  #e2e8f0;
+    }
+
+    body {
+      font-family: 'Be Vietnam Pro', sans-serif;
+      background: #000;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      min-height: 100vh;
+      overflow: hidden;
+    }
+
+    /* ── Slideshow container ── */
+    #slideshow {
+      width: 100vw; height: 100vh;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .slide {
+      position: absolute; inset: 0;
+      display: flex; flex-direction: column;
+      opacity: 0;
+      transform: translateX(60px);
+      transition: opacity .5s ease, transform .5s ease;
+      pointer-events: none;
+    }
+    .slide.active {
+      opacity: 1; transform: translateX(0);
+      pointer-events: all;
+    }
+    .slide.exit {
+      opacity: 0; transform: translateX(-60px);
+    }
+
+    /* ── Navigation ── */
+    #nav {
+      position: fixed; bottom: 28px; left: 50%;
+      transform: translateX(-50%);
+      display: flex; align-items: center; gap: 16px;
+      z-index: 100;
+      background: rgba(255,255,255,.08);
+      backdrop-filter: blur(16px);
+      border: 1px solid rgba(255,255,255,.15);
+      border-radius: 50px;
+      padding: 10px 24px;
+    }
+    #nav button {
+      background: rgba(255,255,255,.12);
+      border: 1px solid rgba(255,255,255,.2);
+      color: #fff;
+      width: 40px; height: 40px;
+      border-radius: 50%;
+      font-size: 18px; cursor: pointer;
+      transition: background .2s;
+      display: flex; align-items: center; justify-content: center;
+    }
+    #nav button:hover { background: var(--blue-accent); }
+    #counter {
+      color: #fff; font-size: 14px; font-weight: 600;
+      min-width: 60px; text-align: center;
+      opacity: .85;
+    }
+    #progress {
+      position: fixed; top: 0; left: 0;
+      height: 3px;
+      background: linear-gradient(90deg, var(--cyan), var(--blue-accent));
+      transition: width .4s ease;
+      z-index: 200;
+    }
+
+    /* ────────────────────────────────────────────
+       SLIDE BACKGROUNDS
+    ──────────────────────────────────────────── */
+    .bg-cover {
+      background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 50%, #0d1b2a 100%);
+    }
+    .bg-dark {
+      background: linear-gradient(160deg, #0f172a 0%, #1a1f2e 100%);
+    }
+    .bg-teal {
+      background: linear-gradient(135deg, #042f2e 0%, #0d4f4a 50%, #0f172a 100%);
+    }
+    .bg-purple {
+      background: linear-gradient(135deg, #1e0a3c 0%, #2d1b69 50%, #0f172a 100%);
+    }
+    .bg-amber {
+      background: linear-gradient(135deg, #1c1200 0%, #3d2800 50%, #0f172a 100%);
+    }
+    .bg-red {
+      background: linear-gradient(135deg, #1f0a0a 0%, #3d1515 50%, #0f172a 100%);
+    }
+    .bg-green {
+      background: linear-gradient(135deg, #021e0f 0%, #0a3d20 50%, #0f172a 100%);
+    }
+
+    /* ── Decorative orbs ── */
+    .orb {
+      position: absolute; border-radius: 50%;
+      filter: blur(80px); opacity: .25;
+      pointer-events: none;
+    }
+
+    /* ── Common layout helpers ── */
+    .slide-inner {
+      position: relative; z-index: 2;
+      display: flex; flex-direction: column;
+      height: 100%; padding: 50px 80px;
+    }
+
+    .slide-tag {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: rgba(255,255,255,.08);
+      border: 1px solid rgba(255,255,255,.15);
+      border-radius: 999px;
+      padding: 5px 16px;
+      color: var(--cyan); font-size: 13px; font-weight: 600;
+      letter-spacing: .5px; text-transform: uppercase;
+      width: fit-content; margin-bottom: 20px;
+    }
+    .slide-tag .dot {
+      width: 7px; height: 7px; border-radius: 50%;
+      background: var(--cyan); animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0%,100%{ transform: scale(1); opacity:1; }
+      50%{ transform: scale(1.4); opacity:.6; }
+    }
+
+    h1.slide-title {
+      font-size: clamp(32px, 4.5vw, 62px);
+      font-weight: 900; color: #fff;
+      line-height: 1.15; margin-bottom: 18px;
+    }
+    h2.slide-heading {
+      font-size: clamp(24px, 3vw, 42px);
+      font-weight: 800; color: #fff;
+      line-height: 1.2; margin-bottom: 14px;
+    }
+    h3.slide-sub {
+      font-size: clamp(16px, 1.8vw, 24px);
+      font-weight: 700; color: rgba(255,255,255,.75);
+      margin-bottom: 10px;
+    }
+    .lead {
+      font-size: clamp(14px, 1.4vw, 20px);
+      color: rgba(255,255,255,.65);
+      line-height: 1.7; max-width: 780px;
+    }
+
+    /* accent colors */
+    .c-cyan   { color: var(--cyan); }
+    .c-teal   { color: var(--teal); }
+    .c-green  { color: var(--green); }
+    .c-amber  { color: var(--amber); }
+    .c-red    { color: var(--red); }
+    .c-purple { color: var(--purple); }
+    .c-blue   { color: var(--blue-accent); }
+
+    /* ── Cards / Chips ── */
+    .card-grid {
+      display: grid;
+      gap: 16px;
+      margin-top: 24px;
+      flex: 1;
+    }
+    .card-grid.cols-2 { grid-template-columns: repeat(2, 1fr); }
+    .card-grid.cols-3 { grid-template-columns: repeat(3, 1fr); }
+    .card-grid.cols-4 { grid-template-columns: repeat(4, 1fr); }
+
+    .card {
+      background: rgba(255,255,255,.06);
+      border: 1px solid rgba(255,255,255,.1);
+      border-radius: 16px;
+      padding: 22px 24px;
+      transition: transform .2s, background .2s;
+      display: flex; flex-direction: column; gap: 10px;
+    }
+    .card:hover { transform: translateY(-3px); background: rgba(255,255,255,.1); }
+    .card .icon { font-size: 30px; line-height: 1; }
+    .card .card-title {
+      font-size: 15px; font-weight: 700; color: #fff;
+    }
+    .card .card-body {
+      font-size: 13px; color: rgba(255,255,255,.6); line-height: 1.65;
+    }
+    .card.accent-cyan  { border-top: 3px solid var(--cyan); }
+    .card.accent-teal  { border-top: 3px solid var(--teal); }
+    .card.accent-green { border-top: 3px solid var(--green); }
+    .card.accent-amber { border-top: 3px solid var(--amber); }
+    .card.accent-red   { border-top: 3px solid var(--red); }
+    .card.accent-purple{ border-top: 3px solid var(--purple); }
+    .card.accent-blue  { border-top: 3px solid var(--blue-accent); }
+
+    /* ── Badge / chip ── */
+    .badge {
+      display: inline-block; border-radius: 999px;
+      padding: 3px 12px; font-size: 12px; font-weight: 700;
+      text-transform: uppercase; letter-spacing: .5px;
+    }
+    .badge-cyan   { background: rgba(6,182,212,.2);  color: var(--cyan); }
+    .badge-green  { background: rgba(16,185,129,.2); color: var(--green); }
+    .badge-amber  { background: rgba(245,158,11,.2); color: var(--amber); }
+    .badge-red    { background: rgba(239,68,68,.2);  color: var(--red); }
+    .badge-purple { background: rgba(124,58,237,.2); color: var(--purple); }
+    .badge-blue   { background: rgba(37,99,235,.2);  color: var(--blue-accent); }
+
+    /* ── List items ── */
+    .check-list { list-style: none; display: flex; flex-direction: column; gap: 12px; margin-top: 16px; }
+    .check-list li {
+      display: flex; align-items: flex-start; gap: 12px;
+      color: rgba(255,255,255,.8); font-size: clamp(13px,1.3vw,16px); line-height: 1.5;
+    }
+    .check-list li::before {
+      content: "✦"; color: var(--cyan); font-size: 14px;
+      flex-shrink: 0; margin-top: 1px;
+    }
+
+    /* ── Table ── */
+    table.slide-table {
+      width: 100%; border-collapse: collapse;
+      margin-top: 20px; font-size: clamp(12px,1.2vw,14px);
+    }
+    table.slide-table thead th {
+      background: rgba(37,99,235,.25);
+      color: var(--cyan); font-weight: 700;
+      padding: 12px 16px; text-align: left;
+      border-bottom: 2px solid var(--blue-accent);
+    }
+    table.slide-table tbody tr {
+      border-bottom: 1px solid rgba(255,255,255,.07);
+      transition: background .2s;
+    }
+    table.slide-table tbody tr:hover { background: rgba(255,255,255,.05); }
+    table.slide-table tbody td {
+      padding: 11px 16px; color: rgba(255,255,255,.8);
+      vertical-align: middle;
+    }
+
+    /* ── Timeline ── */
+    .timeline { display: flex; flex-direction: column; gap: 0; margin-top: 20px; flex: 1; }
+    .tl-item { display: flex; gap: 20px; position: relative; }
+    .tl-left {
+      display: flex; flex-direction: column; align-items: center;
+      width: 44px; flex-shrink: 0;
+    }
+    .tl-dot {
+      width: 44px; height: 44px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 800; font-size: 16px; color: #fff; flex-shrink: 0;
+    }
+    .tl-line { flex: 1; width: 2px; background: rgba(255,255,255,.12); }
+    .tl-content {
+      flex: 1; padding-bottom: 22px;
+    }
+    .tl-content h4 { color: #fff; font-size: 15px; font-weight: 700; margin-bottom: 4px; }
+    .tl-content p { color: rgba(255,255,255,.6); font-size: 13px; line-height: 1.6; }
+
+    /* ── Progress bar ── */
+    .bar-wrap { margin-bottom: 14px; }
+    .bar-label { display: flex; justify-content: space-between; margin-bottom: 5px; color: #fff; font-size: 13px; font-weight: 600; }
+    .bar-track { background: rgba(255,255,255,.1); border-radius: 999px; height: 10px; overflow: hidden; }
+    .bar-fill  { height: 100%; border-radius: 999px; transition: width 1.2s ease; }
+
+    /* ── Two-column layout ── */
+    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; flex: 1; align-items: start; margin-top: 20px; }
+    .three-col { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 24px; flex: 1; align-items: start; margin-top: 20px; }
+
+    /* ── Stat block ── */
+    .stat-row { display: flex; gap: 20px; margin-top: 24px; flex-wrap: wrap; }
+    .stat-box {
+      flex: 1; min-width: 130px;
+      background: rgba(255,255,255,.06);
+      border: 1px solid rgba(255,255,255,.1);
+      border-radius: 14px; padding: 20px;
+      text-align: center;
+    }
+    .stat-box .stat-num { font-size: 36px; font-weight: 900; line-height: 1; }
+    .stat-box .stat-lbl { font-size: 12px; color: rgba(255,255,255,.5); margin-top: 6px; font-weight: 600; text-transform: uppercase; letter-spacing: .5px; }
+
+    /* ── Quote / highlight box ── */
+    .highlight-box {
+      background: linear-gradient(135deg, rgba(6,182,212,.12), rgba(37,99,235,.12));
+      border: 1px solid rgba(6,182,212,.3);
+      border-left: 4px solid var(--cyan);
+      border-radius: 12px;
+      padding: 20px 24px;
+      margin-top: 20px;
+      color: rgba(255,255,255,.85);
+      font-size: clamp(13px,1.3vw,16px);
+      line-height: 1.7;
+    }
+
+    /* ── Cover decorative ── */
+    .cover-deco {
+      position: absolute; right: 60px; top: 50%; transform: translateY(-50%);
+      display: flex; flex-direction: column; gap: 16px; align-items: flex-end;
+    }
+    .deco-pill {
+      background: rgba(255,255,255,.06);
+      border: 1px solid rgba(255,255,255,.12);
+      border-radius: 12px; padding: 14px 20px;
+      color: rgba(255,255,255,.7); font-size: 13px;
+      font-weight: 600; text-align: right;
+      backdrop-filter: blur(8px);
+      animation: float 4s ease-in-out infinite;
+    }
+    .deco-pill:nth-child(2) { animation-delay: 1s; }
+    .deco-pill:nth-child(3) { animation-delay: 2s; }
+    .deco-pill:nth-child(4) { animation-delay: .5s; }
+    @keyframes float {
+      0%,100%{ transform: translateY(0); }
+      50%{ transform: translateY(-8px); }
+    }
+
+    /* ── Divider ── */
+    .divider { height: 1px; background: rgba(255,255,255,.1); margin: 16px 0; }
+
+    /* ── Number circle ── */
+    .num-circle {
+      width: 38px; height: 38px; border-radius: 50%;
+      display: inline-flex; align-items: center; justify-content: center;
+      font-weight: 800; font-size: 16px; flex-shrink: 0;
+    }
+
+    /* scroll indicator on cover */
+    .scroll-hint {
+      position: absolute; bottom: 80px; left: 50%; transform: translateX(-50%);
+      color: rgba(255,255,255,.4); font-size: 12px; text-align: center;
+      animation: bounce 2s infinite;
+    }
+    @keyframes bounce { 0%,100%{transform: translateX(-50%) translateY(0);} 50%{transform: translateX(-50%) translateY(6px);} }
+
+    /* keyword highlight */
+    mark {
+      background: linear-gradient(135deg, rgba(6,182,212,.3), rgba(37,99,235,.3));
+      color: var(--cyan); border-radius: 4px; padding: 0 4px;
+    }
+
+    /* ── ISO grid ── */
+    .iso-grid {
+      display: grid; grid-template-columns: repeat(4,1fr); gap: 12px;
+      margin-top: 20px; flex: 1;
+    }
+    .iso-cell {
+      background: rgba(255,255,255,.05);
+      border: 1px solid rgba(255,255,255,.1);
+      border-radius: 12px; padding: 16px 14px;
+      transition: transform .2s, border-color .2s;
+    }
+    .iso-cell:hover { transform: scale(1.04); border-color: var(--cyan); }
+    .iso-cell .iso-icon { font-size: 24px; margin-bottom: 8px; }
+    .iso-cell .iso-name { font-size: 12px; font-weight: 700; color: #fff; margin-bottom: 4px; }
+    .iso-cell .iso-desc { font-size: 11px; color: rgba(255,255,255,.5); line-height: 1.5; }
+
+    /* tool card */
+    .tool-card {
+      background: rgba(255,255,255,.05);
+      border: 1px solid rgba(255,255,255,.1);
+      border-radius: 14px; padding: 18px;
+      display: flex; align-items: center; gap: 16px;
+      transition: background .2s;
+    }
+    .tool-card:hover { background: rgba(255,255,255,.09); }
+    .tool-icon { font-size: 32px; flex-shrink: 0; }
+    .tool-name { font-size: 14px; font-weight: 700; color: #fff; }
+    .tool-desc { font-size: 12px; color: rgba(255,255,255,.5); margin-top: 2px; }
+
+    /* risk matrix */
+    .matrix {
+      display: grid; grid-template-columns: repeat(3,1fr); gap: 10px;
+      margin-top: 20px;
+    }
+    .mx-cell {
+      border-radius: 10px; padding: 14px;
+      text-align: center; font-size: 12px; font-weight: 700; color: #fff;
+    }
+
+    /* ── Final slide ── */
+    .final-grid {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 20px;
+      margin-top: 24px; flex: 1;
+    }
+    .final-card {
+      background: rgba(255,255,255,.05);
+      border: 1px solid rgba(255,255,255,.1);
+      border-radius: 16px; padding: 24px;
+      display: flex; flex-direction: column; gap: 10px;
+    }
+
+    /* slide number badge */
+    .slide-num {
+      position: absolute; top: 28px; right: 36px;
+      font-size: 12px; font-weight: 700;
+      color: rgba(255,255,255,.25);
+      letter-spacing: 1px;
+    }
+  </style>
+</head>
+<body>
+
+<div id="progress"></div>
+
+<div id="slideshow">
+
+  <!-- ══════════════════════════════════════════
+       SLIDE 01 – BÌA
+  ══════════════════════════════════════════ -->
+  <section class="slide bg-cover active" id="s1">
+    <div class="orb" style="width:500px;height:500px;background:var(--blue-accent);top:-100px;left:-150px;"></div>
+    <div class="orb" style="width:350px;height:350px;background:var(--cyan);bottom:-80px;right:200px;"></div>
+    <div class="slide-inner" style="justify-content:center; max-width:700px;">
+      <span class="slide-tag"><span class="dot"></span>Đánh giá & Kiểm định Chất lượng Phần mềm</span>
+      <h1 class="slide-title">Kiểm Thử <span class="c-cyan">Phi Chức Năng</span><br/>Hệ Thống Phòng Khám Nha Khoa</h1>
+      <p class="lead" style="margin-bottom:32px;">Phân tích toàn diện 7 nhóm kiểm thử phi chức năng áp dụng cho hệ thống quản lý phòng khám nha khoa xây dựng trên nền tảng <mark>ASP.NET Core MVC</mark>.</p>
+      <div style="display:flex;gap:12px;flex-wrap:wrap;">
+        <span class="badge badge-cyan">Performance</span>
+        <span class="badge badge-blue">Security</span>
+        <span class="badge badge-green">Reliability</span>
+        <span class="badge badge-amber">Usability</span>
+        <span class="badge badge-purple">Compatibility</span>
+      </div>
+    </div>
+    <div class="cover-deco">
+      <div class="deco-pill">🦷 Quản lý Bệnh nhân</div>
+      <div class="deco-pill">📅 Đặt lịch hẹn</div>
+      <div class="deco-pill">💰 Bảng lương & Hóa đơn</div>
+      <div class="deco-pill">🔔 Real-time SignalR</div>
+    </div>
+    <div class="scroll-hint">▼ Nhấn → hoặc nút bên dưới để tiếp tục</div>
+    <span class="slide-num">01 / 20</span>
+  </section>
+
+  <!-- ══════════════════════════════════════════
+       SLIDE 02 – GIỚI THIỆU HỆ THỐNG
+  ══════════════════════════════════════════ -->
+  <section class="slide bg-dark" id="s2">
+    <div class="orb" style="width:400px;height:400px;background:var(--teal);top:-100px;right:-100px;opacity:.2;"></div>
+    <div class="slide-inner">
+      <span class="slide-tag"><span class="dot"></span>Giới thiệu hệ thống</span>
+      <h2 class="slide-heading">Tổng Quan Hệ Thống <span class="c-cyan">Nha Khoa</span></h2>
+      <div class="two-col" style="margin-top:24px;">
+        <div>
+          <h3 class="slide-sub">Công nghệ sử dụng</h3>
+          <ul class="check-list">
+            <li><strong>ASP.NET Core MVC</strong> – Framework backend chính</li>
+            <li><strong>Entity Framework Core</strong> – ORM, quản lý CSDL</li>
+            <li><strong>SignalR</strong> – Cập nhật real-time hàng chờ</li>
+            <li><strong>SQL Server</strong> – Cơ sở dữ liệu quan hệ</li>
+            <li><strong>Razor Views</strong> – Giao diện người dùng</li>
+          </ul>
+          <div class="highlight-box" style="margin-top:20px;">
+            <strong class="c-cyan">16 Controllers</strong> • <strong class="c-cyan">39 Models</strong> • <strong class="c-cyan">7 Services</strong> – Hệ thống đầy đủ chức năng quản lý phòng khám.
+          </div>
+        </div>
+        <div>
+          <h3 class="slide-sub">Các module chức năng</h3>
+          <div class="card-grid cols-2" style="margin-top:8px;">
+            <div class="card accent-cyan"><div class="icon">👤</div><div class="card-title">Quản lý Nhân viên</div></div>
+            <div class="card accent-teal"><div class="icon">🦷</div><div class="card-title">Hồ sơ Bệnh nhân</div></div>
+            <div class="card accent-blue"><div class="icon">📅</div><div class="card-title">Lịch hẹn & Ca làm</div></div>
+            <div class="card accent-amber"><div class="icon">🧾</div><div class="card-title">Hóa đơn & Thanh toán</div></div>
+            <div class="card accent-green"><div class="icon">💊</div><div class="card-title">Kho thuốc</div></div>
+            <div class="card accent-purple"><div class="icon">💰</div><div class="card-title">Bảng lương</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <span class="slide-num">02 / 20</span>
+  </section>
+
+  <!-- ══════════════════════════════════════════
+       SLIDE 03 – TỔNG QUAN KIỂM THỬ PHI CHỨC NĂNG
+  ══════════════════════════════════════════ -->
+  <section class="slide bg-dark" id="s3">
+    <div class="orb" style="width:450px;height:450px;background:var(--purple);bottom:-100px;left:-100px;opacity:.2;"></div>
+    <div class="slide-inner">
+      <span class="slide-tag"><span class="dot"></span>Lý thuyết nền tảng</span>
+      <h2 class="slide-heading">Kiểm Thử Phi Chức Năng Là Gì?</h2>
+      <div class="two-col">
+        <div>
+          <p class="lead">Kiểm thử phi chức năng (<em>Non-Functional Testing</em>) là loại kiểm thử đánh giá các đặc tính <strong style="color:#fff">không liên quan đến chức năng cụ thể</strong> của hệ thống mà tập trung vào <mark>cách hệ thống thực hiện</mark> chức năng đó.</p>
+          <div class="highlight-box">
+            <strong>"Functional testing checks WHAT the system does,<br/>Non-Functional testing checks HOW WELL it does it."</strong>
+          </div>
+          <div class="stat-row" style="margin-top:20px;">
+            <div class="stat-box"><div class="stat-num c-cyan">7</div><div class="stat-lbl">Nhóm kiểm thử</div></div>
+            <div class="stat-box"><div class="stat-num c-amber">35+</div><div class="stat-lbl">Test cases</div></div>
+            <div class="stat-box"><div class="stat-num c-green">ISO</div><div class="stat-lbl">25010 chuẩn</div></div>
+          </div>
+        </div>
+        <div>
+          <h3 class="slide-sub" style="margin-bottom:16px;">So sánh hai loại kiểm thử</h3>
+          <table class="slide-table">
+            <thead><tr><th>Tiêu chí</th><th>Chức năng</th><th>Phi chức năng</th></tr></thead>
+            <tbody>
+              <tr><td>Kiểm tra</td><td>Hệ thống làm gì</td><td>Làm tốt như thế nào</td></tr>
+              <tr><td>Mục tiêu</td><td>Yêu cầu nghiệp vụ</td><td>Chất lượng vận hành</td></tr>
+              <tr><td>Thực hiện</td><td>Sớm hơn</td><td>Sau khi có bản ổn định</td></tr>
+              <tr><td>Công cụ</td><td>Manual / Unit</td><td>JMeter, k6, OWASP...</td></tr>
+              <tr><td>Chuẩn</td><td>Use case</td><td>ISO/IEC 25010</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    <span class="slide-num">03 / 20</span>
+  </section>
+
+  <!-- ══════════════════════════════════════════
+       SLIDE 04 – PHÂN LOẠI 7 NHÓM
+  ══════════════════════════════════════════ -->
+  <section class="slide bg-dark" id="s4">
+    <div class="slide-inner">
+      <span class="slide-tag"><span class="dot"></span>Phân loại</span>
+      <h2 class="slide-heading">7 Nhóm Kiểm Thử Phi Chức Năng</h2>
+      <div class="card-grid cols-4" style="margin-top:20px;">
+        <div class="card accent-cyan">
+          <div class="icon">⚡</div>
+          <div class="card-title">01. Hiệu năng</div>
+          <div class="card-body">Tốc độ phản hồi, throughput, thời gian xử lý</div>
+          <span class="badge badge-cyan" style="margin-top:auto;">Performance</span>
+        </div>
+        <div class="card accent-red">
+          <div class="icon">🔥</div>
+          <div class="card-title">02. Tải & Căng thẳng</div>
+          <div class="card-body">Chịu tải nhiều người dùng, race condition</div>
+          <span class="badge badge-red" style="margin-top:auto;">Load & Stress</span>
+        </div>
+        <div class="card accent-blue">
+          <div class="icon">🔒</div>
+          <div class="card-title">03. Bảo mật</div>
+          <div class="card-body">SQL Injection, XSS, CSRF, phân quyền</div>
+          <span class="badge badge-blue" style="margin-top:auto;">Security</span>
+        </div>
+        <div class="card accent-green">
+          <div class="icon">🛡️</div>
+          <div class="card-title">04. Độ tin cậy</div>
+          <div class="card-body">Ổn định, xử lý lỗi, tính toàn vẹn dữ liệu</div>
+          <span class="badge badge-green" style="margin-top:auto;">Reliability</span>
+        </div>
+        <div class="card accent-amber">
+          <div class="icon">🎯</div>
+          <div class="card-title">05. Khả năng sử dụng</div>
+          <div class="card-body">UI thân thiện, thông báo rõ ràng, responsive</div>
+          <span class="badge badge-amber" style="margin-top:auto;">Usability</span>
+        </div>
+        <div class="card accent-teal">
+          <div class="icon">🔧</div>
+          <div class="card-title">06. Bảo trì</div>
+          <div class="card-body">Log lỗi, cấu hình, migration database</div>
+          <span class="badge" style="background:rgba(13,148,136,.2);color:var(--teal);margin-top:auto;">Maintainability</span>
+        </div>
+        <div class="card accent-purple">
+          <div class="icon">🌐</div>
+          <div class="card-title">07. Tương thích</div>
+          <div class="card-body">Trình duyệt, in ấn, export file</div>
+          <span class="badge badge-purple" style="margin-top:auto;">Compatibility</span>
+        </div>
+        <div class="card" style="border:1px dashed rgba(255,255,255,.2);background:rgba(255,255,255,.03);">
+          <div class="icon">📋</div>
+          <div class="card-title" style="color:rgba(255,255,255,.5);">Chuẩn tham chiếu</div>
+          <div class="card-body">ISO/IEC 25010<br/>Software Quality Model</div>
+        </div>
+      </div>
+    </div>
+    <span class="slide-num">04 / 20</span>
+  </section>
+
+  <!-- ══════════════════════════════════════════
+       SLIDE 05 – HIỆU NĂNG – LÝ THUYẾT
+  ══════════════════════════════════════════ -->
+  <section class="slide bg-teal" id="s5">
+    <div class="orb" style="width:400px;height:400px;background:var(--cyan);top:-80px;right:-100px;opacity:.3;"></div>
+    <div class="slide-inner">
+      <span class="slide-tag"><span class="dot"></span>Nhóm 01</span>
+      <h2 class="slide-heading">⚡ Kiểm Thử <span class="c-cyan">Hiệu Năng</span></h2>
+      <div class="two-col">
+        <div>
+          <h3 class="slide-sub">Khái niệm</h3>
+          <p class="lead">Kiểm thử hiệu năng đo lường <mark>tốc độ, khả năng phản hồi và độ ổn định</mark> của hệ thống dưới một khối lượng công việc cụ thể.</p>
+          <ul class="check-list" style="margin-top:16px;">
+            <li><strong>Response Time</strong> – Thời gian từ request đến response</li>
+            <li><strong>Throughput</strong> – Số request xử lý được mỗi giây</li>
+            <li><strong>Latency</strong> – Độ trễ từ đầu đến cuối</li>
+            <li><strong>Resource Utilization</strong> – CPU, RAM, DB connection</li>
+          </ul>
+          <div class="highlight-box" style="margin-top:16px;">
+            <strong class="c-cyan">Công cụ:</strong> Apache JMeter, k6, Locust, Visual Studio Profiler
+          </div>
+        </div>
+        <div>
+          <h3 class="slide-sub" style="margin-bottom:16px;">Ngưỡng hiệu năng (SLA)</h3>
+          <div class="bar-wrap"><div class="bar-label"><span>Tải trang danh sách bệnh nhân</span><span class="c-green">≤ 2s</span></div><div class="bar-track"><div class="bar-fill" style="width:70%;background:linear-gradient(90deg,var(--cyan),var(--blue-accent));"></div></div></div>
+          <div class="bar-wrap"><div class="bar-label"><span>Tải lịch hẹn theo ngày</span><span class="c-green">≤ 1s</span></div><div class="bar-track"><div class="bar-fill" style="width:85%;background:linear-gradient(90deg,var(--teal),var(--cyan));"></div></div></div>
+          <div class="bar-wrap"><div class="bar-label"><span>Tính toán bảng lương</span><span class="c-amber">≤ 5s</span></div><div class="bar-track"><div class="bar-fill" style="width:55%;background:linear-gradient(90deg,var(--amber),#f97316);"></div></div></div>
+          <div class="bar-wrap"><div class="bar-label"><span>Xuất hóa đơn / đối soát</span><span class="c-green">≤ 3s</span></div><div class="bar-track"><div class="bar-fill" style="width:65%;background:linear-gradient(90deg,var(--green),var(--teal));"></div></div></div>
+          <div class="bar-wrap"><div class="bar-label"><span>SignalR real-time hàng chờ</span><span class="c-cyan">≤ 500ms</span></div><div class="bar-track"><div class="bar-fill" style="width:90%;background:linear-gradient(90deg,var(--purple),var(--blue-accent));"></div></div></div>
+        </div>
+      </div>
+    </div>
+    <span class="slide-num">05 / 20</span>
+  </section>
+
+  <!-- ══════════════════════════════════════════
+       SLIDE 06 – HIỆU NĂNG – ÁP DỤNG
+  ══════════════════════════════════════════ -->
+  <section class="slide bg-teal" id="s6">
+    <div class="slide-inner">
+      <span class="slide-tag"><span class="dot"></span>Nhóm 01 – Áp dụng</span>
+      <h2 class="slide-heading">Kịch Bản Kiểm Thử Hiệu Năng</h2>
+      <table class="slide-table" style="margin-top:20px;">
+        <thead><tr><th>Mã TC</th><th>Kịch bản</th><th>Controller / Module</th><th>Mục tiêu</th><th>Kết quả chấp nhận</th></tr></thead>
+        <tbody>
+          <tr><td><span class="badge badge-cyan">PT-01</span></td><td>Tải trang danh sách 500 bệnh nhân</td><td>PatientController</td><td>&lt; 2s</td><td>✅ Pass nếu p95 &lt; 2000ms</td></tr>
+          <tr><td><span class="badge badge-cyan">PT-02</span></td><td>Xem lịch hẹn ngày có 20 bác sĩ</td><td>ScheduleController</td><td>&lt; 1s</td><td>✅ Pass nếu p95 &lt; 1000ms</td></tr>
+          <tr><td><span class="badge badge-cyan">PT-03</span></td><td>Tính lương tháng cho 50 nhân viên</td><td>PayrollController</td><td>&lt; 5s</td><td>✅ Pass nếu p95 &lt; 5000ms</td></tr>
+          <tr><td><span class="badge badge-cyan">PT-04</span></td><td>Export hóa đơn + đối soát ngày</td><td>InvoiceController</td><td>&lt; 3s</td><td>✅ Pass nếu p95 &lt; 3000ms</td></tr>
+          <tr><td><span class="badge badge-cyan">PT-05</span></td><td>Push thông báo hàng chờ SignalR</td><td>Hubs/</td><td>&lt; 500ms</td><td>✅ Pass nếu latency &lt; 500ms</td></tr>
+          <tr><td><span class="badge badge-cyan">PT-06</span></td><td>Tìm kiếm bệnh nhân theo tên/SĐT</td><td>PatientController</td><td>&lt; 800ms</td><td>✅ Pass nếu p95 &lt; 800ms</td></tr>
+        </tbody>
+      </table>
+      <div class="highlight-box" style="margin-top:auto;">
+        📌 <strong>Ghi chú:</strong> p95 = 95th percentile – 95% request phải đáp ứng ngưỡng thời gian đề ra.
+      </div>
+    </div>
+    <span class="slide-num">06 / 20</span>
+  </section>
+
+  <!-- ══════════════════════════════════════════
+       SLIDE 07 – TẢI & CĂNG THẲNG – LÝ THUYẾT
+  ══════════════════════════════════════════ -->
+  <section class="slide bg-red" id="s7">
+    <div class="orb" style="width:400px;height:400px;background:var(--red);top:-50px;right:-100px;opacity:.35;"></div>
+    <div class="slide-inner">
+      <span class="slide-tag"><span class="dot"></span>Nhóm 02</span>
+      <h2 class="slide-heading">🔥 Kiểm Thử Tải & <span class="c-red" style="color:#f87171;">Căng Thẳng</span></h2>
+      <div class="two-col">
+        <div>
+          <h3 class="slide-sub">Phân biệt Load vs Stress</h3>
+          <div class="card" style="margin-bottom:14px;border-left:3px solid var(--amber);">
+            <div class="card-title">🏋️ Load Testing</div>
+            <div class="card-body">Kiểm tra hệ thống dưới tải bình thường và tải đỉnh dự kiến. Xác minh hiệu năng trong điều kiện thực tế.</div>
+          </div>
+          <div class="card" style="border-left:3px solid var(--red);">
+            <div class="card-title">💥 Stress Testing</div>
+            <div class="card-body">Đẩy hệ thống vượt quá giới hạn để tìm điểm gãy (breaking point) và kiểm tra khả năng phục hồi.</div>
+          </div>
+          <ul class="check-list" style="margin-top:16px;">
+            <li><strong>Spike Testing</strong> – Tải tăng đột ngột</li>
+            <li><strong>Volume Testing</strong> – Khối lượng dữ liệu lớn</li>
+            <li><strong>Soak Testing</strong> – Chạy lâu dài phát hiện rò rỉ</li>
+          </ul>
+        </div>
+        <div>
+          <h3 class="slide-sub" style="margin-bottom:12px;">Mô hình tải dự kiến</h3>
+          <div class="card accent-amber" style="margin-bottom:12px;">
+            <div class="card-title">📊 Giờ bình thường (8h–17h)</div>
+            <div class="card-body">10–20 người dùng đồng thời: Lễ tân, Bác sĩ, Admin</div>
+          </div>
+          <div class="card accent-red" style="margin-bottom:12px;">
+            <div class="card-title">📈 Giờ cao điểm</div>
+            <div class="card-body">50–80 người dùng: Đặt lịch, thanh toán, xem kết quả</div>
+          </div>
+          <div class="card" style="border-left:3px solid var(--red);">
+            <div class="card-title">🔴 Stress Threshold</div>
+            <div class="card-body">100+ người dùng – Xác định điểm hệ thống bắt đầu lỗi</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <span class="slide-num">07 / 20</span>
+  </section>
+
+  <!-- ══════════════════════════════════════════
+       SLIDE 08 – TẢI – ÁP DỤNG
+  ══════════════════════════════════════════ -->
+  <section class="slide bg-red" id="s8">
+    <div class="slide-inner">
+      <span class="slide-tag"><span class="dot"></span>Nhóm 02 – Áp dụng</span>
+      <h2 class="slide-heading">Kịch Bản Kiểm Thử Tải</h2>
+      <table class="slide-table" style="margin-top:16px;">
+        <thead><tr><th>Mã TC</th><th>Kịch bản</th><th>Người dùng đồng thời</th><th>Trọng tâm kiểm tra</th></tr></thead>
+        <tbody>
+          <tr><td><span class="badge badge-red">LS-01</span></td><td>Đăng nhập đồng thời</td><td>50 users</td><td>AuthController – Không bị timeout</td></tr>
+          <tr><td><span class="badge badge-red">LS-02</span></td><td>Đặt lịch hẹn cùng slot giờ</td><td>10 lễ tân</td><td>Race condition – Không double booking</td></tr>
+          <tr><td><span class="badge badge-red">LS-03</span></td><td>Nhiều admin export bảng lương</td><td>5 admin</td><td>DB lock, timeout, deadlock</td></tr>
+          <tr><td><span class="badge badge-red">LS-04</span></td><td>Xem hàng chờ real-time</td><td>30 màn hình</td><td>SignalR không mất connection</td></tr>
+          <tr><td><span class="badge badge-red">LS-05</span></td><td>Stress test toàn hệ thống</td><td>150 users</td><td>Tìm breaking point, lỗi 500</td></tr>
+          <tr><td><span class="badge badge-red">LS-06</span></td><td>Soak test 8 giờ liên tục</td><td>20 users</td><td>Memory leak, CPU tăng dần</td></tr>
+        </tbody>
+      </table>
+      <div class="card-grid cols-3" style="margin-top:16px;flex:0;">
+        <div class="card" style="border-left:3px solid var(--amber);">
+          <div class="card-title">⚠️ Race Condition</div>
+          <div class="card-body">2 lễ tân đặt cùng ghế nha + cùng giờ → Chỉ 1 được accept</div>
+        </div>
+        <div class="card" style="border-left:3px solid var(--red);">
+          <div class="card-title">💥 Breaking Point</div>
+          <div class="card-body">Xác định ngưỡng người dùng mà hệ thống bắt đầu trả lỗi 500</div>
+        </div>
+        <div class="card" style="border-left:3px solid var(--cyan);">
+          <div class="card-title">🔄 Recovery</div>
+          <div class="card-body">Sau khi hệ thống quá tải, tự phục hồi trong vòng 30s</div>
+        </div>
+      </div>
+    </div>
+    <span class="slide-num">08 / 20</span>
+  </section>
+
+  <!-- ══════════════════════════════════════════
+       SLIDE 09 – BẢO MẬT – LÝ THUYẾT
+  ══════════════════════════════════════════ -->
+  <section class="slide bg-purple" id="s9">
+    <div class="orb" style="width:450px;height:450px;background:var(--purple);top:-100px;right:-100px;opacity:.35;"></div>
+    <div class="slide-inner">
+      <span class="slide-tag"><span class="dot"></span>Nhóm 03</span>
+      <h2 class="slide-heading">🔒 Kiểm Thử <span style="color:#a78bfa;">Bảo Mật</span></h2>
+      <div class="two-col">
+        <div>
+          <p class="lead" style="margin-bottom:16px;">Kiểm thử bảo mật xác minh rằng hệ thống <mark>bảo vệ dữ liệu và chức năng</mark> khỏi các truy cập, thay đổi, rò rỉ trái phép.</p>
+          <h3 class="slide-sub">OWASP Top 10 liên quan</h3>
+          <ul class="check-list">
+            <li><strong>A01 – Broken Access Control:</strong> Phân quyền sai</li>
+            <li><strong>A02 – Cryptographic Failures:</strong> Lộ dữ liệu nhạy cảm</li>
+            <li><strong>A03 – Injection:</strong> SQL Injection, Command Injection</li>
+            <li><strong>A07 – XSS:</strong> Cross-Site Scripting</li>
+            <li><strong>A08 – CSRF:</strong> Cross-Site Request Forgery</li>
+          </ul>
+          <div class="highlight-box" style="margin-top:16px;">
+            <strong class="c-purple" style="color:#a78bfa;">Công cụ:</strong> OWASP ZAP, Burp Suite, dotnet-retire
+          </div>
+        </div>
+        <div>
+          <h3 class="slide-sub" style="margin-bottom:14px;">Dữ liệu nhạy cảm cần bảo vệ</h3>
+          <div class="card" style="border-left:3px solid var(--purple);margin-bottom:10px;">
+            <div class="icon">👤</div>
+            <div class="card-title">Thông tin cá nhân bệnh nhân</div>
+            <div class="card-body">Họ tên, SĐT, địa chỉ, lịch sử khám bệnh, hồ sơ răng</div>
+          </div>
+          <div class="card" style="border-left:3px solid var(--red);margin-bottom:10px;">
+            <div class="icon">💰</div>
+            <div class="card-title">Dữ liệu tài chính</div>
+            <div class="card-body">Bảng lương nhân viên, hóa đơn, phương thức thanh toán</div>
+          </div>
+          <div class="card" style="border-left:3px solid var(--amber);">
+            <div class="icon">🔑</div>
+            <div class="card-title">Thông tin xác thực</div>
+            <div class="card-body">Mật khẩu (bcrypt hash), session token, connection string</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <span class="slide-num">09 / 20</span>
+  </section>
+
+  <!-- ══════════════════════════════════════════
+       SLIDE 10 – BẢO MẬT – ÁP DỤNG
+  ══════════════════════════════════════════ -->
+  <section class="slide bg-purple" id="s10">
+    <div class="slide-inner">
+      <span class="slide-tag"><span class="dot"></span>Nhóm 03 – Áp dụng</span>
+      <h2 class="slide-heading">Kịch Bản Kiểm Thử Bảo Mật</h2>
+      <table class="slide-table" style="margin-top:16px;">
+        <thead><tr><th>Mã TC</th><th>Loại tấn công</th><th>Điểm kiểm tra</th><th>Kết quả mong đợi</th></tr></thead>
+        <tbody>
+          <tr><td><span class="badge badge-purple">SE-01</span></td><td>Broken Access Control</td><td>Truy cập /Patient/Detail/999 khi không có quyền</td><td>Trả về 403 Forbidden</td></tr>
+          <tr><td><span class="badge badge-purple">SE-02</span></td><td>SQL Injection</td><td>Nhập <code style="color:var(--amber);">' OR 1=1--</code> vào ô tìm kiếm</td><td>Không trả dữ liệu bất hợp lệ</td></tr>
+          <tr><td><span class="badge badge-purple">SE-03</span></td><td>XSS – Stored</td><td>Nhập script vào ghi chú khám bệnh</td><td>Script bị escape, không thực thi</td></tr>
+          <tr><td><span class="badge badge-purple">SE-04</span></td><td>CSRF</td><td>Giả mạo form POST xóa lịch hẹn</td><td>Request bị từ chối (token mismatch)</td></tr>
+          <tr><td><span class="badge badge-purple">SE-05</span></td><td>Session Timeout</td><td>Để hệ thống idle 30 phút</td><td>Tự động logout, redirect login</td></tr>
+          <tr><td><span class="badge badge-purple">SE-06</span></td><td>Password Storage</td><td>Kiểm tra DB – cột PasswordHash</td><td>Lưu hash (bcrypt), không plain text</td></tr>
+          <tr><td><span class="badge badge-purple">SE-07</span></td><td>Sensitive Data Exposure</td><td>Kiểm tra API response trả về lương</td><td>Không trả thừa trường nhạy cảm</td></tr>
+          <tr><td><span class="badge badge-purple">SE-08</span></td><td>Hardcoded Secrets</td><td>Scan source code, appsettings</td><td>Không có key/password hardcode</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <span class="slide-num">10 / 20</span>
+  </section>
+
+  <!-- ══════════════════════════════════════════
+       SLIDE 11 – ĐỘ TIN CẬY – LÝ THUYẾT
+  ══════════════════════════════════════════ -->
+  <section class="slide bg-green" id="s11">
+    <div class="orb" style="width:400px;height:400px;background:var(--green);bottom:-80px;right:-80px;opacity:.3;"></div>
+    <div class="slide-inner">
+      <span class="slide-tag"><span class="dot"></span>Nhóm 04</span>
+      <h2 class="slide-heading">🛡️ Kiểm Thử <span class="c-green">Độ Tin Cậy</span></h2>
+      <div class="two-col">
+        <div>
+          <p class="lead" style="margin-bottom:16px;">Độ tin cậy (<em>Reliability</em>) là khả năng hệ thống <mark>thực hiện chức năng đúng trong thời gian xác định</mark> và điều kiện nhất định, bao gồm khả năng chịu lỗi và phục hồi.</p>
+          <h3 class="slide-sub">Các chỉ số đo lường</h3>
+          <ul class="check-list">
+            <li><strong>MTBF</strong> – Mean Time Between Failures (Thời gian trung bình giữa các lỗi)</li>
+            <li><strong>MTTR</strong> – Mean Time To Recover (Thời gian phục hồi trung bình)</li>
+            <li><strong>Availability</strong> – % thời gian hệ thống hoạt động</li>
+            <li><strong>Fault Tolerance</strong> – Xử lý lỗi graceful</li>
+          </ul>
+          <div class="stat-row" style="margin-top:16px;">
+            <div class="stat-box"><div class="stat-num c-green">99%</div><div class="stat-lbl">Uptime mục tiêu</div></div>
+            <div class="stat-box"><div class="stat-num c-amber">&lt;30s</div><div class="stat-lbl">MTTR mục tiêu</div></div>
+          </div>
+        </div>
+        <div>
+          <h3 class="slide-sub" style="margin-bottom:14px;">Rủi ro đối với hệ thống Nha khoa</h3>
+          <div class="timeline">
+            <div class="tl-item">
+              <div class="tl-left"><div class="tl-dot" style="background:var(--red);">!</div><div class="tl-line"></div></div>
+              <div class="tl-content"><h4>Mất kết nối Database</h4><p>Hệ thống không crash – hiển thị thông báo lỗi thân thiện</p></div>
+            </div>
+            <div class="tl-item">
+              <div class="tl-left"><div class="tl-dot" style="background:var(--amber);">!</div><div class="tl-line"></div></div>
+              <div class="tl-content"><h4>SignalR mất kết nối</h4><p>Client tự reconnect – không cần reload trang</p></div>
+            </div>
+            <div class="tl-item">
+              <div class="tl-left"><div class="tl-dot" style="background:var(--purple);">!</div><div class="tl-line"></div></div>
+              <div class="tl-content"><h4>Hóa đơn lỗi giữa chừng</h4><p>Transaction rollback – dữ liệu không bị corrupt</p></div>
+            </div>
+            <div class="tl-item">
+              <div class="tl-left"><div class="tl-dot" style="background:var(--cyan);">!</div></div>
+              <div class="tl-content"><h4>Chạy 8h+ liên tục</h4><p>Không memory leak, không CPU tăng bất thường</p></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <span class="slide-num">11 / 20</span>
+  </section>
+
+  <!-- ══════════════════════════════════════════
+       SLIDE 12 – ĐỘ TIN CẬY – ÁP DỤNG
+  ══════════════════════════════════════════ -->
+  <section class="slide bg-green" id="s12">
+    <div class="slide-inner">
+      <span class="slide-tag"><span class="dot"></span>Nhóm 04 – Áp dụng</span>
+      <h2 class="slide-heading">Kịch Bản Kiểm Thử Độ Tin Cậy</h2>
+      <div class="card-grid cols-2" style="margin-top:20px;">
+        <div class="card accent-green">
+          <div style="display:flex;align-items:center;gap:12px;">
+            <span class="num-circle" style="background:rgba(16,185,129,.3);color:var(--green);">R1</span>
+            <div class="card-title">Soak Test – 8 giờ liên tục</div>
+          </div>
+          <div class="card-body">Chạy 20 user đồng thời trong 8 giờ. Kiểm tra: memory tăng không quá 20%, CPU ổn định, không OutOfMemoryException.</div>
+        </div>
+        <div class="card accent-green">
+          <div style="display:flex;align-items:center;gap:12px;">
+            <span class="num-circle" style="background:rgba(16,185,129,.3);color:var(--green);">R2</span>
+            <div class="card-title">Mất kết nối DB</div>
+          </div>
+          <div class="card-body">Tắt SQL Server trong 30 giây. Kỳ vọng: Hiển thị trang lỗi thân thiện, không crash app, tự kết nối lại khi DB trở về.</div>
+        </div>
+        <div class="card accent-green">
+          <div style="display:flex;align-items:center;gap:12px;">
+            <span class="num-circle" style="background:rgba(16,185,129,.3);color:var(--green);">R3</span>
+            <div class="card-title">SignalR Reconnect</div>
+          </div>
+          <div class="card-body">Ngắt mạng client 10 giây rồi kết nối lại. Kỳ vọng: Client tự reconnect, nhận đủ thông báo hàng chờ mới nhất.</div>
+        </div>
+        <div class="card accent-green">
+          <div style="display:flex;align-items:center;gap:12px;">
+            <span class="num-circle" style="background:rgba(16,185,129,.3);color:var(--green);">R4</span>
+            <div class="card-title">Transaction Rollback</div>
+          </div>
+          <div class="card-body">Inject lỗi giữa chừng khi tạo Invoice + InvoiceDetail + Payment. Kỳ vọng: Toàn bộ rollback, DB không có dữ liệu nửa vời.</div>
+        </div>
+      </div>
+      <div class="highlight-box" style="margin-top:16px;">
+        🔍 Kiểm tra <strong>ActivityLog</strong> sau mỗi kịch bản để xác nhận lỗi được ghi nhận đầy đủ.
+      </div>
+    </div>
+    <span class="slide-num">12 / 20</span>
+  </section>
+
+  <!-- ══════════════════════════════════════════
+       SLIDE 13 – USABILITY
+  ══════════════════════════════════════════ -->
+  <section class="slide bg-amber" id="s13">
+    <div class="orb" style="width:400px;height:400px;background:var(--amber);top:-80px;right:-80px;opacity:.25;"></div>
+    <div class="slide-inner">
+      <span class="slide-tag"><span class="dot"></span>Nhóm 05</span>
+      <h2 class="slide-heading">🎯 Kiểm Thử <span class="c-amber">Khả Năng Sử Dụng</span></h2>
+      <div class="two-col">
+        <div>
+          <p class="lead" style="margin-bottom:16px;">Usability Testing đảm bảo giao diện người dùng <mark>trực quan, dễ học, hiệu quả</mark> và ít gây lỗi cho người dùng cuối (lễ tân, bác sĩ, admin).</p>
+          <h3 class="slide-sub">5 tiêu chí đánh giá (Nielsen)</h3>
+          <ul class="check-list">
+            <li><strong>Learnability</strong> – Học dùng nhanh</li>
+            <li><strong>Efficiency</strong> – Thao tác tối thiểu để hoàn thành task</li>
+            <li><strong>Memorability</strong> – Nhớ lại sau khi không dùng</li>
+            <li><strong>Errors</strong> – Ít gây lỗi, phục hồi lỗi dễ</li>
+            <li><strong>Satisfaction</strong> – Trải nghiệm tích cực</li>
+          </ul>
+        </div>
+        <div>
+          <h3 class="slide-sub" style="margin-bottom:14px;">Test cases áp dụng</h3>
+          <table class="slide-table">
+            <thead><tr><th>Mã</th><th>Nội dung kiểm tra</th><th>Module</th></tr></thead>
+            <tbody>
+              <tr><td><span class="badge badge-amber">U-01</span></td><td>Responsive 1366×768 và 1920×1080</td><td>Toàn bộ</td></tr>
+              <tr><td><span class="badge badge-amber">U-02</span></td><td>Thông báo lỗi form rõ ràng, tiếng Việt</td><td>Tất cả form</td></tr>
+              <tr><td><span class="badge badge-amber">U-03</span></td><td>Nút Lưu/Hủy/Xóa đặt đúng vị trí</td><td>CRUD screens</td></tr>
+              <tr><td><span class="badge badge-amber">U-04</span></td><td>Loading spinner khi tính lương / export</td><td>PayrollController</td></tr>
+              <tr><td><span class="badge badge-amber">U-05</span></td><td>Tìm kiếm bệnh nhân trả kết quả đúng</td><td>PatientController</td></tr>
+              <tr><td><span class="badge badge-amber">U-06</span></td><td>Confirm dialog trước khi xóa dữ liệu</td><td>Xóa record</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    <span class="slide-num">13 / 20</span>
+  </section>
+
+  <!-- ══════════════════════════════════════════
+       SLIDE 14 – TƯƠNG THÍCH
+  ══════════════════════════════════════════ -->
+  <section class="slide bg-dark" id="s14">
+    <div class="orb" style="width:350px;height:350px;background:var(--blue-accent);bottom:-80px;right:-80px;opacity:.25;"></div>
+    <div class="slide-inner">
+      <span class="slide-tag"><span class="dot"></span>Nhóm 07</span>
+      <h2 class="slide-heading">🌐 Kiểm Thử <span class="c-cyan">Tương Thích</span></h2>
+      <div class="three-col">
+        <div>
+          <h3 class="slide-sub" style="margin-bottom:14px;">Trình duyệt</h3>
+          <div class="card accent-blue" style="margin-bottom:10px;">
+            <div class="card-title">🟡 Chrome 120+</div>
+            <div class="card-body">Trình duyệt chính – kiểm tra toàn diện tất cả tính năng</div>
+          </div>
+          <div class="card accent-blue" style="margin-bottom:10px;">
+            <div class="card-title">🔵 Edge 120+</div>
+            <div class="card-body">Phổ biến trong môi trường doanh nghiệp Windows</div>
+          </div>
+          <div class="card accent-blue">
+            <div class="card-title">🦊 Firefox 120+</div>
+            <div class="card-body">Kiểm tra cross-browser rendering</div>
+          </div>
+        </div>
+        <div>
+          <h3 class="slide-sub" style="margin-bottom:14px;">In ấn & Export</h3>
+          <div class="card accent-cyan" style="margin-bottom:10px;">
+            <div class="card-title">🖨️ Print Layout</div>
+            <div class="card-body">Hóa đơn, phiếu lương in đúng định dạng A4 trên mọi trình duyệt</div>
+          </div>
+          <div class="card accent-cyan" style="margin-bottom:10px;">
+            <div class="card-title">📄 PDF Export</div>
+            <div class="card-body">Mở được trên Adobe Reader, browser PDF viewer</div>
+          </div>
+          <div class="card accent-cyan">
+            <div class="card-title">📊 Excel Export</div>
+            <div class="card-body">Tương thích Office 2016+, LibreOffice</div>
+          </div>
+        </div>
+        <div>
+          <h3 class="slide-sub" style="margin-bottom:14px;">Độ phân giải màn hình</h3>
+          <table class="slide-table">
+            <thead><tr><th>Độ phân giải</th><th>Kết quả</th></tr></thead>
+            <tbody>
+              <tr><td>1280×720</td><td><span class="badge badge-green">✓ Hỗ trợ</span></td></tr>
+              <tr><td>1366×768</td><td><span class="badge badge-green">✓ Hỗ trợ</span></td></tr>
+              <tr><td>1920×1080</td><td><span class="badge badge-green">✓ Hỗ trợ</span></td></tr>
+              <tr><td>2560×1440</td><td><span class="badge badge-amber">~ Kiểm tra</span></td></tr>
+            </tbody>
+          </table>
+          <div class="highlight-box" style="margin-top:14px;font-size:13px;">
+            📌 Đặc biệt kiểm tra màn hình ghế nha (tablet/TV) dùng hiển thị số thứ tự hàng chờ
+          </div>
+        </div>
+      </div>
+    </div>
+    <span class="slide-num">14 / 20</span>
+  </section>
+
+  <!-- ══════════════════════════════════════════
+       SLIDE 15 – BẢO TRÌ
+  ══════════════════════════════════════════ -->
+  <section class="slide bg-dark" id="s15">
+    <div class="slide-inner">
+      <span class="slide-tag"><span class="dot"></span>Nhóm 06</span>
+      <h2 class="slide-heading">🔧 Kiểm Thử <span class="c-teal">Khả Năng Bảo Trì</span></h2>
+      <div class="two-col">
+        <div>
+          <p class="lead" style="margin-bottom:16px;">Maintainability đảm bảo hệ thống <mark>dễ vận hành, theo dõi lỗi, cập nhật và deploy</mark> trên môi trường mới mà không gặp sự cố.</p>
+          <ul class="check-list">
+            <li><strong>Log lỗi đầy đủ:</strong> Exception → ghi vào ActivityLog và console</li>
+            <li><strong>Cấu hình tách biệt:</strong> Connection string trong appsettings.json hoặc biến môi trường</li>
+            <li><strong>Migration sạch:</strong> <code style="color:var(--cyan);">dotnet ef database update</code> không lỗi</li>
+            <li><strong>Không hardcode:</strong> Không có IP, password, API key trong code</li>
+          </ul>
+        </div>
+        <div>
+          <h3 class="slide-sub" style="margin-bottom:14px;">Checklist kiểm tra</h3>
+          <table class="slide-table">
+            <thead><tr><th>Hạng mục</th><th>Cách kiểm tra</th><th>Pass</th></tr></thead>
+            <tbody>
+              <tr><td>ActivityLog ghi lỗi</td><td>Trigger exception – xem DB ActivityLog</td><td>✅</td></tr>
+              <tr><td>Không hardcode credential</td><td>Grep source: "password=", "Server="</td><td>✅</td></tr>
+              <tr><td>Migration áp dụng được</td><td>Clone repo mới, chạy ef update</td><td>✅</td></tr>
+              <tr><td>Error page thân thiện</td><td>Trigger 500 – kiểm tra trang hiển thị</td><td>✅</td></tr>
+              <tr><td>Middleware log request</td><td>Xem log console khi có request lỗi</td><td>✅</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    <span class="slide-num">15 / 20</span>
+  </section>
+
+  <!-- ══════════════════════════════════════════
+       SLIDE 16 – ISO/IEC 25010
+  ══════════════════════════════════════════ -->
+  <section class="slide bg-dark" id="s16">
+    <div class="orb" style="width:400px;height:400px;background:var(--blue-accent);top:-100px;right:-100px;opacity:.2;"></div>
+    <div class="slide-inner">
+      <span class="slide-tag"><span class="dot"></span>Chuẩn tham chiếu</span>
+      <h2 class="slide-heading">Chuẩn <span class="c-cyan">ISO/IEC 25010</span> – Mô hình chất lượng phần mềm</h2>
+      <p class="lead" style="margin-bottom:10px;">Tất cả 7 nhóm kiểm thử phi chức năng đều ánh xạ vào các đặc tính chất lượng của chuẩn ISO/IEC 25010.</p>
+      <div class="iso-grid">
+        <div class="iso-cell"><div class="iso-icon">⚡</div><div class="iso-name">Performance Efficiency</div><div class="iso-desc">Hiệu năng theo tài nguyên sử dụng</div></div>
+        <div class="iso-cell"><div class="iso-icon">🔒</div><div class="iso-name">Security</div><div class="iso-desc">Tính bảo mật, bảo vệ dữ liệu</div></div>
+        <div class="iso-cell"><div class="iso-icon">🛡️</div><div class="iso-name">Reliability</div><div class="iso-desc">Độ tin cậy, khả năng chịu lỗi</div></div>
+        <div class="iso-cell"><div class="iso-icon">🎯</div><div class="iso-name">Usability</div><div class="iso-desc">Khả năng sử dụng, trải nghiệm</div></div>
+        <div class="iso-cell"><div class="iso-icon">🔧</div><div class="iso-name">Maintainability</div><div class="iso-desc">Khả năng bảo trì, phân tích lỗi</div></div>
+        <div class="iso-cell"><div class="iso-icon">🌐</div><div class="iso-name">Compatibility</div><div class="iso-desc">Tương thích môi trường, trình duyệt</div></div>
+        <div class="iso-cell"><div class="iso-icon">📦</div><div class="iso-name">Portability</div><div class="iso-desc">Khả năng chuyển môi trường</div></div>
+        <div class="iso-cell"><div class="iso-icon">🎓</div><div class="iso-name">Functional Suitability</div><div class="iso-desc">Đúng chức năng, đầy đủ, phù hợp</div></div>
+      </div>
+    </div>
+    <span class="slide-num">16 / 20</span>
+  </section>
+
+  <!-- ══════════════════════════════════════════
+       SLIDE 17 – CÔNG CỤ
+  ══════════════════════════════════════════ -->
+  <section class="slide bg-dark" id="s17">
+    <div class="slide-inner">
+      <span class="slide-tag"><span class="dot"></span>Công cụ kiểm thử</span>
+      <h2 class="slide-heading">Công Cụ <span class="c-cyan">Kiểm Thử Phi Chức Năng</span></h2>
+      <div class="card-grid cols-3" style="margin-top:20px;">
+        <div class="tool-card">
+          <div class="tool-icon">⚡</div>
+          <div><div class="tool-name">Apache JMeter</div><div class="tool-desc">Performance & Load Testing – GUI mạnh mẽ, hỗ trợ HTTP, giao thức đa dạng</div></div>
+        </div>
+        <div class="tool-card">
+          <div class="tool-icon">🚀</div>
+          <div><div class="tool-name">k6 (Grafana)</div><div class="tool-desc">Modern Load Testing – Script bằng JavaScript, tích hợp CI/CD dễ dàng</div></div>
+        </div>
+        <div class="tool-card">
+          <div class="tool-icon">🔒</div>
+          <div><div class="tool-name">OWASP ZAP</div><div class="tool-desc">Security Scanner – Tự động phát hiện SQL Injection, XSS, CSRF</div></div>
+        </div>
+        <div class="tool-card">
+          <div class="tool-icon">🕷️</div>
+          <div><div class="tool-name">Burp Suite</div><div class="tool-desc">Penetration Testing – Intercept & modify HTTP request, kiểm tra phân quyền</div></div>
+        </div>
+        <div class="tool-card">
+          <div class="tool-icon">🧠</div>
+          <div><div class="tool-name">VS Profiler</div><div class="tool-desc">Memory & CPU Profiling – Phát hiện memory leak trong ASP.NET Core</div></div>
+        </div>
+        <div class="tool-card">
+          <div class="tool-icon">📊</div>
+          <div><div class="tool-name">Application Insights</div><div class="tool-desc">Azure monitoring – Theo dõi hiệu năng, lỗi thời gian thực</div></div>
+        </div>
+        <div class="tool-card">
+          <div class="tool-icon">🌐</div>
+          <div><div class="tool-name">BrowserStack</div><div class="tool-desc">Cross-browser Testing – Kiểm tra trên nhiều trình duyệt & thiết bị thực</div></div>
+        </div>
+        <div class="tool-card">
+          <div class="tool-icon">🔍</div>
+          <div><div class="tool-name">Lighthouse (Chrome)</div><div class="tool-desc">Usability & Performance audit – Tích hợp sẵn trong DevTools</div></div>
+        </div>
+        <div class="tool-card">
+          <div class="tool-icon">🗺️</div>
+          <div><div class="tool-name">SonarQube</div><div class="tool-desc">Code Quality & Security – Phân tích tĩnh code C#, phát hiện lỗ hổng</div></div>
+        </div>
+      </div>
+    </div>
+    <span class="slide-num">17 / 20</span>
+  </section>
+
+  <!-- ══════════════════════════════════════════
+       SLIDE 18 – MA TRẬN ƯU TIÊN
+  ══════════════════════════════════════════ -->
+  <section class="slide bg-dark" id="s18">
+    <div class="slide-inner">
+      <span class="slide-tag"><span class="dot"></span>Lập kế hoạch</span>
+      <h2 class="slide-heading">Ma Trận <span class="c-cyan">Ưu Tiên Kiểm Thử</span></h2>
+      <div class="two-col" style="align-items:start;">
+        <div>
+          <table class="slide-table">
+            <thead><tr><th>Nhóm kiểm thử</th><th>Mức độ rủi ro</th><th>Ưu tiên</th><th>Thời điểm</th></tr></thead>
+            <tbody>
+              <tr><td>🔒 Bảo mật</td><td><span class="badge badge-red">Cao</span></td><td>🔴 P1</td><td>Sprint 1</td></tr>
+              <tr><td>🛡️ Độ tin cậy</td><td><span class="badge badge-red">Cao</span></td><td>🔴 P1</td><td>Sprint 1</td></tr>
+              <tr><td>⚡ Hiệu năng</td><td><span class="badge badge-amber">Trung</span></td><td>🟡 P2</td><td>Sprint 2</td></tr>
+              <tr><td>🔥 Tải &amp; Căng thẳng</td><td><span class="badge badge-amber">Trung</span></td><td>🟡 P2</td><td>Sprint 2</td></tr>
+              <tr><td>🌐 Tương thích</td><td><span class="badge badge-amber">Trung</span></td><td>🟡 P2</td><td>Sprint 3</td></tr>
+              <tr><td>🎯 Khả năng sử dụng</td><td><span class="badge badge-green">Thấp</span></td><td>🟢 P3</td><td>Sprint 3</td></tr>
+              <tr><td>🔧 Bảo trì</td><td><span class="badge badge-green">Thấp</span></td><td>🟢 P3</td><td>Sprint 3</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div>
+          <h3 class="slide-sub" style="margin-bottom:16px;">Lịch thực hiện đề xuất</h3>
+          <div class="timeline">
+            <div class="tl-item">
+              <div class="tl-left"><div class="tl-dot" style="background:var(--red);font-size:12px;">S1</div><div class="tl-line"></div></div>
+              <div class="tl-content"><h4 style="color:var(--red);">Sprint 1 – Tuần 1–2</h4><p>Bảo mật (SE-01 đến SE-08) + Độ tin cậy (R1–R4)</p></div>
+            </div>
+            <div class="tl-item">
+              <div class="tl-left"><div class="tl-dot" style="background:var(--amber);font-size:12px;">S2</div><div class="tl-line"></div></div>
+              <div class="tl-content"><h4 style="color:var(--amber);">Sprint 2 – Tuần 3–4</h4><p>Hiệu năng (PT-01–06) + Tải căng thẳng (LS-01–06)</p></div>
+            </div>
+            <div class="tl-item">
+              <div class="tl-left"><div class="tl-dot" style="background:var(--green);font-size:12px;">S3</div></div>
+              <div class="tl-content"><h4 style="color:var(--green);">Sprint 3 – Tuần 5–6</h4><p>Tương thích + Usability (U-01–06) + Bảo trì</p></div>
+            </div>
+          </div>
+          <div class="highlight-box" style="margin-top:16px;">
+            📅 Tổng: <strong class="c-cyan">6 tuần</strong> • <strong class="c-cyan">35+ test cases</strong> • <strong class="c-cyan">3 vòng lặp</strong> review
+          </div>
+        </div>
+      </div>
+    </div>
+    <span class="slide-num">18 / 20</span>
+  </section>
+
+  <!-- ══════════════════════════════════════════
+       SLIDE 19 – KẾT QUẢ MONG ĐỢI
+  ══════════════════════════════════════════ -->
+  <section class="slide bg-teal" id="s19">
+    <div class="orb" style="width:400px;height:400px;background:var(--cyan);top:-100px;left:-80px;opacity:.25;"></div>
+    <div class="slide-inner">
+      <span class="slide-tag"><span class="dot"></span>Kết quả mong đợi</span>
+      <h2 class="slide-heading">Tiêu Chí <span class="c-cyan">Nghiệm Thu</span> Chất Lượng</h2>
+      <div class="stat-row" style="margin-top:16px;">
+        <div class="stat-box"><div class="stat-num c-green">99%</div><div class="stat-lbl">Uptime hệ thống</div></div>
+        <div class="stat-box"><div class="stat-num c-cyan">&lt;2s</div><div class="stat-lbl">Thời gian tải trang</div></div>
+        <div class="stat-box"><div class="stat-num c-amber">0</div><div class="stat-lbl">Lỗ hổng Critical</div></div>
+        <div class="stat-box"><div class="stat-num c-purple">50</div><div class="stat-lbl">Users đồng thời</div></div>
+      </div>
+      <div class="card-grid cols-2" style="margin-top:20px;">
+        <div class="card accent-green">
+          <div class="card-title">✅ Hiệu năng đạt chuẩn</div>
+          <div class="card-body">95% request đáp ứng SLA đề ra. Không có trang nào load quá 5 giây ngay cả khi tải cao.</div>
+        </div>
+        <div class="card accent-blue">
+          <div class="card-title">✅ Bảo mật không có lỗ hổng Critical/High</div>
+          <div class="card-body">Vượt qua OWASP ZAP scan. Không có SQL Injection, XSS, CSRF. Phân quyền hoạt động đúng.</div>
+        </div>
+        <div class="card accent-cyan">
+          <div class="card-title">✅ Hệ thống ổn định 8 giờ+</div>
+          <div class="card-body">Soak test không phát hiện memory leak. SignalR tự reconnect trong 5 giây. Transaction toàn vẹn.</div>
+        </div>
+        <div class="card accent-amber">
+          <div class="card-title">✅ Tương thích đa trình duyệt</div>
+          <div class="card-body">Hoạt động đúng trên Chrome, Edge, Firefox. In ấn hóa đơn chuẩn A4 trên mọi trình duyệt.</div>
+        </div>
+      </div>
+    </div>
+    <span class="slide-num">19 / 20</span>
+  </section>
+
+  <!-- ══════════════════════════════════════════
+       SLIDE 20 – KẾT LUẬN
+  ══════════════════════════════════════════ -->
+  <section class="slide bg-cover" id="s20">
+    <div class="orb" style="width:500px;height:500px;background:var(--blue-accent);bottom:-150px;right:-100px;opacity:.3;"></div>
+    <div class="orb" style="width:350px;height:350px;background:var(--cyan);top:-80px;left:-80px;opacity:.2;"></div>
+    <div class="slide-inner" style="justify-content:center;">
+      <span class="slide-tag"><span class="dot"></span>Kết luận</span>
+      <h2 class="slide-heading" style="max-width:750px;">Kiểm Thử Phi Chức Năng – <span class="c-cyan">Không Thể Bỏ Qua</span></h2>
+      <p class="lead" style="max-width:700px;margin-bottom:24px;">Một hệ thống phần mềm chỉ "chạy được" là chưa đủ. Kiểm thử phi chức năng đảm bảo hệ thống phòng khám nha khoa <mark>thực sự sẵn sàng cho môi trường thực tế</mark> — nhanh, bảo mật, ổn định và dễ sử dụng.</p>
+      <div class="final-grid">
+        <div class="final-card">
+          <div style="font-size:28px;">📚</div>
+          <div style="font-weight:700;color:#fff;">Tài liệu tham khảo</div>
+          <ul style="list-style:none;color:rgba(255,255,255,.6);font-size:13px;line-height:1.8;">
+            <li>• ISO/IEC 25010:2011 – Software Quality Model</li>
+            <li>• OWASP Testing Guide v4.2</li>
+            <li>• ISTQB Foundation Level Syllabus</li>
+            <li>• Microsoft – ASP.NET Core Performance Best Practices</li>
+            <li>• Nielsen Norman Group – Usability Heuristics</li>
+          </ul>
+        </div>
+        <div class="final-card">
+          <div style="font-size:28px;">🎯</div>
+          <div style="font-weight:700;color:#fff;">Tóm tắt 7 nhóm kiểm thử</div>
+          <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:4px;">
+            <span class="badge badge-cyan">⚡ Hiệu năng</span>
+            <span class="badge badge-red">🔥 Tải & Stress</span>
+            <span class="badge badge-purple">🔒 Bảo mật</span>
+            <span class="badge badge-green">🛡️ Tin cậy</span>
+            <span class="badge badge-amber">🎯 Usability</span>
+            <span class="badge" style="background:rgba(13,148,136,.2);color:var(--teal);">🔧 Bảo trì</span>
+            <span class="badge badge-blue">🌐 Tương thích</span>
+          </div>
+          <div class="divider"></div>
+          <div style="color:rgba(255,255,255,.6);font-size:13px;">
+            Hệ thống: Phòng Khám Nha Khoa<br/>
+            Nền tảng: ASP.NET Core MVC + SQL Server<br/>
+            Chuẩn áp dụng: ISO/IEC 25010
+          </div>
+        </div>
+      </div>
+      <div style="text-align:center;margin-top:28px;color:rgba(255,255,255,.3);font-size:13px;">
+        🦷 Hệ thống Phòng Khám Nha Khoa &nbsp;|&nbsp; Kiểm thử Phi Chức Năng &nbsp;|&nbsp; 2026
+      </div>
+    </div>
+    <span class="slide-num">20 / 20</span>
+  </section>
+
+</div>
+
+<!-- NAVIGATION -->
+<div id="nav">
+  <button id="prevBtn" onclick="changeSlide(-1)" title="Slide trước">&#8592;</button>
+  <span id="counter">1 / 20</span>
+  <button id="nextBtn" onclick="changeSlide(1)" title="Slide tiếp">&#8594;</button>
+</div>
+
+<script>
+  const slides = document.querySelectorAll('.slide');
+  const counter = document.getElementById('counter');
+  const progress = document.getElementById('progress');
+  let current = 0;
+  const total = slides.length;
+
+  function goTo(index) {
+    slides[current].classList.remove('active');
+    slides[current].classList.add('exit');
+    setTimeout(() => slides[current < total - 1 ? current : current].classList.remove('exit'), 500);
+
+    const prev = current;
+    current = (index + total) % total;
+
+    slides[prev].classList.remove('exit');
+    slides[current].classList.add('active');
+    counter.textContent = `${current + 1} / ${total}`;
+    progress.style.width = `${((current + 1) / total) * 100}%`;
+  }
+
+  function changeSlide(dir) {
+    const next = (current + dir + total) % total;
+    slides[current].classList.remove('active');
+    slides[current].style.opacity = 0;
+    slides[current].style.transform = dir > 0 ? 'translateX(-60px)' : 'translateX(60px)';
+    setTimeout(() => {
+      slides[current].style.opacity = '';
+      slides[current].style.transform = '';
+      current = next;
+      slides[current].classList.add('active');
+      counter.textContent = `${current + 1} / ${total}`;
+      progress.style.width = `${((current + 1) / total) * 100}%`;
+    }, 300);
+  }
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown' || e.key === ' ') { e.preventDefault(); changeSlide(1); }
+    if (e.key === 'ArrowLeft'  || e.key === 'ArrowUp')  { e.preventDefault(); changeSlide(-1); }
+  });
+
+  // Touch support
+  let startX = 0;
+  document.addEventListener('touchstart', e => startX = e.touches[0].clientX);
+  document.addEventListener('touchend', e => {
+    const dx = e.changedTouches[0].clientX - startX;
+    if (Math.abs(dx) > 50) changeSlide(dx < 0 ? 1 : -1);
+  });
+
+  // Init
+  progress.style.width = `${(1 / total) * 100}%`;
+</script>
+
+</body>
+</html>

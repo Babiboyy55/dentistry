@@ -1,0 +1,152 @@
+===========================================================
+  DANH SÁCH NỘI DUNG KIỂM THỬ PHI CHỨC NĂNG
+  Hệ thống: Phòng Khám Nha Khoa (ASP.NET Core MVC)
+  Ngày tạo: 14/06/2026
+===========================================================
+
+==========================================================
+1. KIỂM THỬ HIỆU NĂNG (Performance Testing)
+==========================================================
+
+1.1  Thời gian phản hồi trang
+     - Tải các trang nặng như danh sách bệnh nhân (PatientController), lịch hẹn
+     - Mục tiêu: < 2 giây
+
+1.2  Tốc độ tải lịch hẹn theo ngày
+     - Query schedule với nhiều bác sĩ và ghế nha
+     - Mục tiêu: < 1 giây
+
+1.3  Tính toán bảng lương (PayrollController)
+     - Tính lương tháng cho toàn bộ nhân viên cùng lúc
+     - Kiểm tra thời gian xử lý không vượt ngưỡng
+
+1.4  Xuất hóa đơn / đối soát (InvoiceController, DailyReconciliation)
+     - Mục tiêu: < 3 giây
+
+1.5  SignalR Hub (Hubs/)
+     - Kiểm tra độ trễ cập nhật real-time hàng chờ
+     - Mục tiêu: < 500ms
+
+==========================================================
+2. KIỂM THỬ TẢI & CĂNG THẲNG (Load & Stress Testing)
+==========================================================
+
+2.1  Giả lập 50–100 người dùng đồng thời đăng nhập và thao tác
+
+2.2  Nhiều lễ tân cùng đặt lịch hẹn cho bệnh nhân trong cùng một khoảng giờ
+     - Kiểm tra race condition
+
+2.3  Stress test bảng lương
+     - Nhiều admin cùng tính và export bảng lương
+
+2.4  Database connection pool
+     - Đảm bảo không bị nghẽn cổ chai khi nhiều request đồng thời
+
+==========================================================
+3. KIỂM THỬ BẢO MẬT (Security Testing)
+==========================================================
+
+3.1  Xác thực & phân quyền
+     - Người dùng không có quyền không thể truy cập trang Admin
+     - Module: AuthController, RolePermissionController
+
+3.2  Session timeout
+     - Phiên đăng nhập hết hạn đúng hạn
+     - Module: AuthController
+
+3.3  SQL Injection
+     - Kiểm tra tất cả form nhập liệu (tên bệnh nhân, thuốc, dịch vụ...)
+     - Module: Toàn bộ Controllers
+
+3.4  XSS (Cross-Site Scripting)
+     - Input trong ghi chú khám, chẩn đoán, tên bệnh nhân
+     - Module: PatientController, ExaminationSession
+
+3.5  CSRF Protection
+     - Form POST có Anti-Forgery Token không
+     - Áp dụng: Tất cả form tạo/sửa/xóa
+
+3.6  Direct URL access
+     - Truy cập URL bệnh nhân/hóa đơn của người khác (/Patient/Detail/123)
+     - Module: PatientPortalController
+
+3.7  Dữ liệu nhạy cảm
+     - Lương, thông tin y tế không lộ trong response không cần thiết
+     - Module: PayrollController, StaffController
+
+3.8  Mật khẩu
+     - Hash đúng cách, không lưu plain text
+     - Module: AuthController, User.cs
+
+==========================================================
+4. KIỂM THỬ ĐỘ TIN CẬY (Reliability Testing)
+==========================================================
+
+4.1  Hệ thống hoạt động liên tục 8+ giờ
+     - Không bị memory leak hoặc crash
+
+4.2  Mất kết nối DB tạm thời
+     - Hệ thống xử lý lỗi graceful, không crash
+
+4.3  SignalR reconnect
+     - Client mất kết nối rồi kết nối lại có nhận được cập nhật không
+
+4.4  Transaction integrity
+     - Khi tạo hóa đơn lỗi giữa chừng, dữ liệu không bị corrupt
+     - Model: Invoice, InvoiceDetail, Payment
+
+==========================================================
+5. KIỂM THỬ KHẢ NĂNG SỬ DỤNG (Usability Testing)
+==========================================================
+
+5.1  Responsive
+     - Giao diện hoạt động tốt trên màn hình 1366x768, 1920x1080
+
+5.2  Thông báo lỗi rõ ràng
+     - Form lỗi hiển thị message cụ thể, không chỉ "Error"
+
+5.3  Thao tác nhất quán
+     - Nút Lưu/Hủy/Xóa đặt đúng vị trí theo convention
+
+5.4  Loading indicator
+     - Các tác vụ lâu (tính lương, export) có spinner hiển thị
+
+5.5  Tìm kiếm & lọc
+     - Kết quả tìm kiếm bệnh nhân, nhân viên đúng và nhanh
+
+==========================================================
+6. KIỂM THỬ KHẢ NĂNG BẢO TRÌ (Maintainability)
+==========================================================
+
+6.1  Log lỗi
+     - Có ghi log khi exception xảy ra (ActivityLog, Middleware)
+
+6.2  Cấu hình
+     - Thông tin nhạy cảm (connection string, secret) nằm trong appsettings.json
+       hoặc biến môi trường, không hardcode trong code
+
+6.3  Migration
+     - Chạy "dotnet ef migrations" không gây lỗi trên môi trường mới
+
+==========================================================
+7. KIỂM THỬ TƯƠNG THÍCH (Compatibility Testing)
+==========================================================
+
+7.1  Trình duyệt
+     - Chrome, Edge, Firefox — giao diện hiển thị đúng
+
+7.2  In hóa đơn / phiếu lương
+     - Print layout hiển thị đúng trên từng trình duyệt
+
+7.3  Export file (nếu có PDF/Excel)
+     - Mở được trên các phiên bản Office/Reader phổ biến
+
+==========================================================
+ƯU TIÊN THỰC HIỆN
+==========================================================
+
+  [CAO]    Bảo mật (3) --> Độ tin cậy (4) --> Hiệu năng (1)
+  [TRUNG]  Tải/Căng thẳng (2) --> Tương thích (7)
+  [THẤP]   Khả năng sử dụng (5) --> Bảo trì (6)
+
+===========================================================

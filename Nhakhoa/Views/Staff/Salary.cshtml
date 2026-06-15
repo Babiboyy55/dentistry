@@ -9,21 +9,39 @@
     string Fallback(string? val) =>
         string.IsNullOrWhiteSpace(val) ? "Chưa cập nhật" : val;
 
-    string GetNamePrefix(string? degree, string? rank)
+    string GetNamePrefix(string? degree, string? rank, string? fullName = null)
     {
-        if (!string.IsNullOrEmpty(rank))
+        var prefix = "";
+        if (!string.IsNullOrWhiteSpace(rank) && rank != "Không" && rank != "Chưa cập nhật")
         {
-            if (rank.Contains("Giáo sư") && !rank.Contains("Phó")) return "GS. ";
-            if (rank.Contains("Phó Giáo sư")) return "PGS. ";
+            if (rank.Contains("Phó Giáo sư") || rank.Contains("PGS")) prefix += "PGS. ";
+            else if (rank.Contains("Giáo sư") || rank.Contains("GS")) prefix += "GS. ";
         }
-        if (!string.IsNullOrEmpty(degree))
+        if (!string.IsNullOrWhiteSpace(degree) && degree != "Không" && degree != "Bình thường" && degree != "Chưa cập nhật")
         {
-            if (degree.Contains("Tiến sĩ")) return "TS. ";
-            if (degree.Contains("Thạc sĩ")) return "ThS. ";
-            if (degree.Contains("Cử nhân")) return "CN. ";
-            if (degree.Contains("Bác sĩ")) return "BS. ";
+            if (degree.Contains("Tiến sĩ") || degree.Contains("TS")) prefix += "TS. ";
+            else if (degree.Contains("Thạc sĩ") || degree.Contains("ThS")) prefix += "ThS. ";
+            else if (degree.Contains("Bác sĩ chuyên khoa ii") || degree.Contains("bác sĩ chuyên khoa ii") || degree.Contains("CKII") || degree.Contains("CK II") || degree.ToLower().Contains("chuyên khoa ii")) prefix += "BS. CKII. ";
+            else if (degree.Contains("Bác sĩ chuyên khoa i") || degree.Contains("bác sĩ chuyên khoa i") || degree.Contains("CKI") || degree.Contains("CK I") || degree.ToLower().Contains("chuyên khoa i")) prefix += "BS. CKI. ";
+            else if (degree.Contains("Bác sĩ") || degree.Contains("BS")) prefix += "BS. ";
+            else if (degree.Contains("Cử nhân") || degree.Contains("CN")) prefix += "CN. ";
         }
-        return "";
+
+        if (!string.IsNullOrEmpty(fullName) && !string.IsNullOrEmpty(prefix))
+        {
+            var cleanedFullName = fullName.Trim().ToLower();
+            var cleanedPrefix = prefix.Trim().ToLower();
+            if (cleanedFullName.StartsWith(cleanedPrefix) || 
+                cleanedFullName.StartsWith("bs.") || 
+                cleanedFullName.StartsWith("ts.") || 
+                cleanedFullName.StartsWith("ths.") || 
+                cleanedFullName.StartsWith("gs.") || 
+                cleanedFullName.StartsWith("pgs."))
+            {
+                return "";
+            }
+        }
+        return prefix;
     }
 
     // Standard Vietnamese payroll deduction rates (based on base salary)
@@ -41,9 +59,9 @@
     decimal bhxh = baseSalary * 0.08m;
     decimal bhtn = baseSalary * 0.01m;
     decimal unionFee = baseSalary * 0.01m;
-    decimal mandatoryIns = bhxh + bhtn + unionFee;
+    decimal mandatoryIns = bhxh + bhtn;
 
-    decimal taxableIncome = grossSalary - mandatoryIns - personalTaxDeduction;
+    decimal taxableIncome = grossSalary - (mandatoryIns + unionFee) - personalTaxDeduction;
     decimal pit = 0;
     if (taxableIncome > 0)
     {
@@ -56,7 +74,7 @@
         else pit = taxableIncome * 0.35m - 9850000m;
     }
 
-    decimal totalDeductions = mandatoryIns + pit + Model.Salary.OtherDeductions;
+    decimal totalDeductions = mandatoryIns + unionFee + pit + Model.Salary.OtherDeductions;
     decimal netSalary = grossSalary - totalDeductions;
 }
 
@@ -66,7 +84,7 @@
         <h4 class="fw-bold text-dark mb-0">
             <i class="bi bi-cash-stack text-primary me-2"></i>Bảng lương nhân sự
         </h4>
-        <div class="text-muted small mt-1">Chi tiết tính toán lương của @GetNamePrefix(Model.Salary.DegreeTitle, Model.Salary.RankTitle)@Model.FullName</div>
+        <div class="text-muted small mt-1">Chi tiết tính toán lương của @GetNamePrefix(Model.AcademicDegree, Model.AcademicRank, Model.FullName)@Model.FullName</div>
     </div>
     <div class="d-flex gap-2">
         <a href="/Staff/Details/@Model.Id" class="btn btn-outline-secondary btn-sm px-3 rounded-pill d-inline-flex align-items-center gap-1">
@@ -89,7 +107,7 @@
             @(Model.FullName?.Substring(0, 1).ToUpper() ?? "?")
         </div>
         <div class="flex-grow-1">
-            <h4 class="fw-bold text-white mb-1">@GetNamePrefix(Model.Salary.DegreeTitle, Model.Salary.RankTitle)@Model.FullName</h4>
+            <h4 class="fw-bold text-white mb-1">@GetNamePrefix(Model.AcademicDegree, Model.AcademicRank, Model.FullName)@Model.FullName</h4>
             <div class="d-flex flex-wrap gap-2">
                 <span class="badge rounded-pill px-3 py-1 fw-medium" style="background: rgba(255,255,255,0.2); color:#fff; font-size:0.8rem;">
                     <i class="bi bi-briefcase me-1"></i>@Fallback(Model.PositionTitle)
@@ -128,25 +146,31 @@
                 <span class="fw-bold text-dark">@FormatMoney(Model.Salary.BaseSalary)</span>
             </div>
 
-            <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
-                <div class="ps-2">
-                    <div class="fw-semibold text-dark small">Hệ số học vị</div>
-                    <div class="text-muted" style="font-size:0.75rem;">@Fallback(Model.Salary.DegreeTitle)</div>
+            @if (Model.Salary.DegreeMultiplier > 1.0m && !string.IsNullOrEmpty(Model.Salary.DegreeTitle) && Model.Salary.DegreeTitle != "Bình thường" && Model.Salary.DegreeTitle != "Chưa cập nhật" && Model.Salary.DegreeTitle != "Không")
+            {
+                <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
+                    <div class="ps-2">
+                        <div class="fw-semibold text-dark small">Hệ số học vị</div>
+                        <div class="text-muted" style="font-size:0.75rem;">@Fallback(Model.Salary.DegreeTitle)</div>
+                    </div>
+                    <span class="badge bg-primary-subtle text-primary px-3 py-1 fw-bold rounded-pill">
+                        × @Model.Salary.DegreeMultiplier.ToString("0.00")
+                    </span>
                 </div>
-                <span class="badge bg-primary-subtle text-primary px-3 py-1 fw-bold rounded-pill">
-                    × @Model.Salary.DegreeMultiplier.ToString("0.00")
-                </span>
-            </div>
+            }
 
-            <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
-                <div class="ps-2">
-                    <div class="fw-semibold text-dark small">Hệ số học hàm</div>
-                    <div class="text-muted" style="font-size:0.75rem;">@Fallback(Model.Salary.RankTitle)</div>
+            @if (Model.Salary.RankMultiplier > 1.0m && !string.IsNullOrEmpty(Model.Salary.RankTitle) && Model.Salary.RankTitle != "Không" && Model.Salary.RankTitle != "Chưa cập nhật")
+            {
+                <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
+                    <div class="ps-2">
+                        <div class="fw-semibold text-dark small">Hệ số chức danh</div>
+                        <div class="text-muted" style="font-size:0.75rem;">@Fallback(Model.Salary.RankTitle)</div>
+                    </div>
+                    <span class="badge bg-success-subtle text-success px-3 py-1 fw-bold rounded-pill">
+                        × @Model.Salary.RankMultiplier.ToString("0.00")
+                    </span>
                 </div>
-                <span class="badge bg-success-subtle text-success px-3 py-1 fw-bold rounded-pill">
-                    × @Model.Salary.RankMultiplier.ToString("0.00")
-                </span>
-            </div>
+            }
 
             <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
                 <div class="ps-2">
@@ -231,6 +255,7 @@
             <div class="bg-white rounded-3 p-3 border" style="font-family: monospace; font-size: 0.82rem; line-height: 1.8; color: #1a2332;">
                 <div><span class="text-success fw-bold">Gross Salary</span> = @FormatMoney(grossSalary)</div>
                 <div><span class="text-danger fw-bold">- Bảo hiểm (9%)</span> = @FormatMoney(mandatoryIns)</div>
+                <div><span class="text-danger fw-bold">- Phí công đoàn (1%)</span> = @FormatMoney(unionFee)</div>
                 <div><span class="text-danger fw-bold">- Thuế TNCN</span> = @FormatMoney(pit)</div>
                 <div><span class="text-danger fw-bold">- Khấu trừ khác</span> = @FormatMoney(Model.Salary.OtherDeductions)</div>
                 <div class="border-top mt-2 pt-2 fw-bold text-primary">= Thực lĩnh: @FormatMoney(netSalary)</div>

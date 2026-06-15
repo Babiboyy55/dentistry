@@ -274,6 +274,8 @@ namespace Nhakhoa.Controllers
                 PositionTitle = profile?.PositionTitle,
                 Department = profile?.Department,
                 JoinDate = profile?.JoinDate,
+                AcademicRank = profile?.AcademicRank,
+                AcademicDegree = profile?.AcademicDegree,
                 Salary = new StaffSalaryInfoViewModel
                 {
                     BaseSalary = salary?.BaseSalary ?? 0m,
@@ -319,6 +321,8 @@ namespace Nhakhoa.Controllers
                     PositionTitle = profile?.PositionTitle ?? "",
                     Department = profile?.Department ?? "",
                     JoinDate = profile?.JoinDate,
+                    AcademicRank = profile?.AcademicRank,
+                    AcademicDegree = profile?.AcademicDegree,
                     Salary = new StaffSalaryInfoViewModel
                     {
                         BaseSalary = salary?.BaseSalary ?? 0m,

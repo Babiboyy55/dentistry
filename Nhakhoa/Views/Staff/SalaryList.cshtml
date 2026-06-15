@@ -6,6 +6,41 @@
     string FormatMoney(decimal amount) =>
         amount == 0 ? "0 ₫" : amount.ToString("N0") + " ₫";
 
+    string GetNamePrefix(string? degree, string? rank, string? fullName = null)
+    {
+        var prefix = "";
+        if (!string.IsNullOrWhiteSpace(rank) && rank != "Không" && rank != "Chưa cập nhật")
+        {
+            if (rank.Contains("Phó Giáo sư") || rank.Contains("PGS")) prefix += "PGS. ";
+            else if (rank.Contains("Giáo sư") || rank.Contains("GS")) prefix += "GS. ";
+        }
+        if (!string.IsNullOrWhiteSpace(degree) && degree != "Không" && degree != "Bình thường" && degree != "Chưa cập nhật")
+        {
+            if (degree.Contains("Tiến sĩ") || degree.Contains("TS")) prefix += "TS. ";
+            else if (degree.Contains("Thạc sĩ") || degree.Contains("ThS")) prefix += "ThS. ";
+            else if (degree.Contains("Bác sĩ chuyên khoa ii") || degree.Contains("bác sĩ chuyên khoa ii") || degree.Contains("CKII") || degree.Contains("CK II") || degree.ToLower().Contains("chuyên khoa ii")) prefix += "BS. CKII. ";
+            else if (degree.Contains("Bác sĩ chuyên khoa i") || degree.Contains("bác sĩ chuyên khoa i") || degree.Contains("CKI") || degree.Contains("CK I") || degree.ToLower().Contains("chuyên khoa i")) prefix += "BS. CKI. ";
+            else if (degree.Contains("Bác sĩ") || degree.Contains("BS")) prefix += "BS. ";
+            else if (degree.Contains("Cử nhân") || degree.Contains("CN")) prefix += "CN. ";
+        }
+
+        if (!string.IsNullOrEmpty(fullName) && !string.IsNullOrEmpty(prefix))
+        {
+            var cleanedFullName = fullName.Trim().ToLower();
+            var cleanedPrefix = prefix.Trim().ToLower();
+            if (cleanedFullName.StartsWith(cleanedPrefix) || 
+                cleanedFullName.StartsWith("bs.") || 
+                cleanedFullName.StartsWith("ts.") || 
+                cleanedFullName.StartsWith("ths.") || 
+                cleanedFullName.StartsWith("gs.") || 
+                cleanedFullName.StartsWith("pgs."))
+            {
+                return "";
+            }
+        }
+        return prefix;
+    }
+
     // Standard Vietnamese payroll deduction rates (based on base salary)
     decimal insuranceRate = 0.09m; // 8% BHXH + 1% BHTN
     decimal unionRate = 0.01m; // 1% Công đoàn phí
@@ -236,7 +271,7 @@
                     <tr class="payroll-row" data-name="@staff.FullName.ToLower()" data-role="@staff.Role">
                         <td class="text-muted small">@($"NV{staff.Id:0000}")</td>
                         <td>
-                            <div class="fw-semibold text-dark">@staff.FullName</div>
+                            <div class="fw-semibold text-dark">@GetNamePrefix(staff.AcademicDegree, staff.AcademicRank, staff.FullName)@staff.FullName</div>
                             <div class="text-muted small">@staff.PositionTitle - @staff.Department</div>
                         </td>
                         <td><span class="badge @roleBadge">@roleLabel</span></td>
@@ -254,7 +289,7 @@
                             <button class="btn btn-primary btn-sm px-3 rounded-pill" 
                                     onclick="openPayslipModal({
                                         id: @staff.Id,
-                                        fullName: '@staff.FullName',
+                                        fullName: '@(GetNamePrefix(staff.AcademicDegree, staff.AcademicRank, staff.FullName))@staff.FullName',
                                         role: '@roleLabel',
                                         code: '@($"NV{staff.Id:0000}")',
                                         dept: '@(staff.Department ?? "Chưa cập nhật")',
@@ -353,12 +388,12 @@
                                                 <span>Lương cơ bản (HĐ)</span>
                                                 <span id="psBaseSalary" class="text-dark fw-medium">5,000,000 ₫</span>
                                             </div>
-                                            <div class="d-flex justify-content-between py-2 border-bottom text-secondary">
+                                            <div id="psDegreeRow" class="d-flex justify-content-between py-2 border-bottom text-secondary">
                                                 <span>Học vị (<span id="psDegreeTitle">Thạc sĩ</span>)</span>
                                                 <span id="psDegreeMult" class="text-dark">x1.20</span>
                                             </div>
-                                            <div class="d-flex justify-content-between py-2 border-bottom text-secondary">
-                                                <span>Học hàm (<span id="psRankTitle">GS</span>)</span>
+                                            <div id="psRankRow" class="d-flex justify-content-between py-2 border-bottom text-secondary">
+                                                <span>Chức danh (<span id="psRankTitle">GS</span>)</span>
                                                 <span id="psRankMult" class="text-dark">x1.10</span>
                                             </div>
                                             <div class="d-flex justify-content-between py-2 border-bottom text-secondary bg-light-subtle fw-semibold text-dark">
@@ -574,10 +609,22 @@
             document.getElementById('psPos').innerText = staffData.pos;
 
             document.getElementById('psBaseSalary').innerText = formatVND(staffData.baseSalary);
-            document.getElementById('psDegreeTitle').innerText = staffData.degreeTitle;
-            document.getElementById('psDegreeMult').innerText = 'x' + staffData.degreeMult.toFixed(2);
-            document.getElementById('psRankTitle').innerText = staffData.rankTitle;
-            document.getElementById('psRankMult').innerText = 'x' + staffData.rankMult.toFixed(2);
+            
+            if (staffData.degreeMult > 1.0 && staffData.degreeTitle && staffData.degreeTitle !== 'Bình thường' && staffData.degreeTitle !== 'Chưa cập nhật' && staffData.degreeTitle !== 'Không') {
+                document.getElementById('psDegreeRow').style.display = 'flex';
+                document.getElementById('psDegreeTitle').innerText = staffData.degreeTitle;
+                document.getElementById('psDegreeMult').innerText = 'x' + staffData.degreeMult.toFixed(2);
+            } else {
+                document.getElementById('psDegreeRow').style.display = 'none';
+            }
+
+            if (staffData.rankMult > 1.0 && staffData.rankTitle && staffData.rankTitle !== 'Không' && staffData.rankTitle !== 'Chưa cập nhật') {
+                document.getElementById('psRankRow').style.display = 'flex';
+                document.getElementById('psRankTitle').innerText = staffData.rankTitle;
+                document.getElementById('psRankMult').innerText = 'x' + staffData.rankMult.toFixed(2);
+            } else {
+                document.getElementById('psRankRow').style.display = 'none';
+            }
 
             const multSal = staffData.baseSalary * staffData.degreeMult * staffData.rankMult;
             document.getElementById('psSalaryWithMult').innerText = formatVND(multSal);

@@ -290,6 +290,7 @@ namespace Nhakhoa.Controllers
 
             // Lấy tất cả ExaminationSession của bác sĩ trong tháng để lấy tổng hệ số bệnh nhân
             var sessions = await _db.ExaminationSessions
+                .Include(e => e.Appointment)
                 .Where(e => e.DoctorId == doctorId && e.CreatedAt >= from && e.CreatedAt < to)
                 .ToListAsync();
 
@@ -315,7 +316,8 @@ namespace Nhakhoa.Controllers
 
                 // Tổng hệ số bệnh nhân trong ngày trực đó
                 decimal totalPatientCoeff = sessions
-                    .Where(e => e.CreatedAt.Date == shift.ShiftDate.Date)
+                    .Where(e => e.CreatedAt.Date == shift.ShiftDate.Date
+                             && (e.Appointment != null ? e.Appointment.Session : (e.CreatedAt.Hour < 13 ? "Sáng" : "Chiều")) == shift.ShiftType)
                     .Sum(e => e.PatientCoefficient);
 
                 // Số giờ quy đổi = Số giờ mỗi ca × (Hệ số ca + Tổng hệ số bệnh nhân)
@@ -379,6 +381,7 @@ namespace Nhakhoa.Controllers
                 .ToListAsync();
 
             var sessions = await _db.ExaminationSessions
+                .Include(e => e.Appointment)
                 .Where(e => e.CreatedAt >= from && e.CreatedAt < to)
                 .ToListAsync();
 
@@ -403,7 +406,10 @@ namespace Nhakhoa.Controllers
                     var setting = shiftSettings.FirstOrDefault(ss => ss.ShiftName == shift.ShiftType);
                     double dur = setting?.DurationHours ?? 0;
                     decimal dayMul = GetDayMultiplier(shift.ShiftDate.DayOfWeek, config);
-                    decimal patCoeff = docSessions.Where(e => e.CreatedAt.Date == shift.ShiftDate.Date).Sum(e => e.PatientCoefficient);
+                    decimal patCoeff = docSessions
+                        .Where(e => e.CreatedAt.Date == shift.ShiftDate.Date
+                                 && (e.Appointment != null ? e.Appointment.Session : (e.CreatedAt.Hour < 13 ? "Sáng" : "Chiều")) == shift.ShiftType)
+                        .Sum(e => e.PatientCoefficient);
                     decimal convHrs = (decimal)dur * (dayMul + patCoeff);
                     totalConvertedHours += (double)convHrs;
                     totalPay += convHrs * degreeCoeff * config.HourlyRate;
@@ -450,6 +456,7 @@ namespace Nhakhoa.Controllers
                 .ToListAsync();
 
             var sessions = await _db.ExaminationSessions
+                .Include(e => e.Appointment)
                 .Where(e => e.DoctorId == doctorId && e.CreatedAt >= from && e.CreatedAt < to)
                 .ToListAsync();
 
@@ -462,7 +469,10 @@ namespace Nhakhoa.Controllers
                 var setting = shiftSettings.FirstOrDefault(ss => ss.ShiftName == shift.ShiftType);
                 double dur = setting?.DurationHours ?? 0;
                 decimal dayMul = GetDayMultiplier(shift.ShiftDate.DayOfWeek, config);
-                decimal patCoeff = sessions.Where(e => e.CreatedAt.Date == shift.ShiftDate.Date).Sum(e => e.PatientCoefficient);
+                decimal patCoeff = sessions
+                    .Where(e => e.CreatedAt.Date == shift.ShiftDate.Date
+                             && (e.Appointment != null ? e.Appointment.Session : (e.CreatedAt.Hour < 13 ? "Sáng" : "Chiều")) == shift.ShiftType)
+                    .Sum(e => e.PatientCoefficient);
                 decimal convHrs = (decimal)dur * (dayMul + patCoeff);
                 monthly[m] += convHrs * degreeCoeff * config.HourlyRate;
             }
@@ -488,7 +498,10 @@ namespace Nhakhoa.Controllers
             var doctors = await _db.StaffProfiles.Include(sp => sp.User)
                 .Where(sp => sp.User!.IsActive && sp.User.Role == "Doctor").ToListAsync();
             var shifts = await _db.Shifts.Where(s => s.ShiftDate >= from && s.ShiftDate < to && s.IsActive).ToListAsync();
-            var sessions = await _db.ExaminationSessions.Where(e => e.CreatedAt >= from && e.CreatedAt < to).ToListAsync();
+            var sessions = await _db.ExaminationSessions
+                .Include(e => e.Appointment)
+                .Where(e => e.CreatedAt >= from && e.CreatedAt < to)
+                .ToListAsync();
             var shiftSettings = await _db.ShiftSettings.ToListAsync();
             var ratings = await _db.DoctorRatings.Where(r => r.CreatedAt >= from && r.CreatedAt < to).ToListAsync();
 
@@ -509,7 +522,10 @@ namespace Nhakhoa.Controllers
                     var setting = shiftSettings.FirstOrDefault(ss => ss.ShiftName == shift.ShiftType);
                     double dur = setting?.DurationHours ?? 0;
                     decimal dayMul = GetDayMultiplier(shift.ShiftDate.DayOfWeek, config);
-                    decimal patCoeff = docSessions.Where(e => e.CreatedAt.Date == shift.ShiftDate.Date).Sum(e => e.PatientCoefficient);
+                    decimal patCoeff = docSessions
+                        .Where(e => e.CreatedAt.Date == shift.ShiftDate.Date
+                                 && (e.Appointment != null ? e.Appointment.Session : (e.CreatedAt.Hour < 13 ? "Sáng" : "Chiều")) == shift.ShiftType)
+                        .Sum(e => e.PatientCoefficient);
                     decimal convHrs = (decimal)dur * (dayMul + patCoeff);
                     totalConvertedHours += (double)convHrs;
                     monthly[m] += convHrs * degreeCoeff * config.HourlyRate;
@@ -553,12 +569,13 @@ namespace Nhakhoa.Controllers
 
         private static decimal GetDegreeCoeff(string? degree, DoctorSalaryConfig cfg)
         {
-            return (degree ?? "").ToLower() switch
+            var d = (degree ?? "").ToLower();
+            return d switch
             {
-                var d when d.Contains("giáo sư") && d.Contains("phó") => cfg.DegreeAssocProf,
-                var d when d.Contains("giáo sư") => cfg.DegreeProfessor,
-                var d when d.Contains("tiến sĩ") || d.Contains("tiến sỹ") => cfg.DegreeDoctorate,
-                var d when d.Contains("thạc sĩ") || d.Contains("thạc sỹ") => cfg.DegreeMaster,
+                var x when x.Contains("giáo sư") && x.Contains("phó") => cfg.DegreeAssocProf,
+                var x when x.Contains("giáo sư") => cfg.DegreeProfessor,
+                var x when x.Contains("tiến sĩ") || x.Contains("tiến sỹ") || x.Contains("chuyên khoa ii") || x.Contains("chuyên khoa 2") || x.Contains("ckii") || x.Contains("ck2") => cfg.DegreeDoctorate,
+                var x when x.Contains("thạc sĩ") || x.Contains("thạc sỹ") || x.Contains("chuyên khoa i") || x.Contains("chuyên khoa 1") || x.Contains("cki") || x.Contains("ck1") => cfg.DegreeMaster,
                 _ => cfg.DegreeUniversity
             };
         }
